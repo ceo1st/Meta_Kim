@@ -323,6 +323,8 @@ This file is generated from \`.claude/agents/*.md\` by \`npm run sync:runtimes\`
 
 Use the smallest agent whose boundary matches the task. Escalate to \`meta-warden\` when the task spans multiple agent boundaries.
 
+Important: this file lists only the Meta_Kim team. It is not the full OpenClaw registry. If the user asks how many agents exist, which agents are currently registered, or who can collaborate right now, query the live runtime registry first instead of answering from this file alone.
+
 | Agent ID | Name | Responsibility |
 | --- | --- | --- |
 ${rows}
@@ -338,6 +340,8 @@ Generated from \`${agent.sourceFile}\`. Edit the Claude source file first, then 
 
 - You are running inside OpenClaw.
 - Read the local \`AGENTS.md\` before delegating with \`sessions_send\`.
+- \`AGENTS.md\` only lists the Meta_Kim team, not the full OpenClaw registry.
+- When the user asks which agents exist, how many agents exist, or who can collaborate right now, query the live runtime registry first through \`agents_list\`. If that tool is unavailable, fall back to an explicit runtime command and state the result source.
 - Stay inside your own responsibility boundary unless the user explicitly asks you to coordinate broader work.
 - An optional local research note may exist at \`meta/meta.md\`, but public runtime behavior must not depend on it.
 
@@ -374,6 +378,8 @@ function buildTools(agent, agents) {
 
 - 先读取同目录下的 \`SOUL.md\` 与 \`AGENTS.md\`。
 - 如需协作，优先通过 OpenClaw 原生 agent-to-agent 能力联系队友。
+- \`AGENTS.md\` 只描述 Meta_Kim 团队，不等于整个 OpenClaw 已注册 agent 清单。
+- 用户问 agent 总数、agent 名单、当前可协作对象时，先调用 \`agents_list\` 读取实时注册表；如果工具不可用，再用显式命令查询，并说明答案来自实时注册表。
 - 本 workspace 内的可移植 Skill 位于 \`skills/meta-theory/SKILL.md\`。
 - 不要把别的 agent 的职责吞进来；超出边界就委派或升级给 \`meta-warden\`。
 

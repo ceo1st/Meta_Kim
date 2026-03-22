@@ -4,6 +4,8 @@ This file is generated from `.claude/agents/*.md` by `npm run sync:runtimes`.
 
 Use the smallest agent whose boundary matches the task. Escalate to `meta-warden` when the task spans multiple agent boundaries.
 
+Important: this file lists only the Meta_Kim team. It is not the full OpenClaw registry. If the user asks how many agents exist, which agents are currently registered, or who can collaborate right now, query the live runtime registry first instead of answering from this file alone.
+
 | Agent ID | Name | Responsibility |
 | --- | --- | --- |
 | `meta-warden` | Meta-Warden: 元部门经理 🔬 | Coordinate the Meta_Kim agent team, quality gates, and final synthesis across the other meta agents. |
