@@ -162,6 +162,15 @@ It is an engineering system built around one idea:
 
 **AI should understand what you actually need before it starts writing code.**
 
+That means:
+
+- the user starts with intent, not a finished specification
+- the system first clarifies objective, boundaries, constraints, and deliverables
+- work is routed through governable units instead of one giant undifferentiated context
+- the same underlying discipline holds across Claude Code, Codex, and OpenClaw
+
+Meta_Kim cares about whether complex tasks can be **sustained, stable, and governable** — not whether a single response looks right.
+
 At the engineering level, it organizes:
 
 - `agents`: responsibility boundaries and organizational roles
@@ -192,14 +201,16 @@ Meta is an architectural unit here, not decoration.
 
 Meta_Kim follows one chain:
 
-**Decompose into governable units → Define clear boundaries → Orchestrate timing and routing → Amplify raw intent into executable work**
+**Meta -> Organizational Mirroring -> Rhythm Orchestration -> Intent Amplification**
 
 Each part solves a different problem:
 
-- `Meta (decomposition)`: break work into smallest governable units
-- `Organizational Mirroring (structure)`: define who owns what, who doesn't touch what
-- `Rhythm Orchestration (timing)`: control when things happen, what can run in parallel, when to pause
-- `Intent Amplification (completion)`: turn "I want X" into a complete, executable specification
+- `Meta (how to split)`: break work into smallest governable units
+- `Organizational Mirroring (how to structure)`: define who owns what, who doesn't touch what
+- `Rhythm Orchestration (how to dispatch)`: control when things happen, what can run in parallel, when to pause
+- `Intent Amplification (how to complete)`: turn "I want X" into a complete, executable specification
+
+Remove any one of these and the method is incomplete.
 
 ## How the System Works
 
@@ -215,7 +226,15 @@ flowchart TD
     F --> G[“Patterns are captured<br/>for reuse next time”]
 ```
 
-Under the hood, 8 specialized meta agents handle different concerns (governance, workflow, identity, skills, safety, memory, quality, discovery). You never interact with them directly — the system coordinates them automatically.
+The default front door is `meta-warden`. The other seven meta agents are backstage specialists, not the public menu.
+
+Every valid business run must keep a single organizing thread:
+
+- one department
+- one primary deliverable
+- one closed handoff chain
+
+If a plan bundles unrelated goals into the same run, `meta-conductor` should reject it and `meta-warden` should keep it out of public display.
 
 ## The Eight Meta Agents
 
