@@ -104,6 +104,7 @@ Stress test: Not executed
 | Decision Rules have no conditions | Rules contain no if/then/else branches | = Just declarations, not decision logic |
 | Thinking Framework copies Workflow | "Thinking Framework" steps are identical to "Workflow" steps | = No distinction between "how to think" and "what to do" |
 | Good/bad examples missing | Output Quality section has only text description with no comparison examples | = Criteria are not actionable |
+| Describes specific tasks not domains | Core Truths / Role section contains "build X", "implement Y", "create Z page" | = Agent is a task executor, not a role with domain depth. Correct SOUL.md describes "what you know" (technologies, patterns, architectures), not "what you do" (specific features or pages) |
 
 ## Meta-Skills
 
