@@ -142,8 +142,8 @@ async function collectAgentHealth(agentId) {
 
   // Boundary markers check
   const hasOwnBoundary = canonicalRaw?.includes("只管") || canonicalRaw?.includes("Own") || canonicalRaw?.includes("own");
-  const hasRefuseBoundary = canonicalRaw?.includes("不碰") || canonicalRaw?.includes("Refuse") || canonicalRaw?.includes("refuse");
-  const hasFiveStandard = canonicalRaw?.includes("元理论验证") || canonicalRaw?.includes("五标准");
+  const hasRefuseBoundary = canonicalRaw?.includes("不碰") || canonicalRaw?.includes("Refuse") || canonicalRaw?.includes("refuse") || canonicalRaw?.includes("Touch");
+  const hasFiveStandard = canonicalRaw?.includes("元理论验证") || canonicalRaw?.includes("五标准") || canonicalRaw?.includes("Meta-Theory Verification") || canonicalRaw?.includes("Meta-Theory Validation") || canonicalRaw?.includes("Five Criteria");
   const hasSoul = soulRaw && soulRaw.length > 100;
 
   // Health score components (0-1 scale)
