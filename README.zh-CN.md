@@ -1,11 +1,10 @@
-<div align="center">
+span
 
-<h1>Meta_Kim</h1>
 
-<p>
-  <a href="README.md">English</a> |
-  <a href="README.zh-CN.md">简体中文</a>
-</p>
+<h1 style="font-size: 6em; font-weight: 900; margin-bottom: 0.2em; letter-spacing: 0.1em;">元</h1>
+<p style="font-size: 1.2em; color: #7c3aed; font-weight: 600; margin-top: 0;">META_KIM</p>
+<p style="color: #dc2626; font-weight: 700; margin-bottom: 0.5em;">⚠️ BETA VERSION — Work in Progress</p>
+
 
 <p>
   <img alt="Runtime" src="https://img.shields.io/badge/runtime-Claude%20Code%20%7C%20Codex%20%7C%20OpenClaw-111827"/>
@@ -57,11 +56,12 @@
 
 ## 什么时候需要它
 
-| 你的场景 | 没有 Meta_Kim | 有 Meta_Kim |
-|---|---|---|
+
+| 你的场景                              | 没有 Meta_Kim                           | 有 Meta_Kim                                    |
+| --------------------------------------- | ----------------------------------------- | ------------------------------------------------ |
 | "帮我把认证模块重构了，横跨 6 个文件" | AI 直接上手改，改着改着把别的模块搞崩了 | 先确认范围，分配给合适的 agent，审查跨模块影响 |
-| "帮我设计一个新 agent" | 拿到一个通用模板，跟你的业务对不上 | 系统先问你需求，检查现有 agent，必要时才创建 |
-| "我的 agent 老是互相打架" | 职责混乱，重复劳动，没人知道谁该干什么 | 清晰的职责边界，治理流程，质量关卡 |
+| "帮我设计一个新 agent"                | 拿到一个通用模板，跟你的业务对不上      | 系统先问你需求，检查现有 agent，必要时才创建   |
+| "我的 agent 老是互相打架"             | 职责混乱，重复劳动，没人知道谁该干什么  | 清晰的职责边界，治理流程，质量关卡             |
 
 **如果你每次只改一个文件，不需要它。** Meta_Kim 帮的是跨文件、跨模块、需要多种能力协作的复杂任务。
 
@@ -128,6 +128,7 @@ npm run discover:global
 扫描并索引你全局安装的能力（Claude Code、OpenClaw、Codex 三端），生成统一的能力索引。**安装后首次必须运行，之后安装新全局能力时需重新运行。**
 
 扫描范围：
+
 - **Claude Code** (`~/.claude/`): agents、skills、hooks、plugins、commands
 - **OpenClaw** (`~/.openclaw/`): agents、skills、hooks、commands
 - **Codex** (`~/.codex/`): agents、skills、commands
@@ -227,11 +228,12 @@ graph TD
 
 当验证阶段发现修复引入了更多问题时，系统支持四级回滚：
 
-| 回滚级别 | 触发条件 | 动作 |
-|---------|---------|------|
-| 文件级 | 单文件回归 | 从上一个已知好的状态恢复该文件 |
-| 子任务级 | 某个子任务改崩了相邻路径 | 只回滚该子任务的文件集 |
-| 部分回滚 | 部分子任务成功、部分失败 | 保留成功的，回滚失败的，重新进入 Thinking 分解 |
+
+| 回滚级别 | 触发条件                 | 动作                                              |
+| ---------- | -------------------------- | --------------------------------------------------- |
+| 文件级   | 单文件回归               | 从上一个已知好的状态恢复该文件                    |
+| 子任务级 | 某个子任务改崩了相邻路径 | 只回滚该子任务的文件集                            |
+| 部分回滚 | 部分子任务成功、部分失败 | 保留成功的，回滚失败的，重新进入 Thinking 分解    |
 | 全量回滚 | 跨模块污染、原始假设失效 | `git stash` 全部未提交变更，退回 Stage 1 Critical |
 
 **铁律**：回滚不是失败——回滚是系统知道什么时候该停下来，不再让事情变得更糟。
@@ -240,13 +242,14 @@ graph TD
 
 进化阶段的输出必须持久化到明确位置，不能只留在对话上下文里：
 
-| 产出物 | 存储位置 |
-|-------|---------|
-| 可复用模式 | `memory/patterns/` |
-| 伤疤记录（Scars） | `memory/scars/` |
-| 新技能 | `.claude/skills/` |
-| Agent 边界调整 | `.claude/agents/`（触发 `npm run sync:runtimes`） |
-| 能力缺口记录 | `memory/capability-gaps.md` |
+
+| 产出物            | 存储位置                                          |
+| ------------------- | --------------------------------------------------- |
+| 可复用模式        | `memory/patterns/`                                |
+| 伤疤记录（Scars） | `memory/scars/`                                   |
+| 新技能            | `.claude/skills/`                                 |
+| Agent 边界调整    | `.claude/agents/`（触发 `npm run sync:runtimes`） |
+| 能力缺口记录      | `memory/capability-gaps.md`                       |
 
 ## 元的理念
 
@@ -337,11 +340,12 @@ Meta_Kim 不是强行把三个运行时做成一模一样。
 - 保持同一套底层方法
 - 用每个运行时自己的原生结构去承接它
 
-| 运行时 | 用户入口 | 仓库落点 | 作用 |
-| --- | --- | --- | --- |
-| Claude Code | `CLAUDE.md` | `.claude/`、`.mcp.json` | 元 agent、skill、hook、MCP 的主源运行时 |
-| Codex | `AGENTS.md` | `.codex/`、`.agents/`、`codex/config.toml.example` | Codex 原生 agent / skill 镜像 |
-| OpenClaw | `openclaw/workspaces/` | `openclaw/` | OpenClaw 的本地 workspace agent 和模板配置 |
+
+| 运行时      | 用户入口               | 仓库落点                                           | 作用                                       |
+| ------------- | ------------------------ | ---------------------------------------------------- | -------------------------------------------- |
+| Claude Code | `CLAUDE.md`            | `.claude/`、`.mcp.json`                            | 元 agent、skill、hook、MCP 的主源运行时    |
+| Codex       | `AGENTS.md`            | `.codex/`、`.agents/`、`codex/config.toml.example` | Codex 原生 agent / skill 镜像              |
+| OpenClaw    | `openclaw/workspaces/` | `openclaw/`                                        | OpenClaw 的本地 workspace agent 和模板配置 |
 
 ## 怎么用
 
@@ -434,15 +438,16 @@ Codex 的配置分两层：
 
 Meta_Kim 在 `.claude/settings.json` 中内置了 7 个项目级 hooks：
 
-| Hook | 类型 | 用途 |
-|------|------|------|
-| `block-dangerous-bash.mjs` | PreToolUse/Bash | 阻止危险命令（rm -rf、DROP TABLE、force-push） |
-| `pre-git-push-confirm.mjs` | PreToolUse/Bash | git push 前提醒检查 |
-| `post-format.mjs` | PostToolUse/Edit,Write | 自动 prettier 格式化 JS/TS 文件 |
-| `post-typecheck.mjs` | PostToolUse/Edit,Write | 编辑 .ts/.tsx 后自动 tsc 类型检查 |
-| `post-console-log-warn.mjs` | PostToolUse/Edit,Write | 编辑后检测 console.log 并警告 |
-| `subagent-context.mjs` | SubagentStart | 给子 agent 注入项目上下文 |
-| `stop-console-log-audit.mjs` | Stop | 会话结束前审计所有改动文件的 console.log |
+
+| Hook                         | 类型                   | 用途                                           |
+| ------------------------------ | ------------------------ | ------------------------------------------------ |
+| `block-dangerous-bash.mjs`   | PreToolUse/Bash        | 阻止危险命令（rm -rf、DROP TABLE、force-push） |
+| `pre-git-push-confirm.mjs`   | PreToolUse/Bash        | git push 前提醒检查                            |
+| `post-format.mjs`            | PostToolUse/Edit,Write | 自动 prettier 格式化 JS/TS 文件                |
+| `post-typecheck.mjs`         | PostToolUse/Edit,Write | 编辑 .ts/.tsx 后自动 tsc 类型检查              |
+| `post-console-log-warn.mjs`  | PostToolUse/Edit,Write | 编辑后检测 console.log 并警告                  |
+| `subagent-context.mjs`       | SubagentStart          | 给子 agent 注入项目上下文                      |
+| `stop-console-log-audit.mjs` | Stop                   | 会话结束前审计所有改动文件的 console.log       |
 
 Codex 和 OpenClaw 使用各自的原生机制（developer_instructions 和 SOUL.md）实现等效行为。
 
@@ -523,10 +528,10 @@ Codex 和 OpenClaw 使用各自的原生机制（developer_instructions 和 SOUL
 
 Meta_Kim 的方法依据来自“基于元的意图放大”评测与方法沉淀。
 
-- 论文页面：<https://zenodo.org/records/18957649>
+- 论文页面：[https://zenodo.org/records/18957649](https://zenodo.org/records/18957649)
 - DOI：`10.5281/zenodo.18957649`
 
-论文负责解释方法论基础。  
+论文负责解释方法论基础。
 本仓库负责把这套方法落成可运行的工程资产。
 
 ## License

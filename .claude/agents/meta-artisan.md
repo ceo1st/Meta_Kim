@@ -1,7 +1,9 @@
 ---
-version: 1.0.5
+version: 1.0.6
 name: meta-artisan
 description: Match the right skills, tools, and capability packages for a Meta_Kim agent or workflow.
+type: agent
+subagent_type: general-purpose
 ---
 
 # Meta-Artisan: Craft Meta 🎨

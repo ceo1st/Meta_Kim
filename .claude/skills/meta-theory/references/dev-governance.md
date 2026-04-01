@@ -127,11 +127,20 @@ On receiving an escalation signal: re-enter Fetch (Stage 2) to find a more capab
 
 ### Complexity Routing
 
-| File Changes | Complexity | Flow |
-|-------------|-----------|------|
-| 1 file, pure logic/style/comments | Simple | Execution → Review → Verification → Evolution |
-| ≥2 files OR ≥2 modules | Medium | Full 8-stage spine |
-| >5 files OR cross-layer | Complex | Full 8-stage spine; allow business-workflow revision / summary / feedback / evolve phases when the run contract requires them |
+| File Changes | Complexity | Executed Path | Upgrade to 10-Step? |
+|-------------|-----------|---------------|-------------------|
+| 1 file, pure logic/style/comments | Simple | Execution → Review → Verification → Evolution (4 stages) | No — 8-stage is the minimum; even these 4 stages suffice |
+| 2-5 files, 1 module | Medium | Full 8-stage spine | No — 8-stage is the complete executable chain for medium complexity |
+| >5 files OR cross-system OR multi-team | Complex | Full 8-stage spine, with escalation gates | **Yes** — upgrade to full 10-step governance when: (a) >5 files, (b) cross-system dependencies detected, (c) multi-team handoff required, (d) security-sensitive changes, or (e) business-workflow revision/summary/feedback phases are needed per the run contract |
+
+**Upgrade Trigger Conditions** (any one is sufficient):
+- File scope > 5 files
+- Cross-system dependency detected (Stage 3 Thinking identifies shared components across module boundaries)
+- Multi-team handoff required (business department + meta department coordination)
+- Security-sensitive or permission-critical changes
+- Business run contract explicitly requires 10-step phases (direction/planning/execution/review/meta-review/revision/verification/summary/feedback/evolution)
+
+**Note**: The 8-stage spine is the **minimum executable chain** regardless of complexity. The 10-step governance is an **upgrade layer** for complex scenarios — the 8 stages still run, but extended with direction refinement, summary, and feedback phases before Evolution.
 
 ### Critical Stage Output
 
@@ -602,13 +611,16 @@ Evolution outputs must be persisted to specific locations — not left floating 
 
 | Card | Trigger Condition | Action |
 |------|-------------------|--------|
-| Scope Contraction | Repository too large / duplicate filenames / branching history | Ask which target to change, then proceed |
-| Risk | Shared components / auth / global interfaces / hot multi-editor areas | Surface; may trigger interrupt path |
-| Suggestion | User hesitates; interruption costly | Low-cost forward plan or intentional silence |
-| Silence | ≥3 consecutive high-density push rounds | Pause for digestion |
-| Skip | Attention cost > benefit | Simplify or defer |
-| Interrupt | Emergency or Sentinel-critical | Prioritize and reorder |
-| Iteration | Acceptance not closed within agreed rounds | Loop with explicit gate |
+| Scope Contraction (范围收缩牌) | Repository too large / duplicate filenames / branching history | Ask which target to change, then proceed |
+| Risk (风险牌) | Shared components / auth / global interfaces / hot multi-editor areas | Surface; may trigger interrupt path |
+| Suggestion (建议牌) | User hesitates; interruption costly | Low-cost forward plan or intentional silence |
+| Silence (留白牌) | ≥3 consecutive high-density push rounds | Pause for digestion |
+| Skip (跳过牌) | Attention cost > benefit | Simplify or defer |
+| Interrupt (插队牌) | Emergency or Sentinel-critical | Prioritize and reorder |
+| Iteration (迭代牌) | Acceptance not closed within agreed rounds | Loop with explicit gate; max 3 iterations, then escalate to Warden |
+| **Rollback (回滚牌)** | Risk exceeded original scope OR impact scope expanded beyond acceptance | Revert to last stable state; re-enter Stage 3 Thinking to re-decompose |
+
+**Card naming note**: The English names are used internally; the Chinese names in parentheses (e.g. 范围收缩牌) align with `docs/meta.md` original design. Conductor should use the Chinese names in user-facing outputs.
 
 Spine coverage reference (what each stage is for — not separate “card” names):
 

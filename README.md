@@ -1,6 +1,8 @@
 <div align="center">
 
-<h1>Meta_Kim</h1>
+<h1 style="font-size: 6em; font-weight: 900; margin-bottom: 0.2em; letter-spacing: 0.1em;">元</h1>
+<p style="font-size: 1.2em; color: #7c3aed; font-weight: 600; margin-top: 0;">META_KIM</p>
+<p style="color: #dc2626; font-weight: 700; margin-bottom: 0.5em;">⚠️ BETA VERSION — Work in Progress</p>
 
 <p>
   <a href="README.md">English</a> |

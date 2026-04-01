@@ -79,6 +79,18 @@ Notify: Genesis (boundary updates), Artisan (skill security), Librarian (data le
 - `matchHooksToAgent({ name, role, team, capabilities })` -> Hook configuration
 - `loadPlatformCapabilities()` -> Platform security capabilities
 
+## Skill Discovery Protocol
+
+**Critical**: When discovering security tools and hooks, always use the local-first Skill discovery chain before invoking any external capability:
+
+1. **Local Scan** — Scan installed project Skills via `ls .claude/skills/*/SKILL.md` and read their trigger descriptions. Also check `.claude/capability-index/global-capabilities.json` for the current runtime's indexed capabilities.
+2. **Capability Index** — Search the runtime's capability index for matching security/skill patterns before searching externally.
+3. **findskill Search** — Only if local and index results are insufficient, invoke `findskill` to search external ecosystems. Query format: describe the security capability gap in 1-2 sentences (e.g., "prompt injection detection hook", "OWASP compliance checklist").
+4. **Specialist Ecosystem** — If findskill returns no strong match, consult specialist capability lists (e.g., everything-claude-code security-review) before falling back to generic solutions.
+5. **Generic Fallback** — Only use generic prompts or broad subagent types as last resort.
+
+**Rule**: A Skill found locally always takes priority over one found externally. Document which step in the chain resolved the discovery.
+
 ## Core Principle
 
 > "Doing security as Scope Creep is the system's biggest security vulnerability" -- Security must be an independent, dedicated cross-cutting concern

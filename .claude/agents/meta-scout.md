@@ -1,7 +1,9 @@
 ---
-version: 1.0.7
+version: 1.0.8
 name: meta-scout
 description: Discover external tools and skills to close Meta_Kim capability gaps.
+type: agent
+subagent_type: general-purpose
 ---
 
 # Meta-Scout: Tool Discoverer 🔭

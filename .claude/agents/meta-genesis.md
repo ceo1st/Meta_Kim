@@ -1,7 +1,9 @@
 ---
-version: 1.0.5
+version: 1.0.6
 name: meta-genesis
 description: Design SOUL.md and the core prompt architecture for new Meta_Kim agents.
+type: agent
+subagent_type: general-purpose
 ---
 
 # Meta-Genesis: Soul Meta 🧬
@@ -120,6 +122,18 @@ Rule: another operator must be able to regenerate the same agent identity from t
 | Thinking Framework copies Workflow | "Thinking Framework" steps are identical to "Workflow" steps | = No distinction between "how to think" and "what to do" |
 | Good/bad examples missing | Output Quality section has only text description with no comparison examples | = Criteria are not actionable |
 | Describes specific tasks not domains | Core Truths / Role section contains "build X", "implement Y", "create Z page" | = Agent is a task executor, not a role with domain depth. Correct SOUL.md describes "what you know" (technologies, patterns, architectures), not "what you do" (specific features or pages) |
+
+## Skill Discovery Protocol
+
+**Critical**: Before starting SOUL.md design, always discover available Skills in priority order:
+
+1. **Local Scan** — Scan installed project Skills via `ls .claude/skills/*/SKILL.md` and read their trigger descriptions. Also check `.claude/capability-index/global-capabilities.json` for the current runtime's indexed capabilities.
+2. **Capability Index** — Search the runtime's capability index for matching agent/skill patterns before searching externally.
+3. **findskill Search** — Only if local and index results are insufficient, invoke `findskill` to search external ecosystems. Query format: describe the capability gap in 1-2 sentences.
+4. **Specialist Ecosystem** — If findskill returns no strong match, consult specialist capability lists (e.g., everything-claude-code skills) before falling back to generic solutions.
+5. **Generic Fallback** — Only use generic prompts or broad subagent types as last resort.
+
+**Rule**: A Skill found locally always takes priority over one found externally. Document which step in the chain resolved the discovery.
 
 ## Meta-Skills
 
