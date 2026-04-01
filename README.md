@@ -178,6 +178,22 @@ A valid yuan unit must be:
 
 Yuan is an architectural unit here, not decoration.
 
+### The Relationship Between Yuan And Engineering
+
+A version that fits the actual project design more closely is:
+
+**engineering is one of the domains yuan governs. The yuan system can bring engineering work into a full closed loop, but yuan itself is not the same thing as an all-powerful engineer.**
+
+Broken down:
+
+- **what engineering can do, the yuan system can usually still get done**, because it can orchestrate execution-layer agents through `Critical / Fetch / Thinking / Execution / Review / Meta-Review / Verification / Evolution`.
+- **but yuan itself is not supposed to personally execute every engineering detail**. The canonical rules are explicit: meta-theory is the dispatcher, not the executor; executable work should belong to a named owner.
+- **in the other direction, the governance actions yuan performs are not things ordinary engineering flow naturally covers**, such as owner resolution, protocol-first dispatch, review-of-review, verification closure, and Evolution writeback.
+
+If you want the shortest version, use this:
+
+**engineering is a governed domain of yuan, not a lower substitute for it; yuan is strongest at closing the loop around engineering, not at personally doing every part of engineering.**
+
 ## Core Method
 
 Meta_Kim follows one chain:
@@ -335,6 +351,38 @@ The more accurate mapping is:
 - **reviewing a document / proposal** → use `Type D`
 - **retrospectively validating an existing code artifact** → you may attach it to the review-side tail chain, but only after backfilling owner + protocol packets
 - **doing complex development the Meta_Kim way** → still starts from `Critical / Fetch / Thinking`
+
+## Does It Still Carry A Chain-Law Bias?
+
+Yes. **The current Meta_Kim still keeps an explicit chain-like spine.**
+
+If you only look at the visible surface, you still see:
+
+```text
+Critical -> Fetch -> Thinking -> Execution -> Review -> Meta-Review -> Verification -> Evolution
+```
+
+So if someone says “this is still basically an upgraded pipeline”, that is not an unreasonable reading.
+
+But the real project state is no longer “just a chain”. It is:
+
+**chain on the surface, state/event/owner/protocol control underneath.**
+
+More concretely:
+
+- **the chain is still there**: the 8-stage spine remains the most readable execution backbone
+- **state is now doing real control work**: `stageState`, `controlState`, `gateState`, `surfaceState`, `capabilityState`, and `agentInvocationState` keep the system from being just “step 1 then step 2 then step 3”
+- **events can interrupt and reroute**: skip, interrupt, intentional silence, rollback, and owner-resolution branches actively change the path
+- **parallelism weakens the single linear path**: independent work must declare `parallelGroup` and `mergeOwner` instead of defaulting to serial execution
+- **the governance tail chain corrects the run**: `Review / Meta-Review / Verification / Evolution` are not decorative stages; they judge, repair, close, and write back
+
+So the more accurate statement is not “Meta_Kim has escaped chain-law entirely”, but:
+
+**Meta_Kim is currently a hybrid of chain spine + state skeleton + event control + owner protocol + parallel orchestration.**
+
+If you want the shortest version:
+
+**it is not yet a pure state-machine system, but it is no longer a pure chain-flow system either. The chain is the readable backbone, not the whole ontology of the system.**
 
 ## The Hidden State Skeleton And Public Display Gates
 
