@@ -27,7 +27,7 @@ const EXPECTED_PUBLIC_DISPLAY_REQUIRES = [
   "consolidatedDeliverablePresent"
 ];
 
-/** Documented in AGENTS.md / CLAUDE.md — seven project hook commands. */
+/** Documented in AGENTS.md / CLAUDE.md — project hook commands (Stop may list multiple). */
 const EXPECTED_CLAUDE_HOOK_COMMANDS = [
   "node .claude/hooks/block-dangerous-bash.mjs",
   "node .claude/hooks/pre-git-push-confirm.mjs",
@@ -35,7 +35,8 @@ const EXPECTED_CLAUDE_HOOK_COMMANDS = [
   "node .claude/hooks/post-typecheck.mjs",
   "node .claude/hooks/post-console-log-warn.mjs",
   "node .claude/hooks/subagent-context.mjs",
-  "node .claude/hooks/stop-console-log-audit.mjs"
+  "node .claude/hooks/stop-console-log-audit.mjs",
+  "node .claude/hooks/stop-completion-guard.mjs"
 ];
 
 const forbiddenRuntimeMarkers = [
@@ -54,14 +55,16 @@ const EXPECTED_AGENT_WEAPON_MARKERS = {
     "Participation Summary",
     "Gate Decisions",
     "Escalation Decisions",
-    "Final Synthesis"
+    "Final Synthesis",
+    "Governed run artifact"
   ],
   "meta-conductor": [
     "## Required Deliverables",
     "Dispatch Board",
     "Card Deck",
     "Worker Task Board",
-    "Handoff Plan"
+    "Handoff Plan",
+    "Governed run artifact pointer"
   ],
   "meta-genesis": [
     "## Required Deliverables",

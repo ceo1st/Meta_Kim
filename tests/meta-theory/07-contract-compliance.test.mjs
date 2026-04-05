@@ -241,6 +241,16 @@ describe("workflow-contract.json — schema compliance", async () => {
     assert.ok(requiredPackets.includes("summaryPacket"));
   });
 
+  test("intentPacket protocol and conditional governance flows are defined", () => {
+    const when = contract.runDiscipline?.protocolFirst?.intentPacketRequiredWhenGovernanceFlows ?? [];
+    assert.ok(when.includes("complex_dev"));
+    assert.ok(when.includes("meta_analysis"));
+    const fields = contract.protocols?.intentPacket?.requiredFields ?? [];
+    for (const field of ["trueUserIntent", "successCriteria", "nonGoals", "intentPacketVersion"]) {
+      assert.ok(fields.includes(field), `intentPacket missing ${field}`);
+    }
+  });
+
   test("finding closure rules are explicit", () => {
     const closure = contract.runDiscipline?.findingClosure ?? {};
     assert.equal(closure.findingIdRequired, true);

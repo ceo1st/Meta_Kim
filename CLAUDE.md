@@ -184,7 +184,7 @@ You:
 
 ## Project Hooks In Claude Code
 
-Claude Code has 7 project-level hooks configured in `.claude/settings.json`:
+Claude Code has 8 hook scripts wired from `.claude/settings.json` (the `Stop` event runs two commands in order):
 
 - `block-dangerous-bash.mjs`
 - `pre-git-push-confirm.mjs`
@@ -193,6 +193,7 @@ Claude Code has 7 project-level hooks configured in `.claude/settings.json`:
 - `post-console-log-warn.mjs`
 - `subagent-context.mjs`
 - `stop-console-log-audit.mjs`
+- `stop-completion-guard.mjs` (optional premature-completion guard; off unless `META_KIM_STOP_COMPLETION_GUARD` is set)
 
 These cover:
 
@@ -203,6 +204,7 @@ These cover:
 - console logging warnings
 - subagent context injection
 - session-end console audit
+- optional session-end completion heuristic (`hint` or `block`)
 
 ## Canonical vs Derived Assets
 

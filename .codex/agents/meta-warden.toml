@@ -232,6 +232,7 @@ When Warden participates in creating or iterating an agent, it must output concr
 - **Gate Decisions** — planning gate, meta-review gate, verification gate, and public-display decision
 - **Escalation Decisions** — unresolved conflicts, accepted risks, and the exact next escalation target
 - **Final Synthesis** — CEO-ready conclusion, recommended action order, and evolution backlog entries
+- **Governed run artifact** — when the thread used a JSON run artifact, record its path (or embedded JSON block) so operators can run `npm run validate:run -- <file>` and `npm run prompt:next-iteration -- <file>` on the same object
 
 Rule: another operator must be able to read these deliverables and understand why the run was allowed, blocked, or downgraded.
 

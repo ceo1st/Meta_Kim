@@ -13,6 +13,7 @@ const artifactArg = process.argv[2];
 const PACKET_LOCATIONS = {
   runHeader: "runHeader",
   taskClassification: "taskClassification",
+  intentPacket: "intentPacket",
   cardPlanPacket: "cardPlanPacket",
   dispatchBoard: "dispatchBoard",
   workerTaskPacket: "workerTaskPackets",
@@ -98,6 +99,30 @@ function validateTaskClassification(contract, taskClassification) {
       "ownerRequired=false is only legal for pure-query runs."
     );
   }
+}
+
+function validateIntentPacketWhenRequired(contract, artifact) {
+  const when = contract.runDiscipline.protocolFirst.intentPacketRequiredWhenGovernanceFlows;
+  if (!Array.isArray(when) || when.length === 0) {
+    return;
+  }
+  const flow = artifact.taskClassification?.governanceFlow;
+  if (!when.includes(flow)) {
+    return;
+  }
+  const intent = artifact.intentPacket;
+  ensure(intent && typeof intent === "object", `intentPacket is required when governanceFlow is ${flow}.`);
+  ensureFields(intent, contract.protocols.intentPacket.requiredFields, "intentPacket");
+  for (const field of ["trueUserIntent", "successCriteria", "nonGoals"]) {
+    ensure(
+      typeof intent[field] === "string" && intent[field].trim().length >= 1,
+      `intentPacket.${field} must be a non-empty string.`
+    );
+  }
+  ensure(
+    intent.intentPacketVersion === "v1",
+    'intentPacket.intentPacketVersion must be "v1" for this contract revision.'
+  );
 }
 
 function validateCardPlan(contract, artifact) {
@@ -407,6 +432,7 @@ async function main() {
   validateRequiredPackets(contract, artifact);
   ensureFields(artifact.runHeader, contract.protocols.runHeader.requiredFields, "runHeader");
   validateTaskClassification(contract, artifact.taskClassification);
+  validateIntentPacketWhenRequired(contract, artifact);
   validateCardPlan(contract, artifact);
   ensureFields(artifact.dispatchBoard, contract.protocols.dispatchBoard.requiredFields, "dispatchBoard");
   validateWorkerPackets(contract, artifact);

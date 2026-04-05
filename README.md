@@ -543,6 +543,26 @@ Each run must now also emit an explicit `writebackDecision`:
 11. **Validates real runs, not just the contract**: `validate:run` checks whether a recorded run artifact actually satisfies the full packet chain
 12. **Writes learning back into the system**: reusable patterns, scars, and owner / skill / contract adjustments are persisted
 
+## Governed run artifacts (complex work)
+
+For runs where `governanceFlow` is `complex_dev` or `meta_analysis`, treat a **single JSON run artifact** as the source of truth alongside chat:
+
+1. During Thinking, capture **`intentPacket`** (`trueUserIntent`, `successCriteria`, `nonGoals`, `intentPacketVersion: v1`) — intent lock-in before heavy execution (see `contracts/workflow-contract.json` → `protocols.intentPacket` and `runDiscipline.protocolFirst.intentPacketRequiredWhenGovernanceFlows`).
+2. Keep the full packet chain required by `runDiscipline.protocolFirst.requiredPackets` in that file (or merge incrementally each round).
+3. Before claiming **public-ready** or **done**, run:
+
+```bash
+npm run validate:run -- path/to/your-run.json
+```
+
+4. If validation fails or findings are still open, get a concrete next-iteration checklist:
+
+```bash
+npm run prompt:next-iteration -- path/to/your-run.json
+```
+
+Optional **Stop hook** guard (off by default): set `META_KIM_STOP_COMPLETION_GUARD=hint` for stderr-only reminders, or `=block` to force another turn when the last assistant text claims completion without governance cues. See `.claude/hooks/stop-completion-guard.mjs`.
+
 ## The Eight Yuan / Meta Agents
 
 | Agent              | Main job                                          | Human shorthand               |
@@ -691,7 +711,7 @@ So:
 
 ## Hooks (Claude Code)
 
-Meta_Kim ships 7 project-level hooks in `.claude/settings.json`:
+Meta_Kim ships 8 hook command scripts in `.claude/settings.json` (the `Stop` event runs two of them in sequence):
 
 | Hook                           | Type                   | Purpose                                                             |
 | ------------------------------ | ---------------------- | ------------------------------------------------------------------- |
@@ -702,6 +722,7 @@ Meta_Kim ships 7 project-level hooks in `.claude/settings.json`:
 | `post-console-log-warn.mjs`  | PostToolUse/Edit,Write | warn about `console.log` in edited files                          |
 | `subagent-context.mjs`       | SubagentStart          | inject project context into spawned subagents                       |
 | `stop-console-log-audit.mjs` | Stop                   | audit modified files for `console.log` before the session ends    |
+| `stop-completion-guard.mjs`  | Stop                   | optional weak guard against premature “done” (off unless env set)   |
 
 Codex and OpenClaw use their own native mechanisms for equivalent behavior.
 
@@ -953,6 +974,7 @@ The system routes each request through the matching governance stage.
 | `npm run test:meta-theory`             | after changing `meta-theory`, contracts, or its tests | runs `tests/meta-theory/*.test.mjs`                               |
 | `npm run validate`                     | before committing                                | runs static integrity validation                                      |
 | `npm run validate:run -- <run.json>`   | when you want to verify a recorded real run      | validates packet lineage, summary/public-ready truthfulness, and finding closure |
+| `npm run prompt:next-iteration -- <run.json>` | when a run failed validation or findings are open | prints the next closure checklist from the artifact                         |
 | `npm run check`                        | when you want a quick static pass                | runs `check:runtimes + validate`                                    |
 | `npm run eval:agents`                  | for fast runtime smoke                           | runs CLI/config/hook/runtime-registry smoke without LLM prompt checks |
 | `npm run eval:agents:live`             | when you want live runtime acceptance            | runs the slower Claude / Codex / OpenClaw prompt-backed evaluation    |

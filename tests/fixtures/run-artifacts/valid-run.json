@@ -26,6 +26,12 @@
     "classifierVersion": "v2",
     "complexity": "medium"
   },
+  "intentPacket": {
+    "trueUserIntent": "Harden refresh-token handling so secrets never live inline in source; one consolidated deliverable for the auth module.",
+    "successCriteria": "Tests pass with env-only secrets; review finding finding-001 can be verified_closed; run artifact validates with npm run validate:run.",
+    "nonGoals": "No unrelated auth flows (login UI, OAuth providers); no production deploy in this run.",
+    "intentPacketVersion": "v1"
+  },
   "cardPlanPacket": {
     "dealerOwner": "meta-conductor",
     "dealerMode": "conductor-primary-warden-escalation",

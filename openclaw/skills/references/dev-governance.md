@@ -65,6 +65,24 @@ Before Stage 4 starts, Thinking must produce explicit protocol artifacts for the
 
 If these protocol artifacts do not exist, the run is not ready for Execution.
 
+For `governanceFlow` in `complex_dev` or `meta_analysis`, the machine-validated JSON artifact must also include **`intentPacket`** (`trueUserIntent`, `successCriteria`, `nonGoals`, `intentPacketVersion: v1`) before Execution — see `contracts/workflow-contract.json` (`protocols.intentPacket`, `runDiscipline.protocolFirst.intentPacketRequiredWhenGovernanceFlows`).
+
+---
+
+## 1B. Multi-iteration closure (until gates pass)
+
+When work is not done after one pass (open review findings, `verificationPacket.verified !== true`, or `npm run validate:run` fails), treat the run like a **Ralph-style loop** without inventing new stage names:
+
+1. **Execution / Revision** — address the highest-severity open findings; update code or docs as needed.
+2. **Review** — refresh `reviewPacket` and finding `closeState` transitions (`open` → `fixed_pending_verify` as appropriate).
+3. **Verification** — refresh `revisionResponses`, `verificationResults`, and `closeFindings` until every finding is `verified_closed` or `accepted_risk`.
+4. **Summary** — align `summaryPacket` with `contracts/workflow-contract.json` `runDiscipline.publicDisplayRequires` before setting `publicReady=true`.
+5. **Validate** — run `npm run validate:run -- <artifact.json>`; if it fails, run `npm run prompt:next-iteration -- <artifact.json>` and feed the printed checklist back into the orchestrator.
+
+Stop when `validate:run` passes **or** the user explicitly accepts risk with documented `accepted_risk` and honest `publicReady=false`.
+
+Optional Claude **Stop hook** (project default off): `META_KIM_STOP_COMPLETION_GUARD=hint` logs a stderr reminder when the last assistant message claims completion without governance cues; `=block` returns `{"decision":"block",...}` so the model continues. See `.claude/hooks/stop-completion-guard.mjs`.
+
 ---
 
 ## 2. CORE 8-STAGE EXECUTION SPINE (Detailed)

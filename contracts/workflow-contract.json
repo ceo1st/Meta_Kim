@@ -402,7 +402,12 @@
         "verificationPacket",
         "summaryPacket",
         "evolutionWritebackPacket"
-      ]
+      ],
+      "intentPacketRequiredWhenGovernanceFlows": [
+        "complex_dev",
+        "meta_analysis"
+      ],
+      "description": "intentPacket is required in run artifacts when taskClassification.governanceFlow is listed in intentPacketRequiredWhenGovernanceFlows (IntentGate-style intent lock-in)."
     },
     "findingClosure": {
       "findingIdRequired": true,
@@ -520,6 +525,15 @@
         "classifierVersion",
         "complexity"
       ]
+    },
+    "intentPacket": {
+      "requiredFields": [
+        "trueUserIntent",
+        "successCriteria",
+        "nonGoals",
+        "intentPacketVersion"
+      ],
+      "description": "Structured user-intent lock before heavy execution: what they really want, how we know we are done, and explicit out-of-scope items."
     },
     "cardPlanPacket": {
       "requiredFields": [

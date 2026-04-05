@@ -463,6 +463,7 @@ When Conductor is involved in creating or iterating an agent or department workf
 - **Card Deck** — stage cards, priorities, skip conditions, interrupt triggers, and delivery shell choices
 - **Worker Task Board / Task Packets** — one standard task board per worker with owner, dependency, parallel-group, and merge-owner declarations
 - **Handoff Plan** — exact handoff order showing how every worker serves the same primary deliverable
+- **Governed run artifact pointer** — if this run maintains machine-validated JSON (`complex_dev` / `meta_analysis`), name the artifact file path or paste location so `validate:run` / `prompt:next-iteration` stay aligned with the live packet state
 
 Rule: if the board allows multiple unrelated topics, detached worker tasks, or missing visual/material strategy, the conclusion must be `Requires Re-scheduling`.
 
