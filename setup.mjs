@@ -29,7 +29,7 @@ const SKILLS = [
   // 社区高星项目
   { name: 'superpowers', repo: 'obra/superpowers' },
   { name: 'everything-claude-code', repo: 'affaan-m/everything-claude-code' },
-  { name: 'planning-with-files', repo: 'OthmanAdi/planning-with-files' },
+  { name: 'planning-with-files', repo: 'OthmanAdi/planning-with-files', subdir: 'skills/planning-with-files' },
   { name: 'cli-anything', repo: 'HKUDS/CLI-Anything' },
   { name: 'gstack', repo: 'garrytan/gstack' },
   // Anthropic 官方 (subdir)

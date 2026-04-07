@@ -97,7 +97,8 @@ echo ""
 echo "--- 社区高星项目 ---"
 install_skill "superpowers"            "obra/superpowers"
 install_skill "everything-claude-code" "affaan-m/everything-claude-code"
-install_skill "planning-with-files"    "OthmanAdi/planning-with-files"
+# SKILL.md lives under skills/planning-with-files/ (not repo root). Whole-repo clone breaks CC discovery.
+install_skill_from_subdir "planning-with-files" "OthmanAdi/planning-with-files" "skills/planning-with-files"
 install_skill "cli-anything"           "HKUDS/CLI-Anything"
 install_skill "gstack"                 "garrytan/gstack"
 

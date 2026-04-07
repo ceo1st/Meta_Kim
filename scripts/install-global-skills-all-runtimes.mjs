@@ -30,14 +30,24 @@ const pluginsOnly = process.argv.includes("--plugins-only");
 const skipPlugins =
   process.argv.includes("--skip-plugins") || process.argv.includes("--no-plugins");
 
-/** Keep in sync with install-deps.sh */
+/**
+ * Keep in sync with install-deps.sh / setup.mjs.
+ * Use `subdir` when the installable skill lives under a path like skills/<name>/ (repo root has no SKILL.md).
+ * Note: Hooks in SKILL frontmatter only apply once the skill is discoverable. User-level commands under
+ * a repo’s .claude/commands are not merged by cloning into ~/.claude/skills/<id> — use `claude plugin install`
+ * for plugin bundles (e.g. superpowers@claude-plugins-official).
+ */
 const SKILL_REPOS = [
   { id: "agent-teams-playbook", repo: "https://github.com/KimYx0207/agent-teams-playbook.git" },
   { id: "findskill", repo: "https://github.com/KimYx0207/findskill.git" },
   { id: "hookprompt", repo: "https://github.com/KimYx0207/HookPrompt.git" },
   { id: "superpowers", repo: "https://github.com/obra/superpowers.git" },
   { id: "everything-claude-code", repo: "https://github.com/affaan-m/everything-claude-code.git" },
-  { id: "planning-with-files", repo: "https://github.com/OthmanAdi/planning-with-files.git" },
+  {
+    id: "planning-with-files",
+    repo: "https://github.com/OthmanAdi/planning-with-files.git",
+    subdir: "skills/planning-with-files",
+  },
   { id: "cli-anything", repo: "https://github.com/HKUDS/CLI-Anything.git" },
   { id: "gstack", repo: "https://github.com/garrytan/gstack.git" },
 ];
@@ -119,6 +129,38 @@ async function installGitSkill(targetDir, repoUrl) {
   console.log(`[OK] cloned ${targetDir}`);
 }
 
+async function installGitSkillFromSubdir(targetDir, repoUrl, subdirPath) {
+  assertUnderHome(targetDir);
+  if ((await pathExists(targetDir)) && !updateMode) {
+    console.log(`[SKIP] exists ${targetDir}`);
+    return;
+  }
+
+  if (dryRun) {
+    console.log(`[dry-run] sparse install ${repoUrl} (${subdirPath}) -> ${targetDir}`);
+    return;
+  }
+
+  if ((await pathExists(targetDir)) && updateMode) {
+    await fs.rm(targetDir, { recursive: true, force: true });
+  }
+
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "meta-kim-skill-"));
+  try {
+    runGit(["clone", "--depth", "1", "--filter=blob:none", "--sparse", repoUrl, tmp]);
+    runGit(["sparse-checkout", "set", subdirPath], { cwd: tmp });
+    const src = path.join(tmp, ...subdirPath.split("/").filter(Boolean));
+    if (!(await pathExists(src))) {
+      throw new Error(`Sparse checkout path missing after clone: ${src}`);
+    }
+    await fs.mkdir(path.dirname(targetDir), { recursive: true });
+    await fs.cp(src, targetDir, { recursive: true, force: true });
+    console.log(`[OK] ${path.basename(targetDir)} -> ${targetDir} (from ${subdirPath})`);
+  } finally {
+    await fs.rm(tmp, { recursive: true, force: true });
+  }
+}
+
 async function installSkillCreator(targetBaseSkills) {
   const id = "skill-creator";
   const targetDir = path.join(targetBaseSkills, id);
@@ -163,8 +205,13 @@ async function installAllSkillsForRuntime(label, skillsRoot) {
     await fs.mkdir(skillsRoot, { recursive: true });
   }
 
-  for (const { id, repo } of SKILL_REPOS) {
-    await installGitSkill(path.join(skillsRoot, id), repo);
+  for (const spec of SKILL_REPOS) {
+    const targetDir = path.join(skillsRoot, spec.id);
+    if (spec.subdir) {
+      await installGitSkillFromSubdir(targetDir, spec.repo, spec.subdir);
+    } else {
+      await installGitSkill(targetDir, spec.repo);
+    }
   }
   await installSkillCreator(skillsRoot);
 }
