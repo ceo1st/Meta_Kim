@@ -16,11 +16,14 @@ import { homedir, platform, tmpdir } from 'node:os'
 // ── Config ──────────────────────────────────────────────
 
 const SKILL_OWNER = process.env.META_KIM_SKILL_OWNER || 'KimYx0207'
+// 每个条目的 name 对应独立目录 ~/.claude/skills/<name>/，技能之间不会重名。
+// subdir 仅表示上游仓库里要 sparse 检出并拷贝到该目录的「源子路径」，不是多个技能共用一个文件夹。
 const SKILLS_DIR = join(homedir(), '.claude', 'skills')
 const PROJECT_DIR = resolve(import.meta.dirname || '.')
 
 const PROXY = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || ''
 
+// KimYx0207/findskill：仓库根无 SKILL.md，按平台选包——windows/ 为 Windows；original/ 为 macOS / Linux / *nix 等其余平台。
 const findskillPackSubdir = platform() === 'win32' ? 'windows' : 'original'
 
 const SKILLS = [

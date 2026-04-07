@@ -37,6 +37,7 @@ const skipPlugins =
  * a repo’s .claude/commands are not merged by cloning into ~/.claude/skills/<id> — use `claude plugin install`
  * for plugin bundles (e.g. superpowers@claude-plugins-official).
  */
+// findskill 上游分包：win32 → windows/；darwin、linux、aix、freebsd 等 → original/（非 Windows 统一走 original，不是「只支持 Windows」）。
 const FINDSKILL_SUBDIR = os.platform() === "win32" ? "windows" : "original";
 
 const SKILL_REPOS = [

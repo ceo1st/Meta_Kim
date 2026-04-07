@@ -90,7 +90,8 @@ echo ""
 
 echo "--- 项目默认依赖 ---"
 install_skill "agent-teams-playbook" "$PROJECT_SKILL_OWNER/agent-teams-playbook"
-# findskill: SKILL.md is under original/ (Unix) or windows/ (Git Bash / native Windows); not at repo root.
+# findskill：仓库根无 SKILL.md；上游提供 original/（macOS、Linux、*BSD、WSL 等）与 windows/（本机 Windows / Git Bash·MSYS·Cygwin）。
+# 安装目标仍是 ~/.claude/skills/findskill/，与其它技能目录隔离。
 FINDSKILL_SUBDIR="original"
 uname_s="$(uname -s 2>/dev/null || echo unknown)"
 case "$uname_s" in
