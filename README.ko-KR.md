@@ -19,19 +19,15 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green"/>
 </p>
 
-**AI 코딩 보조를 위한 거버넌스 레이어입니다. 복잡한 작업을 제대로 끝내기 위해 Claude Code, Codex, OpenClaw 세 런타임에서 동일한 규율을 유지합니다.**
-
-많은 도구는 바로 코드부터 씁니다. Meta_Kim은 그 사이에 요구를 명확히 하고, 누가 무엇을 할지 계획한 뒤, 검토까지 거치는 단계를 둡니다.
-
-그 결과 멀티 파일 변경 실패를 줄이고, 에이전트 책임을 분명히 하며, 일회성 해킹 대신 재사용 가능한 패턴을 남깁니다.
-
 > **정본(최신·전체)**: 영어는 [README.md](README.md), 中文는 [README.zh-CN.md](README.zh-CN.md). 이 문서는 한국어 독자를 위한 안내입니다.
 
 </div>
 
 ## 한눈에 보기
 
-- 공개 진입점은 하나, 뒤에는 8개의 메타/元 에이전트
+**AI 코딩 보조를 위한 거버넌스 레이어**입니다. Claude Code, Codex, OpenClaw 세 런타임에서 같은 규율을 유지해 복잡한 작업을 **먼저 제대로** 끝냅니다. 많은 도구는 곧바로 코드부터 쓰지만, Meta_Kim은 그 앞에 명확화·탐색·실행·검토·진화 단계를 둡니다.
+
+- 공개 진입점은 하나, 뒤에는 메타 에이전트 8개（**영어 개념명은 Meta**. 한자 「元」는 로고·정본 용어）
 - **하나의 거버넌스 규율**을 세 런타임에 투영
 - 복잡한 작업 흐름: 명확화 → 탐색 → 실행 → 검토 → 진화
 - **네 가지 철칙**: Critical > 추측, Fetch > 가정, Thinking > 성급함, Review > 맹신
@@ -48,9 +44,7 @@
 
 ## 이 프로젝트가 하는 일
 
-“AI가 코드를 더 많이 쓰게 한다”가 핵심이 아닙니다. 복잡한 작업에서 흔한 실패(모호한 요청→추측, 경계를 넘나드는 변경, 멀티 런타임 설정 어긋남, 검토·검증·학습 부재)를 줄입니다.
-
-핵은 **실행 전 의도 증폭(intent amplification)**입니다. 범위·제약·산출물·위험을 드러내고, 하나의 거대 컨텍스트에 몰아넣지 않고 역할에 맡깁니다.
+핵심은 “코드를 더 쓰게 하는 것”이 아니라, 복잡 작업에서 흔한 실패(모호한 요청→추측, 경계 넘나드는 변경, 멀티 런타임 불일치, 검토·검증·학습 부재)를 줄이는 것입니다. 중심 개념은 **실행 전 의도 증폭(intent amplification)**이며, 요지는 위「한눈에 보기」와 영어 [README.md](README.md)의 *What This Project Is*와 같습니다.
 
 ## 메타 아키텍처 관점
 
@@ -187,7 +181,7 @@ flowchart TD
 
 ```mermaid
 flowchart TB
-  Y["Yuan smallest governable unit"] --> OM["Org mirror division escalation"]
+  Y["Meta (元) smallest governable unit"] --> OM["Org mirror division escalation"]
   OM --> RO["Rhythm conductor stageState parallel"]
   RO --> IA["Intent amplification closure"]
   Y -.-> R1["split"]
@@ -247,7 +241,7 @@ openclaw agent --local --agent meta-warden --message "..." --json --timeout 120
 
 ```mermaid
 flowchart LR
-    A["Yuan / 元"] --> B["Organizational Mirroring"]
+    A["Meta (元)"] --> B["Organizational Mirroring"]
     B --> C["Rhythm Orchestration"]
     C --> D["Intent Amplification"]
 ```
@@ -307,7 +301,7 @@ flowchart TD
     D --> D2[read dispatch report]
 ```
 
-## 여덟 메타/元 에이전트
+## 여덟 메타 에이전트
 
 | 에이전트 | 주요 역할 |
 | -------- | --------- |
@@ -324,6 +318,23 @@ flowchart TD
 
 ## 빠른 시작(요점)
 
+**clone 없이 (`npx`가 임시로 가져와 `setup.mjs`와 동일 계열 실행):**
+
+```bash
+npx --yes github:KimYx0207/Meta_Kim meta-kim
+```
+
+**UI 언어 고정 + 환경 점검만 (쓰기·설치 없음):** `--lang` 은 `en` / `zh-CN` / `ja-JP` / `ko-KR`.
+
+| UI 언어 | 명령 |
+| --- | --- |
+| English | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang en --check` |
+| 简体中文 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang zh-CN --check` |
+| 日本語 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ja-JP --check` |
+| 한국어 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ko-KR --check` |
+
+**clone 후:**
+
 ```bash
 git clone https://github.com/KimYx0207/Meta_Kim.git
 cd Meta_Kim
@@ -333,12 +344,15 @@ node setup.mjs
 | 사용법 | 설명 |
 | --- | --- |
 | `node setup.mjs` | 대화형 설정 (언어 선택 → 설치/업데이트/확인) |
-| `node setup.mjs --lang ko-KR` | 언어 선택 건너뛰고 한국어로 실행 |
+| `node setup.mjs --lang en` | 언어 선택 생략, UI English |
+| `node setup.mjs --lang zh-CN` | 언어 선택 생략, UI 简体中文 |
+| `node setup.mjs --lang ja-JP` | 언어 선택 생략, UI 日本語 |
+| `node setup.mjs --lang ko-KR` | 언어 선택 생략, UI 한국어 |
 | `node setup.mjs --update` | 모든 스킬과 의존성 업데이트 |
 | `node setup.mjs --check` | 환경 + 의존성 + 런타임 간 동기화 확인 |
 | `node setup.mjs --silent` | 비대화형 모드 (CI/스크립트용) |
 
-`node setup.mjs`는 대화형 마법사를 시작합니다: 언어 선택 (en / zh-CN / ja-JP / ko-KR) → 작업 메뉴 (설치/업데이트/확인/종료). 설치 흐름은 환경 확인, `npm install`, 9개 글로벌 메타 스킬 설치, 의존성 및 런타임 간 동기화 상태 검증 (Claude Code / Codex / OpenClaw) 후 `validate`를 실행합니다. 확인 모드 (`--check`)는 전체 사전 점검을 실행합니다: 환경, 9개 스킬 의존성 검증, 런타임 간 동기화 상태 — 아무것도 수정하지 않습니다.
+마법사 전체 흐름과 `--check` 의미는 위 표와 같습니다. 긴 설명은 [README.md Quick Start / Manual setup](README.md#quick-start-clone-to-working-in-5-minutes)을 보세요.
 
 > **타사 메타 스킬 findskill:** **이 저장소(Meta_Kim)를 정본으로 삼으세요.** `setup.mjs`는 **`KimYx0207/findskill`**을 `~/.claude/skills/findskill/`에 설치합니다. **이 저장소의 문서·에이전트는 이름을 `findskill`로만 통일**합니다. 다른 채널에서 같은 기능을 중복 설치하지 마세요.
 

@@ -19,19 +19,15 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green"/>
 </p>
 
-**A governance layer for AI coding assistants — designed to make complex tasks done right, with one unified discipline that runs on Claude Code, Codex, and OpenClaw.**
+</div>
 
 <!-- Maintainer: suggested GitHub About (avoid implying “only a mirror stack”). Example: Governance layer for AI coding: meta agents, workflow contract, meta-theory; canonical in .claude/, with generated companion assets for Codex and OpenClaw. -->
 
-Most AI coding tools jump straight to writing code. Meta_Kim adds a step in between: clarify what you actually need, plan who does what, then execute with review.
-
-The result: fewer broken multi-file changes, clearer agent responsibilities, and reusable patterns instead of one-shot hacks.
-
-</div>
-
 ## At a Glance
 
-- 8 specialized yuan / meta agents behind one public entry point
+Meta_Kim is a **governance layer for AI coding assistants**: one unified discipline on Claude Code, Codex, and OpenClaw so complex work is **done right before it is done fast**. Most tools jump straight to code; Meta_Kim inserts clarify → search capabilities → plan → execute → review → evolve.
+
+- 8 specialized meta agents behind one public entry point
 - **One unified governance discipline** projected across Claude Code, Codex, and OpenClaw
 - Every complex task goes through: clarify -> search -> execute -> review -> evolve
 - **Four iron rules**: Critical > Guessing, Fetch > Assuming, Thinking > Rushing, Review > Trusting
@@ -226,11 +222,11 @@ flowchart TD
   UP -->|No| E2
 ```
 
-### 6. Core method chain (Yuan → mirror → rhythm → amplification) expanded
+### 6. Core method chain (Meta → mirror → rhythm → amplification) expanded
 
 ```mermaid
 flowchart TB
-  Y["Yuan smallest governable unit"] --> OM["Org mirror division escalation"]
+  Y["Meta (元) smallest governable unit"] --> OM["Org mirror division escalation"]
   OM --> RO["Rhythm conductor stageState parallel"]
   RO --> IA["Intent amplification closure"]
   Y -.-> R1["split"]
@@ -239,7 +235,7 @@ flowchart TB
   IA -.-> R4["done"]
 ```
 
-## Author and Support
+## Contact and support
 
 <div align="center">
   <img src="images/%E4%BA%8C%E7%BB%B4%E7%A0%81%E5%9F%BA%E7%A1%80%E6%AC%BE.png" alt="Contact QR" width="560"/>
@@ -272,7 +268,7 @@ flowchart TB
   </table>
 </div>
 
-## Paper and Method Basis
+### Paper and method basis
 
 The methodological foundation comes from evaluation work on meta-based intent amplification:
 
@@ -342,7 +338,7 @@ In Meta_Kim:
 
 **Meta (`元`) = the smallest governable unit that exists to support intent amplification**
 
-A valid yuan unit must be:
+A valid meta unit must be:
 
 - independently understandable
 - small enough to stay controllable
@@ -350,23 +346,23 @@ A valid yuan unit must be:
 - replaceable without collapsing the whole system
 - reusable across workflows
 
-Yuan is an architectural unit here, not decoration.
+Meta is an architectural unit here, not decoration.
 
-### The Relationship Between Yuan And Engineering
+### Meta and engineering
 
 A version that fits the actual project design more closely is:
 
-**engineering is one of the domains yuan governs. The yuan system can bring engineering work into a full closed loop, but yuan itself is not the same thing as an all-powerful engineer.**
+**Engineering is one of the domains meta governs. The meta system can bring engineering work into a full closed loop, but meta itself is not the same thing as an all-powerful engineer.**
 
 Broken down:
 
-- **what engineering can do, the yuan system can usually still get done**, because it can orchestrate execution-layer agents through `Critical / Fetch / Thinking / Execution / Review / Meta-Review / Verification / Evolution`.
-- **but yuan itself is not supposed to personally execute every engineering detail**. The canonical rules are explicit: meta-theory is the dispatcher, not the executor; executable work should belong to a named owner.
-- **in the other direction, the governance actions yuan performs are not things ordinary engineering flow naturally covers**, such as owner resolution, protocol-first dispatch, review-of-review, verification closure, and Evolution writeback.
+- **What engineering can do, the meta system can usually still get done**, because it can orchestrate execution-layer agents through `Critical / Fetch / Thinking / Execution / Review / Meta-Review / Verification / Evolution`.
+- **But meta itself is not supposed to personally execute every engineering detail**. The canonical rules are explicit: meta-theory is the dispatcher, not the executor; executable work should belong to a named owner.
+- **In the other direction, the governance actions meta performs are not things ordinary engineering flow naturally covers**, such as owner resolution, protocol-first dispatch, review-of-review, verification closure, and Evolution writeback.
 
 If you want the shortest version, use this:
 
-**engineering is a governed domain of yuan, not a lower substitute for it; yuan is strongest at closing the loop around engineering, not at personally doing every part of engineering.**
+**Engineering is a governed domain of meta, not a lower substitute for it; meta is strongest at closing the loop around engineering, not at personally doing every part of engineering.**
 
 ## Core Method
 
@@ -374,19 +370,19 @@ Meta_Kim follows one chain:
 
 ```mermaid
 flowchart LR
-    A["Yuan / 元"] --> B["Organizational Mirroring"]
+    A["Meta (元)"] --> B["Organizational Mirroring"]
     B --> C["Rhythm Orchestration"]
     C --> D["Intent Amplification"]
 ```
 
-- `Yuan (元)`: how to split
+- `Meta (元)`: how to split
 - `Organizational Mirroring`: how to structure
 - `Rhythm Orchestration`: how to dispatch
 - `Intent Amplification`: how to complete
 
 Remove any one of these and the method is incomplete.
 
-**More diagrams:** see [Visual maps (how the pieces connect)](#meta-kim-visual-maps-en) earlier in this file — maintenance loop, entry vs skill, per-stage spine, two-layer workflows, task routing, and the expanded Yuan chain.
+**More diagrams:** see [Visual maps (how the pieces connect)](#meta-kim-visual-maps-en) earlier in this file — maintenance loop, entry vs skill, per-stage spine, two-layer workflows, task routing, and the expanded Meta chain.
 
 ## Development Governance Spine (The Core - Read This First)
 
@@ -710,7 +706,7 @@ Optional **soft todo gate** during `validate:run`: set `META_KIM_SOFT_PUBLIC_REA
 
 Optional **soft comment-review gate**: set `META_KIM_SOFT_COMMENT_REVIEW=1`. When `summaryPacket.publicReady` is true, `summaryPacket.commentReviewAcknowledged` must be `true`. See `softCommentReviewGate` in the contract.
 
-## The Eight Yuan / Meta Agents
+## The eight meta agents
 
 | Agent              | Main job                                          | Human shorthand               |
 | ------------------ | ------------------------------------------------- | ----------------------------- |
@@ -895,11 +891,14 @@ Codex and OpenClaw use their own native mechanisms for equivalent behavior.
 npx --yes github:KimYx0207/Meta_Kim meta-kim
 ```
 
-Chinese UI + check-only example:
+**UI language + check only (no writes, no install):** `--lang` matches `setup.mjs`: `en`, `zh-CN`, `ja-JP`, `ko-KR`.
 
-```bash
-npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang zh-CN --check
-```
+| UI language | Command |
+| --- | --- |
+| English | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang en --check` |
+| 简体中文 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang zh-CN --check` |
+| 日本語 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ja-JP --check` |
+| 한국어 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ko-KR --check` |
 
 **Classic flow** (clone, then enter the directory):
 
@@ -913,18 +912,23 @@ node setup.mjs
 | ---------------------------------- | -------------------------------------------------------- |
 | `npx --yes github:KimYx0207/Meta_Kim meta-kim` | Same as `node setup.mjs`; skips manual `git clone` / `cd` |
 | `node setup.mjs`                   | Interactive setup (language → install / update / check)  |
-| `node setup.mjs --lang zh-CN`     | Skip language selection, use Chinese                     |
+| `node setup.mjs --lang en`         | Skip language selection, English UI                      |
+| `node setup.mjs --lang zh-CN`      | Skip language selection, Chinese UI                      |
+| `node setup.mjs --lang ja-JP`      | Skip language selection, Japanese UI                     |
+| `node setup.mjs --lang ko-KR`      | Skip language selection, Korean UI                       |
 | `node setup.mjs --update`          | Update all skills and dependencies                       |
 | `node setup.mjs --check`           | Environment + dependency + cross-runtime sync check      |
 | `node setup.mjs --silent`          | Non-interactive (CI / scripts)                           |
 
-`node setup.mjs` launches an interactive wizard: language selection (en / zh-CN / ja-JP / ko-KR) → action menu (install / update / check / exit). The install flow runs environment checks, `npm install`, installs the 9 global meta-skills, verifies dependencies and cross-runtime sync status (Claude Code / Codex / OpenClaw), then runs `validate`. The check mode (`--check`) performs a full preflight: environment, 9-skill dependency verification, and cross-runtime sync status — all without modifying anything.
+Wizard flow and `--check` behavior are summarized in the table above; for the full narrative see [Manual setup (step by step)](#manual-install-en) below.
 
 > **Third-party meta-skill `findskill`:** treat **Meta_Kim as canonical**. `setup.mjs` installs **`KimYx0207/findskill`** into `~/.claude/skills/findskill/`. **Agents and docs in this repo use the name `findskill` only** — do not mix legacy spellings. Avoid parallel duplicate installs from other channels.
 
 > Pure Node.js script — works on Windows / macOS / Linux without bash.
 
 ---
+
+<a id="manual-install-en"></a>
 
 ### Manual Setup (Step by Step)
 
@@ -1235,15 +1239,7 @@ If this is your first time here, the lowest-friction order is:
 3. then review the repository tree section above
 4. only read `.claude/skills/meta-theory/references/meta-theory.md` when you want the deeper theory
 
-## Author and Resources
-
-- GitHub: [https://github.com/KimYx0207](https://github.com/KimYx0207)
-- X: [https://x.com/KimYx0207](https://x.com/KimYx0207)
-- Website: [https://www.aiking.dev/](https://www.aiking.dev/)
-- WeChat Official Account: `老金带你玩AI`
-- Feishu knowledge base: [https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf](https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf)
-- Paper: [https://zenodo.org/records/18957649](https://zenodo.org/records/18957649)
-- DOI: `10.5281/zenodo.18957649`
+Contact links, payment QR codes, and paper / DOI are in [Contact and support](#contact-and-support) above (no second copy here).
 
 ## License
 

@@ -19,19 +19,15 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green"/>
 </p>
 
-**AI コーディング支援のためのガバナンス層です。複雑なタスクを「正しく」進めるため、Claude Code・Codex・OpenClaw の三ランタイムで同じ規律を貫きます。**
-
-多くのツールはいきなりコードを書き始めます。Meta_Kim はその手前に、要件の明確化・役割分担・レビューという段を置きます。
-
-その結果、マルチファイル変更の破綻を減らし、エージェントの責務をはっきりさせ、一度きりのハックではなく再利用できる型を残します。
-
 > **正典（最新・最長）**: 英語は [README.md](README.md)、中文は [README.zh-CN.md](README.zh-CN.md)。本書は日本語読者向けの対訳・要約です。
 
 </div>
 
 ## ひと目で
 
-- 公開エントリは一つ、その背後に 8 つのメタ／元エージェント
+**AI コーディング支援のためのガバナンス層**です。Claude Code・Codex・OpenClaw の三ランタイムで同じ規律を貫き、複雑タスクを先に**正しく**進めます。多くのツールはいきなりコードを書き始めますが、Meta_Kim はその手前に明確化・探索・実行・レビュー・進化の段を置きます。
+
+- 公開エントリは一つ、その背後に 8 つのメタ（**英語概念名は Meta**。漢字「元」はロゴ／正典用語）
 - **一つのガバナンス規律**を三ランタイムに投影
 - 複雑タスクの流れ: 明確化 → 探索 → 実行 → レビュー → 進化
 - **四つの鉄則**: Critical > 推測、Fetch > 思い込み、Thinking > 突っ走り、Review > 盲信
@@ -48,9 +44,7 @@
 
 ## このプロジェクトは何か
 
-「AI にもっとコードを書かせる」ことが主目的ではありません。複雑な仕事で起きがちな失敗（曖昧要求→推測、境界をまたぐ変更、マルチランタイムの設定ズレ、レビュー・検証・学習の欠落）を減らします。
-
-**実行前の意図拡張（intent amplification）**が核です。スコープ・制約・成果物・リスクを明示し、一つの巨大コンテキストに丸投げせず適切な役割へ振り分けます。
+主目的は「もっとコードを書かせる」ことではなく、複雑仕事の典型失敗（曖昧要求→推測、境界横断変更、マルチランタイムのズレ、レビュー／検証／学習の欠落）を減らすことです。核は **実行前の意図拡張（intent amplification）**（詳細は上文「ひと目で」と英語 [README.md](README.md) の *What This Project Is*）。
 
 ## メタ・アーキテクチャ視点
 
@@ -187,7 +181,7 @@ flowchart TD
 
 ```mermaid
 flowchart TB
-  Y["Yuan smallest governable unit"] --> OM["Org mirror division escalation"]
+  Y["Meta (元) smallest governable unit"] --> OM["Org mirror division escalation"]
   OM --> RO["Rhythm conductor stageState parallel"]
   RO --> IA["Intent amplification closure"]
   Y -.-> R1["split"]
@@ -247,7 +241,7 @@ openclaw agent --local --agent meta-warden --message "..." --json --timeout 120
 
 ```mermaid
 flowchart LR
-    A["Yuan / 元"] --> B["Organizational Mirroring"]
+    A["Meta (元)"] --> B["Organizational Mirroring"]
     B --> C["Rhythm Orchestration"]
     C --> D["Intent Amplification"]
 ```
@@ -307,7 +301,7 @@ flowchart TD
     D --> D2[read dispatch report]
 ```
 
-## 八つのメタ／元エージェント
+## 八つのメタエージェント
 
 | エージェント | 主な役割 |
 | ------------ | -------- |
@@ -324,6 +318,23 @@ flowchart TD
 
 ## クイックスタート（要点）
 
+**clone なし（`npx` が一時取得して `setup.mjs` と同等を実行）:**
+
+```bash
+npx --yes github:KimYx0207/Meta_Kim meta-kim
+```
+
+**UI 言語を固定し、環境チェックのみ（書き込み・インストールなし）:** `--lang` は `en` / `zh-CN` / `ja-JP` / `ko-KR`。
+
+| UI 言語 | コマンド |
+| --- | --- |
+| English | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang en --check` |
+| 简体中文 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang zh-CN --check` |
+| 日本語 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ja-JP --check` |
+| 한국어 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ko-KR --check` |
+
+**従来どおり clone 後:**
+
 ```bash
 git clone https://github.com/KimYx0207/Meta_Kim.git
 cd Meta_Kim
@@ -333,12 +344,15 @@ node setup.mjs
 | 使い方 | 説明 |
 | --- | --- |
 | `node setup.mjs` | 対話式セットアップ（言語選択 → インストール/アップデート/チェック） |
-| `node setup.mjs --lang ja-JP` | 言語選択をスキップして日本語で実行 |
+| `node setup.mjs --lang en` | 言語選択をスキップ、UI は English |
+| `node setup.mjs --lang zh-CN` | 言語選択をスキップ、UI は简体中文 |
+| `node setup.mjs --lang ja-JP` | 言語選択をスキップ、UI は日本語 |
+| `node setup.mjs --lang ko-KR` | 言語選択をスキップ、UI は 한국어 |
 | `node setup.mjs --update` | 全スキルと依存関係を更新 |
 | `node setup.mjs --check` | 環境 + 依存関係 + ランタイム間同期チェック |
 | `node setup.mjs --silent` | 非対話モード（CI/スクリプト用） |
 
-`node setup.mjs` は対話式ウィザードを起動します：言語選択（en / zh-CN / ja-JP / ko-KR）→ アクションメニュー（インストール/アップデート/チェック/終了）。インストールフローでは、環境チェック、`npm install`、9つのグローバルメタスキルのインストール、依存関係とランタイム間同期状態の検証（Claude Code / Codex / OpenClaw）を行い、`validate` を実行します。チェックモード（`--check`）はフルプレフライトチェックを実行します：環境、9スキル依存検証、ランタイム間同期状態 — 何も変更しません。
+ウィザードの全体フローと `--check` の意味は上表のとおり。長文手順は [README.md の Quick Start / Manual setup](README.md#quick-start-clone-to-working-in-5-minutes) を参照。
 
 > **サードパーティのメタスキル findskill:** **Meta_Kim を正としてください。** `setup.mjs` は **`KimYx0207/findskill`** を `~/.claude/skills/findskill/` にインストールします。**本リポジトリ内のドキュメントとエージェントでは名称を `findskill` に統一**します。別チャネルから同じ機能を重複インストールしないでください。
 
@@ -353,8 +367,6 @@ npm run validate
 ```
 
 グローバル能力索引: `npm run discover:global`（ローカルパスを含むため、通常はコミットしない）
-
-詳細手順・全コマンド表は [README.md の Quick Start / Commands](README.md#quick-start-clone-to-working-in-5-minutes) を参照。
 
 ## よく使う npm スクリプト（抜粋）
 

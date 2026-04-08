@@ -19,17 +19,17 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green"/>
 </p>
 
-**AI 编码助手的治理层——一套统一的治理逻辑，同时在 Claude Code、Codex、OpenClaw 三个运行时上工作，让复杂任务做对了再做。**
+</div>
 
 <!-- 维护者：GitHub 仓库 About 描述建议（勿写「运行时镜像系统」易误解为只做同步）。中文示例：AI 编码助手的治理层：统一元角色、工作流纪律与 meta-theory；主源在 .claude/，并生成 Codex / OpenClaw 的配套副本。 -->
 
-多数 AI 编码工具上来就写代码。Meta_Kim 在中间加了一步：先搞清楚你到底要什么，再计划谁干什么，最后才执行并审查。
+## 简介
 
-结果：跨文件改动少翻车，agent 职责更清晰，沉淀可复用模式而不是一次性 hack。
+**Meta_Kim** 是 AI 编码助手的治理层：一套统一的治理逻辑，同时在 Claude Code、Codex、OpenClaw 三个运行时上工作，让复杂任务**做对了再做**。
 
-</div>
+多数工具上来就写代码；Meta_Kim 在中间加了一步：先搞清楚你到底要什么，再计划谁干什么，最后才执行并审查。结果是跨文件改动少翻车，agent 职责更清晰，沉淀可复用模式而不是一次性 hack。
 
-## 一眼看懂
+### 要点速览
 
 - 8 个专业元角色，统一走一个默认公开入口
 - **一套统一的治理逻辑**，投影到 Claude Code、Codex、OpenClaw 三个运行时
@@ -37,6 +37,650 @@
 - **四条铁律**：追问强于猜测、搜索强于假设、计划强于冲动、验证强于信任
 - 纪律：一个部门、一个主交付物、一条闭合交付链
 - 长期主源主要在 `.claude/` 和 `contracts/workflow-contract.json`
+
+
+## 它适合谁
+
+### 适合
+
+- 你要处理多文件、跨模块、跨运行时的复杂任务
+- 你在维护一套 agent / skill / hook / MCP 的工程资产
+- 你希望 AI 协作是可审查、可回滚、可持续维护的
+
+### 不适合
+
+- 你只想临时问几个简单问题
+- 你平时只改单个文件，不需要分工和治理
+- 你想把它当成一个即装即用的 SaaS 产品
+
+## 联系方式与支持
+
+<div align="center">
+  <img src="images/%E4%BA%8C%E7%BB%B4%E7%A0%81%E5%9F%BA%E7%A1%80%E6%AC%BE.png" alt="联系方式" width="560"/>
+  <p>
+    GitHub <a href="https://github.com/KimYx0207">KimYx0207</a> |
+    𝕏 <a href="https://x.com/KimYx0207">@KimYx0207</a> |
+    官网 <a href="https://www.aiking.dev/">aiking.dev</a> |
+    微信公众号：<strong>老金带你玩AI</strong>
+  </p>
+  <p>
+    飞书知识库：
+    <a href="https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf">长期更新入口</a>
+  </p>
+</div>
+
+<div align="center">
+  <table align="center">
+    <tr>
+      <td align="center">
+        <img src="images/%E5%BE%AE%E4%BF%A1.jpg" alt="微信收款码" width="220"/>
+        <br/>
+        <strong>微信支付</strong>
+      </td>
+      <td align="center">
+        <img src="images/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg" alt="支付宝收款码" width="220"/>
+        <br/>
+        <strong>支付宝</strong>
+      </td>
+    </tr>
+  </table>
+</div>
+
+### 方法依据与论文
+
+Meta_Kim 的方法依据来自“基于元的意图放大”评测与方法沉淀：
+
+- 论文页面：<https://zenodo.org/records/18957649>
+- DOI：`10.5281/zenodo.18957649`
+
+论文负责解释方法论基础。本仓库负责把这套方法落成可运行的工程资产。
+
+## 安装与初始化
+
+<a id="install-quick-zh"></a>
+
+### 环境要求
+
+- **Node.js** v18+（用于 sync、validate、OpenClaw 脚本）
+- **Git**（用于克隆项目）
+- **Claude Code CLI**（可选，仅在运行 `eval:agents` 时需要）
+- **Codex CLI**（可选，仅在运行 `eval:agents` 时需要）
+- **OpenClaw CLI**（可选，仅在运行 `npm run prepare:openclaw-local` 时需要）
+
+### 一键安装（推荐）
+
+**无需先 clone（`npx` 会临时拉取仓库并执行安装向导）：**
+
+```bash
+npx --yes github:KimYx0207/Meta_Kim meta-kim
+```
+
+**指定界面语言且只做环境检查（不写盘、不安装）：** `--lang` 与 `setup.mjs` 一致，取值为 `en`、`zh-CN`、`ja-JP`、`ko-KR`。
+
+| 界面语言 | 命令 |
+| --- | --- |
+| English | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang en --check` |
+| 简体中文 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang zh-CN --check` |
+| 日本語 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ja-JP --check` |
+| 한국어 | `npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang ko-KR --check` |
+
+**经典方式（克隆后进目录）：**
+
+```bash
+git clone https://github.com/KimYx0207/Meta_Kim.git
+cd Meta_Kim
+node setup.mjs
+```
+
+| 用法 | 说明 |
+| --- | --- |
+| `npx --yes github:KimYx0207/Meta_Kim meta-kim` | 与 `node setup.mjs` 相同，省略手动 `git clone` / `cd` |
+| `node setup.mjs` | 交互式向导（选语言 → 安装 / 更新 / 检查） |
+| `node setup.mjs --lang en` | 跳过语言选择，界面英语 |
+| `node setup.mjs --lang zh-CN` | 跳过语言选择，界面简体中文 |
+| `node setup.mjs --lang ja-JP` | 跳过语言选择，界面日本語 |
+| `node setup.mjs --lang ko-KR` | 跳过语言选择，界面 한국어 |
+| `node setup.mjs --update` | 更新所有技能和依赖 |
+| `node setup.mjs --check` | 环境 + 依赖 + 跨运行时同步检查 |
+| `node setup.mjs --silent` | 非交互模式（CI / 脚本） |
+
+向导流程与 `--check` 行为见上表；完整步骤见下文 [手动安装（逐步）](#manual-install-zh)。
+
+> **第三方元技能 findskill**：请**以本仓库为准**。`setup.mjs` 安装 **`KimYx0207/findskill`**（在公开生态能力上的维护与优化版）至 `~/.claude/skills/findskill/`。**本仓库内文档与 agent 统一使用名称 `findskill`**，勿与旧写法混用。勿在不同渠道重复安装同能力。
+
+> 纯 Node.js 脚本，Windows / macOS / Linux 通用，不依赖 bash。
+
+---
+
+<a id="manual-install-zh"></a>
+
+### 手动安装（逐步）
+
+下面是更完整的维护者手动流程。它覆盖了 `node setup.mjs` 的核心安装动作，并额外补上 runtime 镜像同步、全局能力发现和全局 meta-theory 便携技能同步。
+
+#### 1. 克隆并安装依赖
+
+```bash
+git clone https://github.com/KimYx0207/Meta_Kim.git
+cd Meta_Kim
+npm install
+```
+
+#### 2. 同步三端镜像
+
+```bash
+npm run sync:runtimes
+```
+
+作用：
+
+- 从 `.claude/` 主源重新生成 Codex / OpenClaw / shared-skills 镜像
+- 检查主源和派生产物是否一致
+
+如果你只是想确认有没有不同步，也可以用：
+
+```bash
+npm run check:runtimes
+```
+
+#### 3. 安装元技能依赖（可选，但推荐）
+
+```bash
+npm run deps:install
+```
+
+这一步会把 Meta_Kim 依赖的 9 个社区 skill 安装到 `~/.claude/skills/`。
+
+注意：
+
+- 这是 **Claude Code 生态** 的全局安装，不是安装到当前仓库里
+- 这个脚本通过 `bash install-deps.sh` 运行
+- **Windows 用户请确保机器上有 `bash`**，通常用 Git Bash 或 WSL 即可
+
+更新这些依赖时用：
+
+```bash
+npm run deps:update
+```
+
+#### 4. 扫描全局能力
+
+```bash
+npm run discover:global
+```
+
+这一步会扫描你电脑里的全局能力，并生成：
+
+```text
+.claude/capability-index/global-capabilities.json
+```
+
+扫描范围包括：
+
+- `~/.claude/`：agents、skills、hooks、plugins、commands
+- `~/.openclaw/`：agents、skills、hooks、commands
+- `~/.codex/`：agents、skills、commands
+
+如果你想先看 CLI 探测结果，可以先跑：
+
+```bash
+npm run probe:clis
+```
+
+#### 5. 可选：同步全局 meta-theory 便携技能
+
+```bash
+npm run show:global:meta-theory-targets
+npm run sync:global:meta-theory
+```
+
+这一步会把 canonical 的 `.claude/skills/meta-theory/` 同步到用户级 runtime home：
+
+- `~/.claude/skills/meta-theory`
+- `~/.openclaw/skills/meta-theory`
+- `~/.codex/skills/.disabled/meta-theory`（默认是 standby，不直接激活）
+
+如果你只想检查有没有漂移，用：
+
+```bash
+npm run check:global:meta-theory
+```
+
+如果你希望 Codex 的全局 meta-theory 直接处于启用态，而不是放在 `.disabled/` 里，用：
+
+```bash
+npm run sync:global:meta-theory:codex-active
+```
+
+需要显式指定用户级 runtime home 时，可设置：
+
+- `META_KIM_CLAUDE_HOME` 或 `CLAUDE_HOME`
+- `META_KIM_OPENCLAW_HOME` 或 `OPENCLAW_HOME`
+- `META_KIM_CODEX_HOME` 或 `CODEX_HOME`
+
+#### 6. 做项目完整性校验
+
+```bash
+npm run validate
+```
+
+这会检查：
+
+- 必要文件是否存在
+- workflow contract 是否完整
+- 8 个 Claude agents 是否合规
+- OpenClaw workspaces 是否齐全
+- `SKILL.md` 多端镜像是否同步
+- Codex agents 是否有效
+- hooks / MCP / package scripts 是否配置正确
+
+#### 7. 跑一次 MCP 自测
+
+```bash
+npm run test:mcp
+```
+
+这一步会自测 `meta-runtime-server`，也是 `node setup.mjs` 默认会执行的一项检查。
+
+#### 8. 需要时再跑轻量运行时 smoke
+
+```bash
+npm run eval:agents
+```
+
+默认的 `eval:agents` 是轻量、无 LLM 的 runtime smoke：
+
+- 可用且通过的运行时会显示 `passed`
+- 没装或当前不可用的可选运行时可能显示 `skipped`
+- 配置错误、注册表接线错误会显示 `failed`
+- 它**不会**主动打开 Claude / Codex / OpenClaw 的实时 prompt 会话
+
+如果你明确要跑较慢的、带实时 prompt 的运行时验收：
+
+```bash
+npm run eval:agents:live
+```
+
+全部一起跑：
+
+```bash
+npm run verify:all
+```
+
+需要完整 live 验收时：
+
+```bash
+npm run verify:all:live
+```
+
+如果你手头有真实 run artifact，想核对整个 packet 链：
+
+```bash
+npm run validate:run -- tests/fixtures/run-artifacts/valid-run.json
+```
+
+#### 9. OpenClaw 本地运行前，额外准备一次
+
+```bash
+npm run prepare:openclaw-local
+```
+
+只有你准备在本机真正跑 OpenClaw 时才需要这一步。
+
+#### 10. 快速健康度检查
+
+```bash
+node scripts/agent-health-report.mjs
+```
+
+可以快速看 8 个 agent 的版本号、frontmatter 完整性、边界定义、workspace 文件和 skill 同步状态。
+
+#### 11. 开始使用（Claude Code）
+
+你可以直接说：
+
+```text
+认证系统要重构，散在 5 个文件里，没人知道 token 刷新到底是哪个文件在处理。
+```
+
+```text
+帮我设计一个 agent，处理这个项目的数据导出任务。
+```
+
+```text
+有问题，我的 agent 写的代码老是互相冲突。
+```
+
+系统会根据任务类型，把请求路由到匹配的治理阶段。
+
+## 使用指南
+
+## 三个运行时怎么承接
+
+最重要的一句：
+
+**Meta_Kim 只有一套方法，不是三个独立项目。**
+
+| 运行时 | 入口 | 仓库里的主要落点 | 角色 |
+| --- | --- | --- | --- |
+| Claude Code | [CLAUDE.md](CLAUDE.md) | `.claude/`、`.mcp.json` | 规范主源和默认编辑运行时 |
+| Codex | [AGENTS.md](AGENTS.md) | `.codex/`、`.agents/`、`codex/` | Codex 原生 custom agents / skills 映射 |
+| OpenClaw | `openclaw/workspaces/` | `openclaw/` | OpenClaw 本地 workspace 映射 |
+
+关键点：
+
+- **Claude Code 是 canonical 编辑运行时。**
+- 长期主源主要在 `.claude/` 和 `contracts/workflow-contract.json`。
+- `.codex/`、`.agents/`、`openclaw/` 里大多数内容是同步产物或运行时适配层。
+- 改完主源以后，再用脚本把三端重新对齐。
+
+### 各运行时怎么接
+
+#### 在 Claude Code 里
+
+Claude Code 自动读取 `CLAUDE.md`、`.claude/agents/`、`.claude/skills/`、`.mcp.json`。打开项目直接聊。
+
+#### 在 Codex 里
+
+Codex 读取 `AGENTS.md`、`.codex/agents/`、`.agents/skills/`，MCP 接法见 `codex/config.toml.example`。注意：**Codex 是读取 / 执行运行时，不是主编辑运行时**。你应该先在 `.claude/` 改，再通过 `npm run sync:runtimes` 同步到 Codex。
+
+#### 在 OpenClaw 里
+
+```bash
+npm install
+npm run prepare:openclaw-local
+```
+
+然后可直接调用：
+
+```bash
+openclaw agent --local --agent meta-warden --message "帮我搞一个批量数据导出的系统，要带进度跟踪。" --json --timeout 120
+```
+
+## 8 个元角色
+
+| Agent | 主要职责 | 你可以怎么理解 |
+| --- | --- | --- |
+| `meta-warden` | 默认入口、仲裁、最终汇总 | 项目经理 / 总协调 |
+| `meta-conductor` | 编排阶段、控制节奏 | 调度员 |
+| `meta-genesis` | 设计 `SOUL.md`、人格和认知结构 | 提示词 / 角色架构师 |
+| `meta-artisan` | skill、MCP、工具装配 | 工具与能力工程师 |
+| `meta-sentinel` | 安全、权限、hook、回滚 | 安全与守卫 |
+| `meta-librarian` | 记忆、上下文、连续性 | 知识管理员 |
+| `meta-prism` | 质量审查、漂移检测、反 AI 套话 | 质量法医 |
+| `meta-scout` | 外部能力发现与评估 | 侦察与选型 |
+
+如果你是普通使用者，只需要记住一件事：
+
+**默认公开前门是 `meta-warden`。**
+
+## 系统怎么工作
+
+你不需要知道内部机制。但如果你好奇：
+
+```mermaid
+flowchart TD
+    A[你说你要什么] --> B[系统澄清范围]
+    B --> C[搜索现有能力]
+    C --> D[分配给专家]
+    D --> E[agent 执行]
+    E --> F[审查产出]
+    F --> G[沉淀模式]
+```
+
+每一条有效的业务 run，都必须保持一条唯一主线：
+
+- 一个部门
+- 一个主交付物
+- 一条闭合交付链
+
+如果同一轮里塞进多个互不相干的目标，`meta-conductor` 应该直接打回，`meta-warden` 也不应让它进入公开展示态。
+
+## 怎么用
+
+### 自动模式（正常聊天就行）
+
+复杂任务直接描述你的需求。系统检测到跨文件或跨模块的工作时，治理流程自动激活。
+
+```text
+帮我搞一个通知系统，邮件、短信、站内信都要，带共享队列和重试逻辑。
+```
+
+```text
+支付流程在 3 个服务之间有竞态条件，修一下，再补上错误处理。
+```
+
+系统会：追问澄清（如果需要）→ 搜索现有 agent → 路由给对的人 → 执行 → 审查 → 沉淀模式。
+
+如果 Fetch 发现没有合适 owner，正常路径不是“直接硬做”，而是：
+
+- 先判断这是长期缺口还是一次性缺口
+- 长期缺口：先走 Type B 补 owner，再执行
+- 一次性低风险缺口：允许临时 `generalPurpose` owner 兜底，但必须在 Evolution 里复盘是否要升格
+
+如果你把真实治理 run 记录成 JSON，可以直接验：
+
+```bash
+npm run validate:run -- tests/fixtures/run-artifacts/valid-run.json
+```
+
+这个脚本不只是看字段齐不齐，还会检查 findingId 是否贯通、closeState 是否合法、delivery shell 是否可追溯，以及 `publicReady` 有没有被乱标。
+
+### 手动模式（你知道你要什么的时候）
+
+如果你明确要设计、审查、审计 agent：
+
+```text
+帮我设计一个 agent，处理这个项目的数据导出任务。
+```
+
+```text
+审查一下我的 agent 定义，边界干不干净？
+```
+
+```text
+我的 agent 职责老是重叠，帮我修正组织结构。
+```
+
+## 项目结构
+
+```text
+Meta_Kim/
+├─ .claude/        主源：agents、skills、hooks、settings
+├─ .codex/         Codex custom agents 镜像
+├─ .agents/        Codex 项目级 skills 镜像
+├─ codex/          Codex 全局配置示例
+├─ openclaw/       OpenClaw workspaces、skills、配置模板
+├─ contracts/      运行时治理合约
+├─ docs/           内部/私有说明文档，以及少量已纳入版本控制的 runtime 文档
+├─ scripts/        同步、校验、探测、MCP、自检脚本
+├─ shared-skills/  跨运行时共享 skill 镜像
+├─ README.md
+├─ README.zh-CN.md
+├─ README.ja-JP.md
+├─ README.ko-KR.md
+├─ CLAUDE.md
+├─ AGENTS.md
+└─ CHANGELOG.md
+```
+
+### 你应该优先改哪里
+
+长期维护时，优先编辑这些文件：
+
+- `.claude/agents/*.md`
+- `.claude/skills/meta-theory/SKILL.md`
+- `.claude/skills/meta-theory/references/*.md`
+- `contracts/workflow-contract.json`
+- `README.md`
+- `README.zh-CN.md`
+- `README.ja-JP.md`
+- `README.ko-KR.md`
+- `CLAUDE.md`
+- `AGENTS.md`
+
+### 哪些文件通常不要手改
+
+除非你很清楚自己在做什么，否则不要把这些当主源：
+
+- `.codex/agents/*.toml`
+- `.agents/skills/meta-theory/`
+- `.codex/skills/meta-theory.md`
+- `shared-skills/meta-theory.md`
+- `openclaw/skills/meta-theory.md`
+- `openclaw/workspaces/*`
+- `openclaw/openclaw.local.json`
+
+这些通常由脚本维护：
+
+- `npm run sync:runtimes`
+- `npm run prepare:openclaw-local`
+
+### 为什么会有 `codex/`
+
+Codex 的配置分两层：
+
+- 仓库内资产：放在 `.codex/` 和 `.agents/`
+- 用户电脑里的全局配置：不能直接写进仓库根部
+
+所以：
+
+- `.codex/` 是 Codex 真正会直接读取的仓库内内容
+- `codex/` 只是一个配置示例目录，用来说明 `~/.codex/config.toml` 应该怎么接
+
+## Hooks（Claude Code）
+
+Meta_Kim 在 `.claude/settings.json` 中配置了 8 个 hook 脚本（`Stop` 事件上会顺序执行其中 2 个）：
+
+| Hook | 类型 | 用途 |
+| --- | --- | --- |
+| `block-dangerous-bash.mjs` | PreToolUse/Bash | 阻止危险命令（rm -rf、DROP TABLE、force-push） |
+| `pre-git-push-confirm.mjs` | PreToolUse/Bash | `git push` 前提醒检查 |
+| `post-format.mjs` | PostToolUse/Edit,Write | 自动 prettier 格式化 JS/TS 文件 |
+| `post-typecheck.mjs` | PostToolUse/Edit,Write | 编辑 `.ts` / `.tsx` 后自动做类型检查 |
+| `post-console-log-warn.mjs` | PostToolUse/Edit,Write | 编辑后检测 `console.log` 并警告 |
+| `subagent-context.mjs` | SubagentStart | 给子 agent 注入项目上下文 |
+| `stop-console-log-audit.mjs` | Stop | 会话结束前审计改动文件里的 `console.log` |
+| `stop-completion-guard.mjs` | Stop | 可选弱哨兵：防未对齐治理流程就宣称「完成」（默认关闭，靠环境变量开启） |
+
+Codex 和 OpenClaw 使用各自原生机制实现等效行为。
+
+## 这些命令什么时候要跑
+
+| 命令 | 什么时候用 | 作用 |
+| --- | --- | --- |
+| `npx --yes github:KimYx0207/Meta_Kim meta-kim` | **不想先 clone** | 与 `node setup.mjs` 相同（`npx` 会拉取本仓库） |
+| `node setup.mjs` | **首次拉仓库** | **交互式向导：语言 → 安装 / 更新 / 检查** |
+| `node setup.mjs --update` | 依赖/技能需要更新时 | 更新所有技能 + 可选运行时同步 |
+| `node setup.mjs --check` | 想先做环境体检时 | 环境 + 依赖 + 跨运行时同步验证 |
+| `npm install` | 手动安装时 | 安装 Node 依赖 |
+| `npm run sync:runtimes` | 改完主源后 | 重建三端镜像 |
+| `npm run check:runtimes` | 不想写文件时 | 只检查镜像是否最新 |
+| `npm run show:global:meta-theory-targets` | 想确认会写到哪些用户级目录 | 打印 Claude / OpenClaw / Codex 的全局 meta-theory 目标及 Claude hooks 路径 |
+| `npm run sync:global:meta-theory` | 改了 canonical `meta-theory` 或 `.claude/hooks` 后 | 同步用户级 Claude/OpenClaw 技能；把 hooks 复制到 `~/.claude/hooks/meta-kim/` 并把 hook 条目合并进 `~/.claude/settings.json`；Codex 默认 standby |
+| `npm run sync:global:meta-theory -- --skip-global-hooks` | 不能动用户级 settings/hooks 时 | 同上但不写 Claude 全局 hooks |
+| `npm run check:global:meta-theory` | 不想改用户级文件时 | 检查全局 meta-theory 与 Claude `hooks/meta-kim` 是否与 canonical 一致 |
+| `npm run sync:global:meta-theory:codex-active` | 希望 Codex 全局技能直接启用时 | 把 Codex 的全局 meta-theory 写到活动目录而不是 `.disabled/` |
+| `npm run deps:install` | 第一次配置 Claude 生态 | 安装 9 个全局元技能 |
+| `npm run deps:update` | 依赖需要更新时 | 更新已安装的元技能 |
+| `npm run deps:install:all-runtimes` | 用 Windows 或也要给 Codex/OpenClaw 装同套 skills | 把同一批 skill 仓库 clone 到 `~/.claude/skills`、`~/.codex/skills`、`~/.openclaw/skills`；若 PATH 上有 `claude`，会执行 `claude plugin install superpowers@claude-plugins-official` |
+| `npm run deps:update:all-runtimes` | 三端 skills 都要更新 | 同上并带 `--update` |
+| `npm run deps:install:claude-plugins` | 只装 Claude Code 官方 plugin 包 | 只跑 `claude plugin install …`，不做 git clone |
+| `npm run discover:global` | 首次安装后、装了新全局能力后 | 生成全局能力索引 |
+| `npm run probe:clis` | 怀疑 CLI 没配好时 | 探测 Claude / Codex / OpenClaw CLI |
+| `npm run test:mcp` | 改了 MCP 相关逻辑时 | 自测 `meta-runtime-server` |
+| `npm run test:meta-theory` | 改了 `meta-theory` skill / contract / tests 时 | 跑 `tests/meta-theory/*.test.mjs` |
+| `npm run validate` | 每次准备提交前 | 做静态完整性校验 |
+| `npm run validate:run -- <run.json>` | 要校验真实 run 产物链时 | 检查 packet 对齐、finding closure、summary/public-ready 是否真实 |
+| `npm run doctor:governance` | 发布前或怀疑 hook/镜像漂移时 | 契约 + hook 列表 + `check:runtimes` + 样例 `validate:run` |
+| `npm run prompt:next-iteration -- <run.json>` | run 未过校验或 finding 未关时 | 从 artifact 打印下一轮闭环待办 |
+| `npm run check` | 想快速做一轮静态检查 | `check:runtimes + validate` |
+| `npm run eval:agents` | 要快速做一轮 runtime smoke 时 | 做 CLI / 配置 / hook / registry 级别的轻量检查，不跑 LLM prompt 验收 |
+| `npm run eval:agents:live` | 要做真实 live 运行时验收时 | 运行较慢的 Claude / Codex / OpenClaw prompt 验收 |
+| `npm run verify:all` | 发布前 / 大改后 | `check + check:global:meta-theory + 轻量 eval + tests` |
+| `npm run verify:all:live` | runtime 敏感发布前 | `check + check:global:meta-theory + live eval + tests` |
+| `node scripts/agent-health-report.mjs` | 想看总体健康度时 | 生成 8 个 agent 的健康报告 |
+
+**Windows / PATH：** 从图形界面或编辑器里启动任务时，Node 子进程继承到的 `PATH` 有时比你单独开的终端更短。遇到 `eval:agents` 找不到 CLI 时，优先检查 `%APPDATA%\\npm\\`、`where.exe` 结果，仍不行就设置绝对路径环境变量：
+
+- `META_KIM_CLAUDE_BIN`
+- `META_KIM_CODEX_BIN`
+- `META_KIM_OPENCLAW_BIN`
+
+## 一个安全的维护流程
+
+如果你要改 agent、skill、README 或运行时配置，推荐始终按这个顺序做：
+
+1. 改 `.claude/` 主源或公共说明文件
+2. 如果改动涉及调度纪律、闸门或交付合约，同时更新 `contracts/workflow-contract.json`
+3. 跑 `npm run sync:runtimes`
+4. 如果改了 canonical `meta-theory`，并且你维护用户级 runtime home，再跑 `npm run sync:global:meta-theory`
+5. 跑 `npm run discover:global`
+6. 跑 `npm run validate`
+7. 如果改了 MCP runtime 相关逻辑，再跑 `npm run test:mcp`
+8. 需要 smoke 级运行时验收时，再跑 `npm run eval:agents`
+9. 只有明确需要 live prompt 验收时，再跑 `npm run eval:agents:live`
+
+这样最不容易把三端镜像改乱。
+
+## 新手最常见的 10 个问题
+
+### 1. 我必须同时安装 Claude Code、Codex、OpenClaw 吗？
+
+不用。你可以只用其中一个运行时。Meta_Kim 设计成跨运行时兼容，但不是强制三端全装。
+
+### 2. 我能不能只改 `.codex/` 或 `openclaw/`？
+
+技术上可以，长期维护上不推荐。大多数情况下，你应该改 `.claude/` 主源，再同步。
+
+### 3. `discover:global` 生成的索引要提交吗？
+
+通常不用。它是本机能力索引，带本地路径，按机器重新生成。
+
+### 4. `eval:agents` 里看到 `skipped` 是不是就说明项目坏了？
+
+不一定。`skipped` 常见原因是对应 CLI 没装，或者对应 runtime 当前不可用。真正的硬失败会标成 `failed`。
+
+### 5. `eval:agents` 和 `eval:agents:live` 有什么区别？
+
+`eval:agents` 是轻量 runtime smoke，只检查 CLI 可用性、配置接线、hook 和 runtime scaffolding，不主动打开 LLM prompt 会话。
+
+`eval:agents:live` 是更重的 live runtime 验收，会真实调用 Claude / Codex / OpenClaw，会慢很多。
+
+### 6. 为什么默认入口不是 8 个 agent 直接给用户选？
+
+因为 Meta_Kim 的设计目标不是“给你一排角色菜单”，而是先用统一前门接住需求，再在后台做分工。
+
+### 7. 什么情况下可以不走 agent？
+
+只有纯 `Q / Query`。也就是纯解释、纯问答、没有改代码、没有外部副作用、没有交付链要求。只要任务会执行、会产生产物、会进入审查或验证，就必须有 owner。
+
+### 8. `.claude/skills/meta-theory/references/meta-theory.md` 是不是必读？
+
+不是。它更像从 canonical skill references 映射出来的方法长文。第一次上手先读本 README 即可。
+
+### 9. 我只想看仓库地图，应该读什么？
+
+直接读本 README 里的仓库结构树即可。
+
+### 10. 我想看三端能力差异，应该读什么？
+
+内部说明：运行时一致性参考在 `docs/` 下，不属于公开内容。
+
+## 最简单的开始方式
+
+上面的 [安装与初始化章节](#install-quick-zh) 已经包含了从克隆到跑起来的完整步骤。
+
+如果你是第一次接触这个项目，按下面顺序最省力：
+
+1. 先读本文件 `README.zh-CN.md`
+2. 再读 [CLAUDE.md](CLAUDE.md) 或 [AGENTS.md](AGENTS.md)
+3. 再看本 README 里的仓库结构树
+4. 需要方法细节时再读 `.claude/skills/meta-theory/references/meta-theory.md`
+
+## 原理与设计
+
+以下章节适合在**完成安装并开始使用**之后阅读：架构视角、流程图、八阶段脊柱（Critical / Fetch / Thinking …）、契约与状态骨架。文首「简介」里的要点速览与这里不重复展开。
 
 ## 为什么它会越用越轻
 
@@ -230,111 +874,13 @@ flowchart TD
 
 ```mermaid
 flowchart TB
-  Y["元 Yuan 最小可治理单元"] --> OM["组织镜像 分工升级审查兜底"]
+  Y["元 Meta 最小可治理单元"] --> OM["组织镜像 分工升级审查兜底"]
   OM --> RO["节奏编排 conductor stageState 并行"]
   RO --> IA["意图放大 交付物闭环显式化"]
   Y -.-> R1["怎么拆"]
   OM -.-> R2["怎么像真组织"]
   RO -.-> R3["谁先谁后"]
   IA -.-> R4["怎么算做完"]
-```
-
-## 作者与支持
-
-<div align="center">
-  <img src="images/%E4%BA%8C%E7%BB%B4%E7%A0%81%E5%9F%BA%E7%A1%80%E6%AC%BE.png" alt="联系方式" width="560"/>
-  <p>
-    GitHub <a href="https://github.com/KimYx0207">KimYx0207</a> |
-    𝕏 <a href="https://x.com/KimYx0207">@KimYx0207</a> |
-    官网 <a href="https://www.aiking.dev/">aiking.dev</a> |
-    微信公众号：<strong>老金带你玩AI</strong>
-  </p>
-  <p>
-    飞书知识库：
-    <a href="https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf">长期更新入口</a>
-  </p>
-</div>
-
-<div align="center">
-  <table align="center">
-    <tr>
-      <td align="center">
-        <img src="images/%E5%BE%AE%E4%BF%A1.jpg" alt="微信收款码" width="220"/>
-        <br/>
-        <strong>微信支付</strong>
-      </td>
-      <td align="center">
-        <img src="images/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg" alt="支付宝收款码" width="220"/>
-        <br/>
-        <strong>支付宝</strong>
-      </td>
-    </tr>
-  </table>
-</div>
-
-## 方法依据与论文
-
-Meta_Kim 的方法依据来自“基于元的意图放大”评测与方法沉淀：
-
-- 论文页面：<https://zenodo.org/records/18957649>
-- DOI：`10.5281/zenodo.18957649`
-
-论文负责解释方法论基础。本仓库负责把这套方法落成可运行的工程资产。
-
-## 它适合谁
-
-### 适合
-
-- 你要处理多文件、跨模块、跨运行时的复杂任务
-- 你在维护一套 agent / skill / hook / MCP 的工程资产
-- 你希望 AI 协作是可审查、可回滚、可持续维护的
-
-### 不适合
-
-- 你只想临时问几个简单问题
-- 你平时只改单个文件，不需要分工和治理
-- 你想把它当成一个即装即用的 SaaS 产品
-
-## 三个运行时怎么承接
-
-最重要的一句：
-
-**Meta_Kim 只有一套方法，不是三个独立项目。**
-
-| 运行时 | 入口 | 仓库里的主要落点 | 角色 |
-| --- | --- | --- | --- |
-| Claude Code | [CLAUDE.md](CLAUDE.md) | `.claude/`、`.mcp.json` | 规范主源和默认编辑运行时 |
-| Codex | [AGENTS.md](AGENTS.md) | `.codex/`、`.agents/`、`codex/` | Codex 原生 custom agents / skills 映射 |
-| OpenClaw | `openclaw/workspaces/` | `openclaw/` | OpenClaw 本地 workspace 映射 |
-
-关键点：
-
-- **Claude Code 是 canonical 编辑运行时。**
-- 长期主源主要在 `.claude/` 和 `contracts/workflow-contract.json`。
-- `.codex/`、`.agents/`、`openclaw/` 里大多数内容是同步产物或运行时适配层。
-- 改完主源以后，再用脚本把三端重新对齐。
-
-### 各运行时怎么接
-
-#### 在 Claude Code 里
-
-Claude Code 自动读取 `CLAUDE.md`、`.claude/agents/`、`.claude/skills/`、`.mcp.json`。打开项目直接聊。
-
-#### 在 Codex 里
-
-Codex 读取 `AGENTS.md`、`.codex/agents/`、`.agents/skills/`，MCP 接法见 `codex/config.toml.example`。注意：**Codex 是读取 / 执行运行时，不是主编辑运行时**。你应该先在 `.claude/` 改，再通过 `npm run sync:runtimes` 同步到 Codex。
-
-#### 在 OpenClaw 里
-
-```bash
-npm install
-npm run prepare:openclaw-local
-```
-
-然后可直接调用：
-
-```bash
-openclaw agent --local --agent meta-warden --message "帮我搞一个批量数据导出的系统，要带进度跟踪。" --json --timeout 120
 ```
 
 ## 元的理念
@@ -710,545 +1256,6 @@ npm run prompt:next-iteration -- path/to/your-run.json
 可选 **软 todo 闸门**（跑 `validate:run` 时）：设置 `META_KIM_SOFT_PUBLIC_READY_GATES=1` 时，若 `summaryPacket.publicReady` 为 true，则任一 `workerTaskPacket` 不得为 `taskTodoState: "open"`；不跟踪 todo 时可省略 `taskTodoState`。见契约中 `runDiscipline.runArtifactValidation.softPublicReadyTodoGate`。
 
 可选 **软注释/文档审查闸门**：设置 `META_KIM_SOFT_COMMENT_REVIEW=1` 且 `summaryPacket.publicReady` 为 true 时，须 `summaryPacket.commentReviewAcknowledged === true`。见 `softCommentReviewGate`。
-
-## 8 个元角色
-
-| Agent | 主要职责 | 你可以怎么理解 |
-| --- | --- | --- |
-| `meta-warden` | 默认入口、仲裁、最终汇总 | 项目经理 / 总协调 |
-| `meta-conductor` | 编排阶段、控制节奏 | 调度员 |
-| `meta-genesis` | 设计 `SOUL.md`、人格和认知结构 | 提示词 / 角色架构师 |
-| `meta-artisan` | skill、MCP、工具装配 | 工具与能力工程师 |
-| `meta-sentinel` | 安全、权限、hook、回滚 | 安全与守卫 |
-| `meta-librarian` | 记忆、上下文、连续性 | 知识管理员 |
-| `meta-prism` | 质量审查、漂移检测、反 AI 套话 | 质量法医 |
-| `meta-scout` | 外部能力发现与评估 | 侦察与选型 |
-
-如果你是普通使用者，只需要记住一件事：
-
-**默认公开前门是 `meta-warden`。**
-
-## 系统怎么工作
-
-你不需要知道内部机制。但如果你好奇：
-
-```mermaid
-flowchart TD
-    A[你说你要什么] --> B[系统澄清范围]
-    B --> C[搜索现有能力]
-    C --> D[分配给专家]
-    D --> E[agent 执行]
-    E --> F[审查产出]
-    F --> G[沉淀模式]
-```
-
-每一条有效的业务 run，都必须保持一条唯一主线：
-
-- 一个部门
-- 一个主交付物
-- 一条闭合交付链
-
-如果同一轮里塞进多个互不相干的目标，`meta-conductor` 应该直接打回，`meta-warden` 也不应让它进入公开展示态。
-
-## 怎么用
-
-### 自动模式（正常聊天就行）
-
-复杂任务直接描述你的需求。系统检测到跨文件或跨模块的工作时，治理流程自动激活。
-
-```text
-帮我搞一个通知系统，邮件、短信、站内信都要，带共享队列和重试逻辑。
-```
-
-```text
-支付流程在 3 个服务之间有竞态条件，修一下，再补上错误处理。
-```
-
-系统会：追问澄清（如果需要）→ 搜索现有 agent → 路由给对的人 → 执行 → 审查 → 沉淀模式。
-
-如果 Fetch 发现没有合适 owner，正常路径不是“直接硬做”，而是：
-
-- 先判断这是长期缺口还是一次性缺口
-- 长期缺口：先走 Type B 补 owner，再执行
-- 一次性低风险缺口：允许临时 `generalPurpose` owner 兜底，但必须在 Evolution 里复盘是否要升格
-
-如果你把真实治理 run 记录成 JSON，可以直接验：
-
-```bash
-npm run validate:run -- tests/fixtures/run-artifacts/valid-run.json
-```
-
-这个脚本不只是看字段齐不齐，还会检查 findingId 是否贯通、closeState 是否合法、delivery shell 是否可追溯，以及 `publicReady` 有没有被乱标。
-
-### 手动模式（你知道你要什么的时候）
-
-如果你明确要设计、审查、审计 agent：
-
-```text
-帮我设计一个 agent，处理这个项目的数据导出任务。
-```
-
-```text
-审查一下我的 agent 定义，边界干不干净？
-```
-
-```text
-我的 agent 职责老是重叠，帮我修正组织结构。
-```
-
-## 项目结构
-
-```text
-Meta_Kim/
-├─ .claude/        主源：agents、skills、hooks、settings
-├─ .codex/         Codex custom agents 镜像
-├─ .agents/        Codex 项目级 skills 镜像
-├─ codex/          Codex 全局配置示例
-├─ openclaw/       OpenClaw workspaces、skills、配置模板
-├─ contracts/      运行时治理合约
-├─ docs/           内部/私有说明文档，以及少量已纳入版本控制的 runtime 文档
-├─ scripts/        同步、校验、探测、MCP、自检脚本
-├─ shared-skills/  跨运行时共享 skill 镜像
-├─ README.md
-├─ README.zh-CN.md
-├─ README.ja-JP.md
-├─ README.ko-KR.md
-├─ CLAUDE.md
-├─ AGENTS.md
-└─ CHANGELOG.md
-```
-
-### 你应该优先改哪里
-
-长期维护时，优先编辑这些文件：
-
-- `.claude/agents/*.md`
-- `.claude/skills/meta-theory/SKILL.md`
-- `.claude/skills/meta-theory/references/*.md`
-- `contracts/workflow-contract.json`
-- `README.md`
-- `README.zh-CN.md`
-- `README.ja-JP.md`
-- `README.ko-KR.md`
-- `CLAUDE.md`
-- `AGENTS.md`
-
-### 哪些文件通常不要手改
-
-除非你很清楚自己在做什么，否则不要把这些当主源：
-
-- `.codex/agents/*.toml`
-- `.agents/skills/meta-theory/`
-- `.codex/skills/meta-theory.md`
-- `shared-skills/meta-theory.md`
-- `openclaw/skills/meta-theory.md`
-- `openclaw/workspaces/*`
-- `openclaw/openclaw.local.json`
-
-这些通常由脚本维护：
-
-- `npm run sync:runtimes`
-- `npm run prepare:openclaw-local`
-
-### 为什么会有 `codex/`
-
-Codex 的配置分两层：
-
-- 仓库内资产：放在 `.codex/` 和 `.agents/`
-- 用户电脑里的全局配置：不能直接写进仓库根部
-
-所以：
-
-- `.codex/` 是 Codex 真正会直接读取的仓库内内容
-- `codex/` 只是一个配置示例目录，用来说明 `~/.codex/config.toml` 应该怎么接
-
-## Hooks（Claude Code）
-
-Meta_Kim 在 `.claude/settings.json` 中配置了 8 个 hook 脚本（`Stop` 事件上会顺序执行其中 2 个）：
-
-| Hook | 类型 | 用途 |
-| --- | --- | --- |
-| `block-dangerous-bash.mjs` | PreToolUse/Bash | 阻止危险命令（rm -rf、DROP TABLE、force-push） |
-| `pre-git-push-confirm.mjs` | PreToolUse/Bash | `git push` 前提醒检查 |
-| `post-format.mjs` | PostToolUse/Edit,Write | 自动 prettier 格式化 JS/TS 文件 |
-| `post-typecheck.mjs` | PostToolUse/Edit,Write | 编辑 `.ts` / `.tsx` 后自动做类型检查 |
-| `post-console-log-warn.mjs` | PostToolUse/Edit,Write | 编辑后检测 `console.log` 并警告 |
-| `subagent-context.mjs` | SubagentStart | 给子 agent 注入项目上下文 |
-| `stop-console-log-audit.mjs` | Stop | 会话结束前审计改动文件里的 `console.log` |
-| `stop-completion-guard.mjs` | Stop | 可选弱哨兵：防未对齐治理流程就宣称「完成」（默认关闭，靠环境变量开启） |
-
-Codex 和 OpenClaw 使用各自原生机制实现等效行为。
-
-## 快速上手（克隆后 5 分钟跑起来）
-
-### 环境要求
-
-- **Node.js** v18+（用于 sync、validate、OpenClaw 脚本）
-- **Git**（用于克隆项目）
-- **Claude Code CLI**（可选，仅在运行 `eval:agents` 时需要）
-- **Codex CLI**（可选，仅在运行 `eval:agents` 时需要）
-- **OpenClaw CLI**（可选，仅在运行 `npm run prepare:openclaw-local` 时需要）
-
-### 一键安装（推荐）
-
-**无需先 clone（`npx` 会临时拉取仓库并执行安装向导）：**
-
-```bash
-npx --yes github:KimYx0207/Meta_Kim meta-kim
-```
-
-中文界面、只做环境检查：
-
-```bash
-npx --yes github:KimYx0207/Meta_Kim meta-kim -- --lang zh-CN --check
-```
-
-**经典方式（克隆后进目录）：**
-
-```bash
-git clone https://github.com/KimYx0207/Meta_Kim.git
-cd Meta_Kim
-node setup.mjs
-```
-
-| 用法 | 说明 |
-| --- | --- |
-| `npx --yes github:KimYx0207/Meta_Kim meta-kim` | 与 `node setup.mjs` 相同，省略手动 `git clone` / `cd` |
-| `node setup.mjs` | 交互式向导（选语言 → 安装 / 更新 / 检查） |
-| `node setup.mjs --lang en` | 跳过语言选择，使用英语 |
-| `node setup.mjs --update` | 更新所有技能和依赖 |
-| `node setup.mjs --check` | 环境 + 依赖 + 跨运行时同步检查 |
-| `node setup.mjs --silent` | 非交互模式（CI / 脚本） |
-
-`node setup.mjs` 启动交互式向导：语言选择（en / zh-CN / ja-JP / ko-KR）→ 操作菜单（安装 / 更新 / 检查 / 退出）。安装流程依次执行环境检查、`npm install`、安装 9 个全局元技能、验证依赖和跨运行时同步状态（Claude Code / Codex / OpenClaw），然后运行 `validate`。检查模式（`--check`）执行完整预检：环境、9 项技能依赖验证和跨运行时同步状态——不做任何修改。
-
-> **第三方元技能 findskill**：请**以本仓库为准**。`setup.mjs` 安装 **`KimYx0207/findskill`**（在公开生态能力上的维护与优化版）至 `~/.claude/skills/findskill/`。**本仓库内文档与 agent 统一使用名称 `findskill`**，勿与旧写法混用。勿在不同渠道重复安装同能力。
-
-> 纯 Node.js 脚本，Windows / macOS / Linux 通用，不依赖 bash。
-
----
-
-### 手动安装（逐步）
-
-下面是更完整的维护者手动流程。它覆盖了 `node setup.mjs` 的核心安装动作，并额外补上 runtime 镜像同步、全局能力发现和全局 meta-theory 便携技能同步。
-
-#### 1. 克隆并安装依赖
-
-```bash
-git clone https://github.com/KimYx0207/Meta_Kim.git
-cd Meta_Kim
-npm install
-```
-
-#### 2. 同步三端镜像
-
-```bash
-npm run sync:runtimes
-```
-
-作用：
-
-- 从 `.claude/` 主源重新生成 Codex / OpenClaw / shared-skills 镜像
-- 检查主源和派生产物是否一致
-
-如果你只是想确认有没有不同步，也可以用：
-
-```bash
-npm run check:runtimes
-```
-
-#### 3. 安装元技能依赖（可选，但推荐）
-
-```bash
-npm run deps:install
-```
-
-这一步会把 Meta_Kim 依赖的 9 个社区 skill 安装到 `~/.claude/skills/`。
-
-注意：
-
-- 这是 **Claude Code 生态** 的全局安装，不是安装到当前仓库里
-- 这个脚本通过 `bash install-deps.sh` 运行
-- **Windows 用户请确保机器上有 `bash`**，通常用 Git Bash 或 WSL 即可
-
-更新这些依赖时用：
-
-```bash
-npm run deps:update
-```
-
-#### 4. 扫描全局能力
-
-```bash
-npm run discover:global
-```
-
-这一步会扫描你电脑里的全局能力，并生成：
-
-```text
-.claude/capability-index/global-capabilities.json
-```
-
-扫描范围包括：
-
-- `~/.claude/`：agents、skills、hooks、plugins、commands
-- `~/.openclaw/`：agents、skills、hooks、commands
-- `~/.codex/`：agents、skills、commands
-
-如果你想先看 CLI 探测结果，可以先跑：
-
-```bash
-npm run probe:clis
-```
-
-#### 5. 可选：同步全局 meta-theory 便携技能
-
-```bash
-npm run show:global:meta-theory-targets
-npm run sync:global:meta-theory
-```
-
-这一步会把 canonical 的 `.claude/skills/meta-theory/` 同步到用户级 runtime home：
-
-- `~/.claude/skills/meta-theory`
-- `~/.openclaw/skills/meta-theory`
-- `~/.codex/skills/.disabled/meta-theory`（默认是 standby，不直接激活）
-
-如果你只想检查有没有漂移，用：
-
-```bash
-npm run check:global:meta-theory
-```
-
-如果你希望 Codex 的全局 meta-theory 直接处于启用态，而不是放在 `.disabled/` 里，用：
-
-```bash
-npm run sync:global:meta-theory:codex-active
-```
-
-需要显式指定用户级 runtime home 时，可设置：
-
-- `META_KIM_CLAUDE_HOME` 或 `CLAUDE_HOME`
-- `META_KIM_OPENCLAW_HOME` 或 `OPENCLAW_HOME`
-- `META_KIM_CODEX_HOME` 或 `CODEX_HOME`
-
-#### 6. 做项目完整性校验
-
-```bash
-npm run validate
-```
-
-这会检查：
-
-- 必要文件是否存在
-- workflow contract 是否完整
-- 8 个 Claude agents 是否合规
-- OpenClaw workspaces 是否齐全
-- `SKILL.md` 多端镜像是否同步
-- Codex agents 是否有效
-- hooks / MCP / package scripts 是否配置正确
-
-#### 7. 跑一次 MCP 自测
-
-```bash
-npm run test:mcp
-```
-
-这一步会自测 `meta-runtime-server`，也是 `node setup.mjs` 默认会执行的一项检查。
-
-#### 8. 需要时再跑轻量运行时 smoke
-
-```bash
-npm run eval:agents
-```
-
-默认的 `eval:agents` 是轻量、无 LLM 的 runtime smoke：
-
-- 可用且通过的运行时会显示 `passed`
-- 没装或当前不可用的可选运行时可能显示 `skipped`
-- 配置错误、注册表接线错误会显示 `failed`
-- 它**不会**主动打开 Claude / Codex / OpenClaw 的实时 prompt 会话
-
-如果你明确要跑较慢的、带实时 prompt 的运行时验收：
-
-```bash
-npm run eval:agents:live
-```
-
-全部一起跑：
-
-```bash
-npm run verify:all
-```
-
-需要完整 live 验收时：
-
-```bash
-npm run verify:all:live
-```
-
-如果你手头有真实 run artifact，想核对整个 packet 链：
-
-```bash
-npm run validate:run -- tests/fixtures/run-artifacts/valid-run.json
-```
-
-#### 9. OpenClaw 本地运行前，额外准备一次
-
-```bash
-npm run prepare:openclaw-local
-```
-
-只有你准备在本机真正跑 OpenClaw 时才需要这一步。
-
-#### 10. 快速健康度检查
-
-```bash
-node scripts/agent-health-report.mjs
-```
-
-可以快速看 8 个 agent 的版本号、frontmatter 完整性、边界定义、workspace 文件和 skill 同步状态。
-
-#### 11. 开始使用（Claude Code）
-
-你可以直接说：
-
-```text
-认证系统要重构，散在 5 个文件里，没人知道 token 刷新到底是哪个文件在处理。
-```
-
-```text
-帮我设计一个 agent，处理这个项目的数据导出任务。
-```
-
-```text
-有问题，我的 agent 写的代码老是互相冲突。
-```
-
-系统会根据任务类型，把请求路由到匹配的治理阶段。
-
-## 这些命令什么时候要跑
-
-| 命令 | 什么时候用 | 作用 |
-| --- | --- | --- |
-| `npx --yes github:KimYx0207/Meta_Kim meta-kim` | **不想先 clone** | 与 `node setup.mjs` 相同（`npx` 会拉取本仓库） |
-| `node setup.mjs` | **首次拉仓库** | **交互式向导：语言 → 安装 / 更新 / 检查** |
-| `node setup.mjs --update` | 依赖/技能需要更新时 | 更新所有技能 + 可选运行时同步 |
-| `node setup.mjs --check` | 想先做环境体检时 | 环境 + 依赖 + 跨运行时同步验证 |
-| `npm install` | 手动安装时 | 安装 Node 依赖 |
-| `npm run sync:runtimes` | 改完主源后 | 重建三端镜像 |
-| `npm run check:runtimes` | 不想写文件时 | 只检查镜像是否最新 |
-| `npm run show:global:meta-theory-targets` | 想确认会写到哪些用户级目录 | 打印 Claude / OpenClaw / Codex 的全局 meta-theory 目标及 Claude hooks 路径 |
-| `npm run sync:global:meta-theory` | 改了 canonical `meta-theory` 或 `.claude/hooks` 后 | 同步用户级 Claude/OpenClaw 技能；把 hooks 复制到 `~/.claude/hooks/meta-kim/` 并把 hook 条目合并进 `~/.claude/settings.json`；Codex 默认 standby |
-| `npm run sync:global:meta-theory -- --skip-global-hooks` | 不能动用户级 settings/hooks 时 | 同上但不写 Claude 全局 hooks |
-| `npm run check:global:meta-theory` | 不想改用户级文件时 | 检查全局 meta-theory 与 Claude `hooks/meta-kim` 是否与 canonical 一致 |
-| `npm run sync:global:meta-theory:codex-active` | 希望 Codex 全局技能直接启用时 | 把 Codex 的全局 meta-theory 写到活动目录而不是 `.disabled/` |
-| `npm run deps:install` | 第一次配置 Claude 生态 | 安装 9 个全局元技能 |
-| `npm run deps:update` | 依赖需要更新时 | 更新已安装的元技能 |
-| `npm run deps:install:all-runtimes` | 用 Windows 或也要给 Codex/OpenClaw 装同套 skills | 把同一批 skill 仓库 clone 到 `~/.claude/skills`、`~/.codex/skills`、`~/.openclaw/skills`；若 PATH 上有 `claude`，会执行 `claude plugin install superpowers@claude-plugins-official` |
-| `npm run deps:update:all-runtimes` | 三端 skills 都要更新 | 同上并带 `--update` |
-| `npm run deps:install:claude-plugins` | 只装 Claude Code 官方 plugin 包 | 只跑 `claude plugin install …`，不做 git clone |
-| `npm run discover:global` | 首次安装后、装了新全局能力后 | 生成全局能力索引 |
-| `npm run probe:clis` | 怀疑 CLI 没配好时 | 探测 Claude / Codex / OpenClaw CLI |
-| `npm run test:mcp` | 改了 MCP 相关逻辑时 | 自测 `meta-runtime-server` |
-| `npm run test:meta-theory` | 改了 `meta-theory` skill / contract / tests 时 | 跑 `tests/meta-theory/*.test.mjs` |
-| `npm run validate` | 每次准备提交前 | 做静态完整性校验 |
-| `npm run validate:run -- <run.json>` | 要校验真实 run 产物链时 | 检查 packet 对齐、finding closure、summary/public-ready 是否真实 |
-| `npm run doctor:governance` | 发布前或怀疑 hook/镜像漂移时 | 契约 + hook 列表 + `check:runtimes` + 样例 `validate:run` |
-| `npm run prompt:next-iteration -- <run.json>` | run 未过校验或 finding 未关时 | 从 artifact 打印下一轮闭环待办 |
-| `npm run check` | 想快速做一轮静态检查 | `check:runtimes + validate` |
-| `npm run eval:agents` | 要快速做一轮 runtime smoke 时 | 做 CLI / 配置 / hook / registry 级别的轻量检查，不跑 LLM prompt 验收 |
-| `npm run eval:agents:live` | 要做真实 live 运行时验收时 | 运行较慢的 Claude / Codex / OpenClaw prompt 验收 |
-| `npm run verify:all` | 发布前 / 大改后 | `check + check:global:meta-theory + 轻量 eval + tests` |
-| `npm run verify:all:live` | runtime 敏感发布前 | `check + check:global:meta-theory + live eval + tests` |
-| `node scripts/agent-health-report.mjs` | 想看总体健康度时 | 生成 8 个 agent 的健康报告 |
-
-**Windows / PATH：** 从图形界面或编辑器里启动任务时，Node 子进程继承到的 `PATH` 有时比你单独开的终端更短。遇到 `eval:agents` 找不到 CLI 时，优先检查 `%APPDATA%\\npm\\`、`where.exe` 结果，仍不行就设置绝对路径环境变量：
-
-- `META_KIM_CLAUDE_BIN`
-- `META_KIM_CODEX_BIN`
-- `META_KIM_OPENCLAW_BIN`
-
-## 一个安全的维护流程
-
-如果你要改 agent、skill、README 或运行时配置，推荐始终按这个顺序做：
-
-1. 改 `.claude/` 主源或公共说明文件
-2. 如果改动涉及调度纪律、闸门或交付合约，同时更新 `contracts/workflow-contract.json`
-3. 跑 `npm run sync:runtimes`
-4. 如果改了 canonical `meta-theory`，并且你维护用户级 runtime home，再跑 `npm run sync:global:meta-theory`
-5. 跑 `npm run discover:global`
-6. 跑 `npm run validate`
-7. 如果改了 MCP runtime 相关逻辑，再跑 `npm run test:mcp`
-8. 需要 smoke 级运行时验收时，再跑 `npm run eval:agents`
-9. 只有明确需要 live prompt 验收时，再跑 `npm run eval:agents:live`
-
-这样最不容易把三端镜像改乱。
-
-## 新手最常见的 10 个问题
-
-### 1. 我必须同时安装 Claude Code、Codex、OpenClaw 吗？
-
-不用。你可以只用其中一个运行时。Meta_Kim 设计成跨运行时兼容，但不是强制三端全装。
-
-### 2. 我能不能只改 `.codex/` 或 `openclaw/`？
-
-技术上可以，长期维护上不推荐。大多数情况下，你应该改 `.claude/` 主源，再同步。
-
-### 3. `discover:global` 生成的索引要提交吗？
-
-通常不用。它是本机能力索引，带本地路径，按机器重新生成。
-
-### 4. `eval:agents` 里看到 `skipped` 是不是就说明项目坏了？
-
-不一定。`skipped` 常见原因是对应 CLI 没装，或者对应 runtime 当前不可用。真正的硬失败会标成 `failed`。
-
-### 5. `eval:agents` 和 `eval:agents:live` 有什么区别？
-
-`eval:agents` 是轻量 runtime smoke，只检查 CLI 可用性、配置接线、hook 和 runtime scaffolding，不主动打开 LLM prompt 会话。
-
-`eval:agents:live` 是更重的 live runtime 验收，会真实调用 Claude / Codex / OpenClaw，会慢很多。
-
-### 6. 为什么默认入口不是 8 个 agent 直接给用户选？
-
-因为 Meta_Kim 的设计目标不是“给你一排角色菜单”，而是先用统一前门接住需求，再在后台做分工。
-
-### 7. 什么情况下可以不走 agent？
-
-只有纯 `Q / Query`。也就是纯解释、纯问答、没有改代码、没有外部副作用、没有交付链要求。只要任务会执行、会产生产物、会进入审查或验证，就必须有 owner。
-
-### 8. `.claude/skills/meta-theory/references/meta-theory.md` 是不是必读？
-
-不是。它更像从 canonical skill references 映射出来的方法长文。第一次上手先读本 README 即可。
-
-### 9. 我只想看仓库地图，应该读什么？
-
-直接读本 README 里的仓库结构树即可。
-
-### 10. 我想看三端能力差异，应该读什么？
-
-内部说明：运行时一致性参考在 `docs/` 下，不属于公开内容。
-
-## 最简单的开始方式
-
-上面的 [快速上手章节](#快速上手克隆后-5-分钟跑起来) 已经包含了从克隆到跑起来的完整步骤。
-
-如果你是第一次接触这个项目，按下面顺序最省力：
-
-1. 先读本文件 `README.zh-CN.md`
-2. 再读 [CLAUDE.md](CLAUDE.md) 或 [AGENTS.md](AGENTS.md)
-3. 再看本 README 里的仓库结构树
-4. 需要方法细节时再读 `.claude/skills/meta-theory/references/meta-theory.md`
-
-## 作者与资料
-
-- GitHub: <https://github.com/KimYx0207>
-- X: <https://x.com/KimYx0207>
-- Website: <https://www.aiking.dev/>
-- WeChat Official Account: `老金带你玩AI`
-- Feishu knowledge base: <https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf>
-- Paper: <https://zenodo.org/records/18957649>
-- DOI: `10.5281/zenodo.18957649`
 
 ## License
 
