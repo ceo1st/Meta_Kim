@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -195,6 +196,96 @@ export async function resolveTargetContext(argv = process.argv.slice(2)) {
     cliTargets,
   };
 }
+
+// ── Path resolution ─────────────────────────────────────────
+
+/** Home directory resolver for each runtime. Priority: env var > ~/.runtime */
+export function resolveRuntimeHomeDir(runtimeId) {
+  const specs = {
+    claude: {
+      envKeys: ["META_KIM_CLAUDE_HOME", "CLAUDE_HOME"],
+      defaultDir: ".claude",
+    },
+    codex: {
+      envKeys: ["META_KIM_CODEX_HOME", "CODEX_HOME"],
+      defaultDir: ".codex",
+    },
+    openclaw: {
+      envKeys: ["META_KIM_OPENCLAW_HOME", "OPENCLAW_HOME"],
+      defaultDir: ".openclaw",
+    },
+  };
+
+  const spec = specs[runtimeId];
+  if (!spec) {
+    throw new Error(`Unknown runtime: ${runtimeId}`);
+  }
+
+  for (const key of spec.envKeys) {
+    const value = process.env[key];
+    if (typeof value === "string" && value.trim()) {
+      return path.resolve(value.trim());
+    }
+  }
+  return path.join(os.homedir(), spec.defaultDir);
+}
+
+/**
+ * Parse --scope CLI argument.
+ * @returns "project" | "global" | "both"
+ */
+export function parseScopeArg(argv = process.argv.slice(2)) {
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === "--scope" && argv[i + 1]) {
+      const scope = argv[i + 1];
+      if (!["project", "global", "both"].includes(scope)) {
+        throw new Error(
+          `Invalid --scope value: ${scope}. Expected: project|global|both`,
+        );
+      }
+      return scope;
+    }
+    if (argv[i].startsWith("--scope=")) {
+      const scope = argv[i].slice("--scope=".length);
+      if (!["project", "global", "both"].includes(scope)) {
+        throw new Error(
+          `Invalid --scope value: ${scope}. Expected: project|global|both`,
+        );
+      }
+      return scope;
+    }
+  }
+  return "project"; // Default: write to repo-local
+}
+
+/**
+ * Resolve output path for a given runtime asset.
+ * @param {string} runtimeId - "claude" | "codex" | "openclaw"
+ * @param {string} scope - "project" | "global" | "both"
+ * @param {string} baseDir - repoRoot for project scope, or runtime home dir for global
+ * @param {string} relativePath - Relative path from profile's outputPaths (e.g. ".claude/agents")
+ */
+export function resolveOutputPath(runtimeId, scope, baseDir, relativePath) {
+  return path.join(baseDir, relativePath);
+}
+
+/**
+ * Safety check: assert path is within allowed home directories.
+ * Throws if targetPath escapes allowedRoots.
+ */
+export function assertHomeBound(targetPath, allowedRoots) {
+  const resolved = path.resolve(targetPath);
+  const isAllowed = allowedRoots.some(
+    (root) => resolved === root || resolved.startsWith(`${root}${path.sep}`),
+  );
+  if (!isAllowed) {
+    throw new Error(
+      `Refusing to write outside configured runtime homes: ${resolved}`,
+    );
+  }
+}
+
+// ── Manifest & profile validation ─────────────────────────────────
 
 export function validateSyncManifest(manifest) {
   if (!manifest || typeof manifest !== "object") {

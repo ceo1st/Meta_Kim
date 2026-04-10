@@ -402,9 +402,10 @@ node setup.mjs
 | `node setup.mjs --lang zh-CN` | 言語選択をスキップ、UI は简体中文 |
 | `node setup.mjs --lang ja-JP` | 言語選択をスキップ、UI は日本語 |
 | `node setup.mjs --lang ko-KR` | 言語選択をスキップ、UI は 한국어 |
-| `node setup.mjs --update` | 全スキルと依存関係を更新 |
+| `node setup.mjs --update` | 全スキルと依存関係を更新（インストール範囲を尋ねる） |
 | `node setup.mjs --check` | 環境 + 依存関係 + ランタイム間同期チェック |
 | `node setup.mjs --silent` | 非対話モード（CI/スクリプト用） |
+| `node setup.mjs --targets claude,codex,openclaw` | 非対話マルチランタイム選択 |
 
 </div>
 
@@ -432,7 +433,9 @@ npm run validate
 | -------- | ---- |
 | `npm run validate` | リポジトリ整合性（契約・エージェント・workspace・MCP 自己検証など） |
 | `npm run check:runtimes` | 鏡像が正典と一致するか（書き換えなし） |
-| `npm run sync:runtimes` | 正典から鏡像を再生成 |
+| `npm run sync:runtimes` | 正典から鏡像を再生成（デフォルト: project scope → repo-local） |
+| `npm run sync:runtimes -- --scope global` | ユーザーランタイムホームに直接インストール | `~/.claude/`、`~/.codex/`、`~/.openclaw/` に直接書き込み |
+| `npm run sync:runtimes -- --check` | 変更をプレビュー（書き込みなし） | 更新されるファイルを表示 |
 | `npm run test:meta-theory` | メタ理論テストスイート |
 | `npm run eval:agents` | ランタイムの軽量スモーク |
 | `npm run validate:run -- <run.json>` | 記録された run アーティファクトの検証 |

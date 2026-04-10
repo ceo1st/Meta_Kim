@@ -4,24 +4,19 @@ npm-debug.log*
 
 # ========== Runtime Projections (Generated from canonical/) ==========
 # These are DERIVED assets, NOT source. Edit canonical/ instead.
-.claude/agents/
-.claude/hooks/
-.claude/skills/
-.claude/settings.json
+.claude/
 .mcp.json
 .codex/
+codex/
 .agents/
-openclaw/workspaces/
+openclaw/
 openclaw/workspaces/*/.openclaw/
-openclaw/skills/
-openclaw/openclaw.template.json
-shared-skills/meta-theory.md
-shared-skills/references/
+shared-skills/
 
-# ========== Runtime State (Local only, never commit) ==========
+# ========== Local State (Never commit) ==========
+.meta-kim/
 .meta-kim/state/
 .meta-kim/local.overrides.json
-.claude/capability-index/
 
 # ========== Runtime Directories ==========
 runtimes/

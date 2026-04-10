@@ -150,9 +150,10 @@ node setup.mjs
 | `node setup.mjs --lang zh-CN` | 跳过语言选择，界面简体中文 |
 | `node setup.mjs --lang ja-JP` | 跳过语言选择，界面日本語 |
 | `node setup.mjs --lang ko-KR` | 跳过语言选择，界面 한국어 |
-| `node setup.mjs --update` | 更新所有技能和依赖 |
+| `node setup.mjs --update` | 更新所有技能和依赖（询问安装范围） |
 | `node setup.mjs --check` | 环境 + 依赖 + 跨运行时同步检查 |
 | `node setup.mjs --silent` | 非交互模式（CI / 脚本） |
+| `node setup.mjs --targets claude,codex,openclaw` | 非交互多运行时激活 |
 
 </div>
 
@@ -663,10 +664,15 @@ npm run graphify:check
 | --- | --- | --- |
 | `npx --yes github:KimYx0207/Meta_Kim meta-kim` | **不想先 clone** | 与 `node setup.mjs` 相同（`npx` 会拉取本仓库） |
 | `node setup.mjs` | **首次拉仓库** | **交互式向导：语言 → 安装 / 更新 / 检查 + 选择本机 active runtimes** |
-| `node setup.mjs --update` | 依赖/技能需要更新时 | 更新所有技能 + 可选运行时同步 |
+| `node setup.mjs --update` | 依赖/技能需要更新时 | 更新所有技能（询问安装范围：project/global/both） |
 | `node setup.mjs --check` | 想先做环境体检时 | 环境 + 依赖 + 跨运行时同步验证 |
 | `npm install` | 手动安装时 | 安装 Node 依赖 |
-| `npm run sync:runtimes` | 改完主源后 | 重建三端镜像 |
+| `npm run sync:runtimes` | 改完主源后 | 重建三端镜像（默认：project 范围 → repo 本地目录） |
+| `npm run sync:runtimes -- --scope project` | 仅 repo 本地同步 | 写到 `.claude/`、`.codex/`、`openclaw/`、`shared-skills/` |
+| `npm run sync:runtimes -- --scope global` | 仅全局运行时目录 | 写到 `~/.claude/`、`~/.codex/`、`~/.openclaw/` |
+| `npm run sync:runtimes -- --scope both` | 同时同步两个范围 | 同时写到 repo 本地和全局目录 |
+| `npm run sync:runtimes -- --scope global --targets claude` | 全局 + 仅 Claude | 只写到 `~/.claude/` |
+| `npm run sync:runtimes -- --check` | 预览改动不写入 | 显示哪些文件会更新 |
 | `npm run check:runtimes` | 不想写文件时 | 只检查镜像是否最新 |
 | `npm run show:global:meta-theory-targets` | 想确认会写到哪些用户级目录 | 打印 Claude / OpenClaw / Codex 的全局 meta-theory 目标及 Claude hooks 路径 |
 | `npm run sync:global:meta-theory` | 改了 canonical `meta-theory` 或 `canonical/runtime-assets/claude/hooks` 后 | 默认按本机 `activeTargets` 同步用户级 `meta-theory`；若启用 Claude，还会把 hooks 复制到 `~/.claude/hooks/meta-kim/` 并合并到 `~/.claude/settings.json` |

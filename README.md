@@ -1011,9 +1011,10 @@ node setup.mjs
 | `node setup.mjs --lang zh-CN`      | Skip language selection, Chinese UI                      |
 | `node setup.mjs --lang ja-JP`      | Skip language selection, Japanese UI                     |
 | `node setup.mjs --lang ko-KR`      | Skip language selection, Korean UI                       |
-| `node setup.mjs --update`          | Update all skills and dependencies                       |
+| `node setup.mjs --update`          | Update all skills and dependencies (asks for install scope)  |
 | `node setup.mjs --check`           | Environment + dependency + cross-runtime sync check      |
 | `node setup.mjs --silent`          | Non-interactive (CI / scripts)                           |
+| `node setup.mjs --targets claude,codex,openclaw` | Non-interactive multi-runtime activation             |
 
 </div>
 
@@ -1229,7 +1230,12 @@ The system routes each request through the matching governance stage.
 | `node setup.mjs --update`              | when skills/deps need updating                   | update all skills + optional runtime sync                      |
 | `node setup.mjs --check`               | when you want an environment preflight          | env + dependency + cross-runtime sync verification             |
 | `npm install`                          | manual setup                                     | installs Node dependencies                                            |
-| `npm run sync:runtimes`                | after editing canonical source                   | rebuilds runtime mirrors                                              |
+| `npm run sync:runtimes`                | after editing canonical source                   | rebuilds runtime mirrors (default: project scope → repo-local dirs)  |
+| `npm run sync:runtimes -- --scope project` | project-local sync                              | writes to `.claude/`, `.codex/`, `openclaw/`, `shared-skills/`    |
+| `npm run sync:runtimes -- --scope global` | global runtime homes                            | writes to `~/.claude/`, `~/.codex/`, `~/.openclaw/`                 |
+| `npm run sync:runtimes -- --scope both`   | both scopes simultaneously                       | writes to both repo-local and global dirs                              |
+| `npm run sync:runtimes -- --scope global --targets claude` | global, single runtime                | writes to `~/.claude/` only                                         |
+| `npm run sync:runtimes -- --check`     | preview changes without writing                   | shows which files would be updated                                     |
 | `npm run check:runtimes`               | when you only want a diff check                  | verifies mirrors are current without rewriting                        |
 | `npm run show:global:meta-theory-targets` | before touching user-level runtime homes       | prints the resolved global `meta-theory` sync targets and Claude hook paths |
 | `npm run sync:global:meta-theory`      | after changing canonical `meta-theory` or `canonical/runtime-assets/claude/hooks` | syncs user-level `meta-theory` for local `activeTargets`; when Claude is active, also copies hooks to `~/.claude/hooks/meta-kim/` and merges entries into `~/.claude/settings.json` |

@@ -402,9 +402,10 @@ node setup.mjs
 | `node setup.mjs --lang zh-CN` | 언어 선택 생략, UI 简体中文 |
 | `node setup.mjs --lang ja-JP` | 언어 선택 생략, UI 日本語 |
 | `node setup.mjs --lang ko-KR` | 언어 선택 생략, UI 한국어 |
-| `node setup.mjs --update` | 모든 스킬과 의존성 업데이트 |
+| `node setup.mjs --update` | 모든 스킬과 의존성 업데이트（설치 범위 물음） |
 | `node setup.mjs --check` | 환경 + 의존성 + 런타임 간 동기화 확인 |
 | `node setup.mjs --silent` | 비대화형 모드 (CI/스크립트용) |
+| `node setup.mjs --targets claude,codex,openclaw` | 비대화 멀티 런타임 선택 |
 
 </div>
 
@@ -434,7 +435,9 @@ npm run validate
 | ---- | ---- |
 | `npm run validate` | 저장소 무결성(계약·에이전트·workspace·MCP 자가검사 등) |
 | `npm run check:runtimes` | 미러가 정본과 일치하는지(쓰기 없음) |
-| `npm run sync:runtimes` | 정본에서 미러 재생성 |
+| `npm run sync:runtimes` | 정본에서 미러 재생성 (기본값: project scope → repo-local) |
+| `npm run sync:runtimes -- --scope global` | 사용자 런타임 홈에 직접 설치 | `~/.claude/`, `~/.codex/`, `~/.openclaw/`에 직접 쓰기 |
+| `npm run sync:runtimes -- --check` | 변경사항 미리보기(쓰기 없음) | 업데이트될 파일 표시 |
 | `npm run test:meta-theory` | 메타이론 테스트 스위트 |
 | `npm run eval:agents` | 런타임 경량 스모크 |
 | `npm run validate:run -- <run.json>` | 기록된 run 아티팩트 검증 |

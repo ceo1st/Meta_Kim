@@ -22,6 +22,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { resolveTargetContext } from "./meta-kim-sync-config.mjs";
+import { t } from "./meta-kim-i18n.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -80,7 +81,7 @@ function loadSkillsManifest() {
 
     return { skillRepos, claudePluginSpecs };
   } catch (err) {
-    console.warn(`Failed to load skills manifest: ${err.message}`);
+    console.warn(t.failManifestLoad(err.message));
     return { skillRepos: [], claudePluginSpecs: [] };
   }
 }
@@ -128,7 +129,7 @@ async function pathExists(p) {
 
 function runGit(args, opts = {}) {
   if (dryRun) {
-    console.log(`[dry-run] git ${args.join(" ")}`);
+    console.log(t.dryRun(`git ${args.join(" ")}`));
     return;
   }
   execFileSync("git", args, { stdio: "inherit", ...opts });
@@ -139,42 +140,42 @@ async function installGitSkill(targetDir, repoUrl) {
   if (await pathExists(targetDir)) {
     if (updateMode) {
       if (dryRun) {
-        console.log(`[dry-run] update ${targetDir}`);
+        console.log(t.dryRun(`update ${targetDir}`));
         return;
       }
       try {
         runGit(["-C", targetDir, "pull", "--ff-only"]);
-        console.log(`[OK] updated ${targetDir}`);
+        console.log(t.okUpdated(targetDir));
       } catch {
-        console.warn(`[WARN] pull failed, re-cloning ${targetDir}`);
+        console.warn(t.warnPullFailed(targetDir));
         await fs.rm(targetDir, { recursive: true, force: true });
         runGit(["clone", "--depth", "1", repoUrl, targetDir]);
-        console.log(`[OK] cloned ${targetDir}`);
+        console.log(t.okCloned(targetDir));
       }
     } else {
-      console.log(`[SKIP] exists ${targetDir}`);
+      console.log(t.skipExists(targetDir));
     }
     return;
   }
   if (dryRun) {
-    console.log(`[dry-run] clone ${repoUrl} -> ${targetDir}`);
+    console.log(t.dryRun(`clone ${repoUrl} -> ${targetDir}`));
     return;
   }
   await fs.mkdir(path.dirname(targetDir), { recursive: true });
   runGit(["clone", "--depth", "1", repoUrl, targetDir]);
-  console.log(`[OK] cloned ${targetDir}`);
+  console.log(t.okCloned(targetDir));
 }
 
 async function installGitSkillFromSubdir(targetDir, repoUrl, subdirPath) {
   assertUnderHome(targetDir);
   if ((await pathExists(targetDir)) && !updateMode) {
-    console.log(`[SKIP] exists ${targetDir}`);
+    console.log(t.skipExists(targetDir));
     return;
   }
 
   if (dryRun) {
     console.log(
-      `[dry-run] sparse install ${repoUrl} (${subdirPath}) -> ${targetDir}`,
+      t.dryRun(`sparse install ${repoUrl} (${subdirPath}) -> ${targetDir}`),
     );
     return;
   }
@@ -201,9 +202,7 @@ async function installGitSkillFromSubdir(targetDir, repoUrl, subdirPath) {
     }
     await fs.mkdir(path.dirname(targetDir), { recursive: true });
     await fs.cp(src, targetDir, { recursive: true, force: true });
-    console.log(
-      `[OK] ${path.basename(targetDir)} -> ${targetDir} (from ${subdirPath})`,
-    );
+    console.log(t.okBasename(path.basename(targetDir), targetDir));
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
   }
@@ -215,12 +214,12 @@ async function installSkillCreator(targetBaseSkills) {
   assertUnderHome(targetDir);
 
   if ((await pathExists(targetDir)) && !updateMode) {
-    console.log(`[SKIP] exists ${targetDir}`);
+    console.log(t.skipExists(targetDir));
     return;
   }
 
   if (dryRun) {
-    console.log(`[dry-run] sparse install skill-creator -> ${targetDir}`);
+    console.log(t.dryRun(`sparse install skill-creator -> ${targetDir}`));
     return;
   }
 
@@ -248,14 +247,14 @@ async function installSkillCreator(targetBaseSkills) {
       recursive: true,
       force: true,
     });
-    console.log(`[OK] skill-creator -> ${targetDir}`);
+    console.log(t.okBasename("skill-creator", targetDir));
   } finally {
     await fs.rm(tmp, { recursive: true, force: true });
   }
 }
 
 async function installAllSkillsForRuntime(label, skillsRoot, runtimeId) {
-  console.log(`\n--- ${label}: ${skillsRoot} ---`);
+  console.log(`\n${t.skillsHeader(label, skillsRoot)}`);
   assertUnderHome(skillsRoot);
   if (!dryRun) {
     await fs.mkdir(skillsRoot, { recursive: true });
@@ -263,7 +262,7 @@ async function installAllSkillsForRuntime(label, skillsRoot, runtimeId) {
 
   for (const spec of SKILL_REPOS) {
     if (spec.targets && !spec.targets.includes(runtimeId)) {
-      console.log(`[SKIP] ${spec.id} — not applicable to ${runtimeId}`);
+      console.log(t.skipNotApplicable(spec.id, runtimeId));
       continue;
     }
     const targetDir = path.join(skillsRoot, spec.id);
@@ -280,27 +279,54 @@ function installClaudePlugins() {
   if (skipPlugins || CLAUDE_PLUGIN_SPECS.length === 0) {
     return;
   }
-  console.log("\n--- Claude Code plugins (user scope) ---");
+  console.log(`\n${t.pluginsHeader}`);
   const r = spawnSync("claude", ["--version"], { encoding: "utf8" });
   if (r.status !== 0) {
-    console.warn(
-      "[WARN] `claude` CLI not found on PATH — skip plugin install. Install Claude Code CLI, then re-run with --plugins-only.",
-    );
+    console.warn(t.warnClaNotFound);
     return;
   }
 
+  // Detect already-installed plugins so we skip re-installing them.
+  // "claude plugin install" always exits 0 (even if already installed),
+  // so we must check the plugin list first.
+  const listOut = spawnSync("claude", ["plugins", "list", "--json"], {
+    encoding: "utf8",
+    shell: os.platform() === "win32",
+  });
+  let installedNames = new Set();
+  if (listOut.status === 0 && listOut.stdout) {
+    try {
+      const plugins = JSON.parse(listOut.stdout);
+      if (Array.isArray(plugins)) {
+        for (const p of plugins) {
+          // Plugin objects may have "name" or "id"; normalize to bare name.
+          const name = (p.name || p.id || "").split("@")[0].trim();
+          if (name) installedNames.add(name);
+        }
+      }
+    } catch {
+      // If JSON parse fails, fall through to blind install.
+    }
+  }
+
   for (const spec of CLAUDE_PLUGIN_SPECS) {
-    if (dryRun) {
-      console.log(`[dry-run] claude plugin install ${spec}`);
+    // Extract bare name from spec like "superpowers@claude-plugins-official"
+    const bareName = spec.split("@")[0];
+    if (installedNames.has(bareName)) {
+      console.log(t.skipAlreadyInstalled(bareName));
       continue;
     }
-    console.log(`Installing plugin: ${spec}`);
+    if (dryRun) {
+      console.log(t.dryRun(`claude plugin install ${spec}`));
+      continue;
+    }
+    console.log(t.installingPlugin(spec));
     const p = spawnSync("claude", ["plugin", "install", spec], {
       stdio: "inherit",
       shell: os.platform() === "win32",
     });
     if (p.status !== 0) {
-      console.warn(`[WARN] plugin install failed: ${spec} (exit ${p.status})`);
+      console.warn(t.warnPluginFailed(spec, p.status));
     }
   }
 }
@@ -339,7 +365,7 @@ async function main() {
 
   // Optional: graphify (code knowledge graph)
   if (!pluginsOnly) {
-    console.log("\n--- Python Tools (optional) ---");
+    console.log(`\n${t.pythonToolsOptionalHeader}`);
     const pyCmd = ["python3", "python"].find((cmd) => {
       try {
         const r = spawnSync(cmd, ["--version"], {
@@ -357,54 +383,50 @@ async function main() {
     });
 
     if (!pyCmd) {
-      console.log("Python 3.10+ not found. Skipping graphify.");
-      console.log(
-        "Install Python 3.10+ and run: pip install graphifyy && graphify claude install",
-      );
+      console.log(t.pythonNotFoundGraphify);
+      console.log(t.pythonInstallHintGraphify);
     } else {
-      const gfCheck = spawnSync("graphify", ["--version"], {
+      // Use "python -m graphify" instead of bare "graphify" command
+      // graphifyy installs as a Python module, not a PATH executable
+      const gfCheck = spawnSync(pyCmd, ["-m", "graphify", "--version"], {
         encoding: "utf8",
         shell: os.platform() === "win32",
       });
       if (gfCheck.status === 0) {
-        console.log(
-          `[SKIP] graphify already installed (${(gfCheck.stdout || "").trim()})`,
-        );
+        console.log(t.skipGraphifyInstalled((gfCheck.stdout || "").trim()));
       } else {
-        console.log(
-          "[INSTALL] graphify (code knowledge graph, 71x token compression)...",
-        );
+        console.log(t.installingGraphify);
         const pipCmd = pyCmd === "python3" ? "pip3" : "pip";
         const pipResult = spawnSync(pipCmd, ["install", "graphifyy"], {
           stdio: "inherit",
           shell: os.platform() === "win32",
         });
         if (pipResult.status === 0) {
-          console.log("[INSTALL] Registering graphify Claude skill...");
-          const skillResult = spawnSync("graphify", ["claude", "install"], {
-            stdio: "inherit",
-            shell: os.platform() === "win32",
-          });
+          console.log(t.installingGraphifySkill);
+          const skillResult = spawnSync(
+            pyCmd,
+            ["-m", "graphify", "claude", "install"],
+            {
+              stdio: "inherit",
+              shell: os.platform() === "win32",
+            },
+          );
           if (skillResult.status === 0) {
-            console.log("[OK] graphify installed and Claude skill registered");
+            console.log(t.okGraphifyInstalled);
           } else {
-            console.warn(
-              "[WARN] graphify Claude skill registration failed (non-blocking)",
-            );
+            console.warn(t.warnGraphifySkillFailed);
           }
         } else {
-          console.warn("[WARN] graphify pip install failed (non-blocking)");
+          console.warn(t.warnGraphifyPipFailed);
         }
       }
     }
   }
 
-  console.log("\nDone.");
-  console.log(
-    "Note: Codex/OpenClaw have no Claude Code plugin format — same repos are mirrored as skill directories only.",
-  );
-  console.log(`Active runtime targets: ${activeTargets.join(", ")}`);
-  console.log(`Meta_Kim repo (canonical source root): ${repoRoot}`);
+  console.log(`\n${t.done}`);
+  console.log(t.noteCodexOpenclaw);
+  console.log(t.activeTargets(activeTargets));
+  console.log(t.metaKimRoot(repoRoot));
 }
 
 main().catch((err) => {

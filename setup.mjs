@@ -249,7 +249,7 @@ const I18N = {
     stepPythonTools: "Optional Python Tools",
     pythonNotFound: "Python 3.10+ not found — skipping graphify",
     pythonHint:
-      "Install Python 3.10+ and run: pip install graphifyy && graphify claude install",
+      "Install Python 3.10+ and run: pip install graphifyy && python -m graphify claude install",
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling:
       "Installing graphify (code knowledge graph, 71x token compression)...",
@@ -264,23 +264,32 @@ const I18N = {
     updateHeading: "Update Mode",
     updateNpm: "Reinstalling npm dependencies...",
     updateSkills: "Updating all skills...",
-    updateSyncRuntimes:
-      "Regenerate Codex + OpenClaw mirror files in this repo from the canonical `.claude/` definitions? Same agent roles and skill text, but not identical files (Codex `.toml`, OpenClaw generated workspace markdown + config). Edit `.claude/agents` and meta-theory first, then sync.",
-    updateSyncing: "Regenerating Codex / OpenClaw mirrors from `.claude/`...",
-    updateSyncDone: "Copy step finished",
-    updateSyncSkip: "Copy step skipped or failed",
+    updateSyncProjectFiles: "Syncing project runtime files from canonical/...",
+    updateSyncDone: "Sync complete",
+    updateSyncProjectSkipped: "Project sync skipped (global update mode)",
+    updateSyncSkip: "Sync skipped or failed",
     updateReGlobal: "Re-select global skills directory?",
     askReselectRuntimes: "Re-select AI coding tools for this machine?",
+    askPythonToolsUpdate: "Install/update Python graphify tool? (optional)",
+    pythonToolsSkipped: "Python tools skipped",
+    askGlobalSkillsUpdate: "Update global skills? (optional)",
+    updateSkillsDone: "Global skills updated",
+    globalSkillsSkipped: "Global skills skipped",
+    askMetaTheoryUpdate: "Sync meta-theory to global directory? (optional)",
+    updateMetaTheoryDone: "meta-theory synced to global",
+    metaTheorySkipped: "meta-theory sync skipped",
     updateComplete: "Update complete!",
     // Installation overview strings
     installOverviewTitle: "Meta_Kim Installation Overview",
     installOverviewWill: "This process will:",
     installOverviewSyncConfig:
-      "Sync configurations (canonical → .claude/.codex/openclaw/)",
-    installOverviewInstallSkills: "Install 9 global skill repositories",
+      "Sync configurations to project directory (canonical → .claude/.codex/openclaw/)",
+    installOverviewInstallSkills:
+      "Install 9 global skill repositories (~/.claude/skills/)",
     installOverviewSyncMeta: "Sync meta-theory to global directory",
-    installOverviewOptionalPython: "Optional: Install Python graphify tool",
+    installOverviewOptionalPython: "Install Python graphify tool",
     installOverviewTargets: "Target tools:",
+    installOverviewScope: "Installation scope:",
     installOverviewEstimated: "Estimated time:",
     installOverviewTime: "2-5 minutes (depends on network speed)",
     // Progress step strings
@@ -449,13 +458,20 @@ const I18N = {
     updateHeading: "更新模式",
     updateNpm: "正在重新安装 npm 依赖...",
     updateSkills: "正在更新所有技能...",
-    updateSyncRuntimes:
-      "是否根据 `.claude/`（正典）重新生成本仓库里 Codex、OpenClaw 用的文件？不是整文件夹原样复制：同一套 meta agent / meta-theory 的职责与正文一致，但格式不同（例如 Codex 为 .toml，OpenClaw 为工作台里的 SOUL 等生成件）。日常请只改 `.claude/agents` 与 `.claude/skills/meta-theory`，再执行本步。",
-    updateSyncing: "正从 `.claude/` 生成 Codex / OpenClaw 镜像文件...",
+    updateSyncProjectFiles: "正在从 canonical/ 同步项目运行时文件...",
     updateSyncDone: "同步完成",
+    updateSyncProjectSkipped: "跳过项目同步（全局更新模式）",
     updateSyncSkip: "未同步或同步失败",
     updateReGlobal: "是否重新选择全局技能目录？",
     askReselectRuntimes: "重新选择这台电脑的 AI 编程工具？",
+    askPythonToolsUpdate: "安装/更新 Python graphify 工具？（可选）",
+    pythonToolsSkipped: "Python 工具已跳过",
+    askGlobalSkillsUpdate: "更新全局技能？（可选）",
+    updateSkillsDone: "全局技能已更新",
+    globalSkillsSkipped: "全局技能已跳过",
+    askMetaTheoryUpdate: "同步 meta-theory 到全局目录？（可选）",
+    updateMetaTheoryDone: "meta-theory 已同步到全局",
+    metaTheorySkipped: "meta-theory 同步已跳过",
     updateComplete: "更新完成！",
     // 安装概览字符串
     installOverviewTitle: "Meta_Kim 安装概览",
@@ -466,6 +482,7 @@ const I18N = {
     installOverviewSyncMeta: "同步 meta-theory 到全局目录",
     installOverviewOptionalPython: "可选：安装 Python graphify 工具",
     installOverviewTargets: "目标工具：",
+    installOverviewScope: "安装范围：",
     installOverviewEstimated: "预计用时：",
     installOverviewTime: "2-5 分钟（取决于网络速度）",
     // 进度步骤字符串
@@ -646,26 +663,37 @@ const I18N = {
     updateHeading: "アップデートモード",
     updateNpm: "npm依存関係を再インストール中...",
     updateSkills: "すべてのスキルを更新中...",
-    updateSyncRuntimes:
-      "`.claude/` を正典として、Codex / OpenClaw 向けの生成ミラーを作り直しますか？単純コピーではなく、内容は同じでも形式は異なります（Codex は .toml、OpenClaw はワークスペース用 Markdown など）。編集は `.claude/agents` と meta-theory から。",
-    updateSyncing: "`.claude/` から Codex / OpenClaw ミラーを再生成中...",
+    updateSyncProjectFiles:
+      "canonical/ からプロジェクトランタイムファイルを同期中...",
     updateSyncDone: "同期が完了しました",
+    updateSyncProjectSkipped:
+      "プロジェクト同期をスキップ（グローバル更新モード）",
     updateSyncSkip: "同期をスキップしたか失敗しました",
     updateReGlobal: "グローバルスキルディレクトリを再選択しますか？",
     askReselectRuntimes:
       "このパソコンで使うAIコーディングツールを再選択しますか？",
+    askPythonToolsUpdate:
+      "Python graphify ツールをインストール/更新しますか？（オプション）",
+    pythonToolsSkipped: "Python ツールをスキップしました",
+    askGlobalSkillsUpdate: "グローバルスキルを更新しますか？（オプション）",
+    updateSkillsDone: "グローバルスキルが更新されました",
+    globalSkillsSkipped: "グローバルスキルをスキップしました",
+    askMetaTheoryUpdate:
+      "meta-theory をグローバルディレクトリに同期しますか？（オプション）",
+    updateMetaTheoryDone: "meta-theory がグローバルに同期されました",
+    metaTheorySkipped: "meta-theory 同期をスキップしました",
     updateComplete: "アップデート完了！",
     // インストール概要文字列
     installOverviewTitle: "Meta_Kim インストール概要",
     installOverviewWill: "このプロセスでは：",
     installOverviewSyncConfig:
-      "設定を同期 (canonical → .claude/.codex/openclaw/)",
+      "プロジェクトディレクトリに設定を同期 (canonical → .claude/.codex/openclaw/)",
     installOverviewInstallSkills:
-      "9つのグローバルスキルリポジトリをインストール",
+      "9つのグローバルスキルリポジトリをインストール (~/.claude/skills/)",
     installOverviewSyncMeta: "meta-theory をグローバルディレクトリに同期",
-    installOverviewOptionalPython:
-      "オプション：Python graphify ツールをインストール",
+    installOverviewOptionalPython: "Python graphify ツールをインストール",
     installOverviewTargets: "対象ツール：",
+    installOverviewScope: "インストール範囲：",
     installOverviewEstimated: "予想時間：",
     installOverviewTime: "2-5分（ネットワーク速度によります）",
     // 進捗ステップ文字列
@@ -842,23 +870,32 @@ const I18N = {
     updateHeading: "업데이트 모드",
     updateNpm: "npm 의존성 재설치 중...",
     updateSkills: "모든 스킬 업데이트 중...",
-    updateSyncRuntimes:
-      "`.claude/`를 기준으로 Codex / OpenClaw용 생성 미러를 다시 만들까요? 단순 복사가 아니라 내용은 같지만 형식은 다릅니다 (Codex .toml, OpenClaw 워크스페이스 Markdown 등). 편집은 `.claude/agents`·meta-theory에서.",
-    updateSyncing: "`.claude/`에서 Codex / OpenClaw 미러 재생성 중...",
+    updateSyncProjectFiles: "canonical/에서 프로젝트 런타임 파일 동기화 중...",
     updateSyncDone: "동기화 완료",
+    updateSyncProjectSkipped: "프로젝트 동기화 건너뜀 (전역 업데이트 모드)",
     updateSyncSkip: "동기화를 건너뛰었거나 실패했습니다",
     updateReGlobal: "전역 스킬 디렉토리를 다시 선택할까요?",
     askReselectRuntimes: "이 컴퓨터에서 사용할 AI 코딩 도구를 다시 선택할까요?",
+    askPythonToolsUpdate: "Python graphify 도구를 설치/업데이트할까요? (선택)",
+    pythonToolsSkipped: "Python 도구 건너뜀",
+    askGlobalSkillsUpdate: "전역 스킬을 업데이트할까요? (선택)",
+    updateSkillsDone: "전역 스킬 업데이트 완료",
+    globalSkillsSkipped: "전역 스킬 건너뜀",
+    askMetaTheoryUpdate: "meta-theory를 전역 디렉토리에 동기화할까요? (선택)",
+    updateMetaTheoryDone: "meta-theory가 전역에 동기화됨",
+    metaTheorySkipped: "meta-theory 동기화 건너뜀",
     updateComplete: "업데이트 완료!",
     // 설치 개요 문자열
     installOverviewTitle: "Meta_Kim 설치 개요",
     installOverviewWill: "이 과정에서:",
     installOverviewSyncConfig:
-      "설정 동기화 (canonical → .claude/.codex/openclaw/)",
-    installOverviewInstallSkills: "9개 전역 스킬 리포지토리 설치",
+      "프로젝트 디렉토리에 설정 동기화 (canonical → .claude/.codex/openclaw/)",
+    installOverviewInstallSkills:
+      "9개 전역 스킬 리포지토리 설치 (~/.claude/skills/)",
     installOverviewSyncMeta: "meta-theory를 전역 디렉토리에 동기화",
-    installOverviewOptionalPython: "선택사항: Python graphify 도구 설치",
+    installOverviewOptionalPython: "Python graphify 도구 설치",
     installOverviewTargets: "대상 도구:",
+    installOverviewScope: "설치 범위:",
     installOverviewEstimated: "예상 시간:",
     installOverviewTime: "2-5분(네트워크 속도에 따라 다름)",
     // 진행 단계 문자열
@@ -1068,18 +1105,40 @@ function isFirstRun() {
   return !existsSync(stateDir);
 }
 
-/** Show installation overview before starting */
-function showInstallOverview(activeTargets) {
+/** Show installation overview before starting (scope-aware bullets) */
+function showInstallOverview(activeTargets, installScope) {
+  const bullets = [];
+  bullets.push(t.installOverviewSyncConfig);
+
+  if (installScope === "project") {
+    // project-only: sync only
+  } else if (installScope === "global") {
+    // global-only: skills + meta-theory only
+    bullets.push(t.installOverviewInstallSkills);
+    bullets.push(t.installOverviewSyncMeta);
+  } else {
+    // both: all steps
+    bullets.push(t.installOverviewInstallSkills);
+    bullets.push(t.installOverviewSyncMeta);
+  }
+
+  // graphify is always optional — show as optional hint, not a bullet
+  const scopeLabel =
+    {
+      project: t.installScopeProjectLabel,
+      global: t.installScopeGlobalLabel,
+      both: t.installScopeBothLabel,
+    }[installScope] || installScope;
+
   console.log(`
 ${C.bold}  ${t.installOverviewTitle}${C.reset}
 
   ${C.dim}${t.installOverviewWill}${C.reset}
-  ${C.dim}•${C.reset} ${t.installOverviewSyncConfig}
-  ${C.dim}•${C.reset} ${t.installOverviewInstallSkills}
-  ${C.dim}•${C.reset} ${t.installOverviewSyncMeta}
-  ${C.dim}•${C.reset} ${t.installOverviewOptionalPython}
+${bullets.map((b) => `  ${C.dim}•${C.reset} ${b}`).join("\n")}
+  ${C.dim}•${C.reset} ${C.dim}${t.installOverviewOptionalPython}${C.reset} ${C.yellow}(optional)${C.reset}
 
   ${C.dim}${t.installOverviewTargets}${C.reset}${C.cyan}${activeTargets.join(", ")}${C.reset}
+  ${C.dim}${t.installOverviewScope}${C.reset}${C.cyan}${scopeLabel}${C.reset}
   ${C.dim}${t.installOverviewEstimated}${C.reset}${t.installOverviewTime}
 `);
 }
@@ -1522,9 +1581,12 @@ function runNodeScript(scriptRelative, extraArgs = []) {
 
 // ── Step 3: Auto-configure project files ────────────────
 
-async function autoConfigure() {
+async function autoConfigure(installScope = "project") {
   heading(t.stepConfig);
-  const syncResult = runNodeScript("scripts/sync-runtimes.mjs");
+  const syncResult = runNodeScript("scripts/sync-runtimes.mjs", [
+    "--scope",
+    installScope,
+  ]);
   if (syncResult.status === 0) {
     ok("Repo projections synced from canonical/");
     return true;
@@ -2001,7 +2063,7 @@ async function runInstall() {
   const installScope = await askInstallScope();
 
   // Show installation overview
-  showInstallOverview(activeTargets);
+  showInstallOverview(activeTargets, installScope);
 
   const confirm = await askYesNo(t.confirmStartInstall, true);
   if (!confirm) {
@@ -2023,7 +2085,7 @@ async function runInstall() {
     await withProgress(
       `Step ${stepNum}: Sync project runtime files`,
       async () => {
-        const configResult = await autoConfigure();
+        const configResult = await autoConfigure(installScope);
         if (!configResult) {
           warn(t.warnConfigSyncFailed);
         }
@@ -2075,16 +2137,27 @@ async function runInstall() {
     });
   }
 
-  // 最终验证
+  // [Optional] Python tools (graphify)
   stepNum++;
-  await withProgress(`Step ${stepNum}: Final validation`, async () => {
-    await installPythonTools();
-    const { supportedTargets } = await resolveTargetContext(args);
+  const wantPython = await askYesNo(t.askPythonToolsUpdate, true);
+  if (wantPython) {
+    await withProgress(
+      `Step ${stepNum}: Install Python graphify tool`,
+      async () => {
+        await installPythonTools();
+      },
+    );
+  } else {
+    skip(`${C.dim}${t.pythonToolsSkipped}${C.reset}`);
+    stepNum--; // don't count skipped steps
+  }
 
-    // 根据安装范围检查不同的同步状态
+  // 验证
+  stepNum++;
+  await withProgress(`Step ${stepNum}: Validate installation`, async () => {
+    const { supportedTargets } = await resolveTargetContext(args);
     const checkTargets = needProject ? supportedTargets : [];
     checkSync(runtimes, checkTargets);
-
     await validate();
   });
 
@@ -2100,6 +2173,10 @@ async function runUpdate() {
     ? await selectActiveTargets(runtimes)
     : (await resolveTargetContext(args)).activeTargets;
 
+  // ── 0. Ask for update scope (like install mode) ─────────────────────
+  const updateScope = await askInstallScope();
+
+  // ── 1. npm install (always — new code may have new deps) ────────────
   info(t.updateNpm);
   const npmResult = spawnSync("npm", ["install"], {
     cwd: PROJECT_DIR,
@@ -2109,34 +2186,54 @@ async function runUpdate() {
   if (npmResult.status === 0) ok(t.npmDone);
   else warn(t.npmFailed);
 
-  await installPythonTools();
+  // ── 2. [Optional] Python tools (graphify) ─────────────────────────
+  const wantPython = await askYesNo(t.askPythonToolsUpdate, true);
+  if (wantPython) {
+    await installPythonTools();
+  } else {
+    skip(`${C.dim}${t.pythonToolsSkipped}${C.reset}`);
+  }
 
-  const doSync = await askYesNo(t.updateSyncRuntimes, true);
-  if (doSync) {
-    info(t.updateSyncing);
-    const syncResult = runNodeScript("scripts/sync-runtimes.mjs");
+  // ── 3. sync-runtimes (scope from user selection) ──────────────────
+  if (updateScope === "global") {
+    skip(`${C.dim}${t.updateSyncProjectSkipped}${C.reset}`);
+  } else {
+    info(t.updateSyncProjectFiles);
+    const syncResult = runNodeScript("scripts/sync-runtimes.mjs", [
+      "--scope",
+      updateScope,
+    ]);
     if (syncResult.status === 0) ok(t.updateSyncDone);
     else warn(t.updateSyncSkip);
   }
 
-  // 安装全局技能并检查结果
-  const updateInstallResult = runNodeScript(
-    "scripts/install-global-skills-all-runtimes.mjs",
-    ["--update", "--targets", activeTargets.join(",")],
-  );
-  if (updateInstallResult.status !== 0) {
-    warn(t.warnSkillsUpdateFailed);
+  // ── 4. [Optional] Global skills update ─────────────────────────────
+  const wantGlobalSkills = await askYesNo(t.askGlobalSkillsUpdate, true);
+  if (wantGlobalSkills) {
+    const updateInstallResult = runNodeScript(
+      "scripts/install-global-skills-all-runtimes.mjs",
+      ["--update", "--targets", activeTargets.join(",")],
+    );
+    if (updateInstallResult.status === 0) ok(t.updateSkillsDone);
+    else warn(t.warnSkillsUpdateFailed);
+  } else {
+    skip(`${C.dim}${t.globalSkillsSkipped}${C.reset}`);
   }
 
-  // 同步全局 meta-theory 并检查结果
-  const updateSyncResult = runNodeScript(
-    "scripts/sync-global-meta-theory.mjs",
-    ["--targets", activeTargets.join(",")],
-  );
-  if (updateSyncResult.status !== 0) {
-    warn(t.warnMetaTheoryUpdateFailed);
+  // ── 5. [Optional] Global meta-theory sync ──────────────────────────
+  const wantMetaTheory = await askYesNo(t.askMetaTheoryUpdate, true);
+  if (wantMetaTheory) {
+    const updateSyncResult = runNodeScript(
+      "scripts/sync-global-meta-theory.mjs",
+      ["--targets", activeTargets.join(",")],
+    );
+    if (updateSyncResult.status === 0) ok(t.updateMetaTheoryDone);
+    else warn(t.warnMetaTheoryUpdateFailed);
+  } else {
+    skip(`${C.dim}${t.metaTheorySkipped}${C.reset}`);
   }
 
+  // ── 6. checkSync (repo-local, project scope) ───────────────────────
   const { supportedTargets } = await resolveTargetContext(args);
   checkSync(runtimes, supportedTargets);
   console.log(`\n${C.bold}${C.green}  ${t.updateComplete}${C.reset}\n`);

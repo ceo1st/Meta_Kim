@@ -4,6 +4,23 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [1.5.0] - 2026-04-11
+
+### Added
+
+- **Framework extensibility via `config/sync.json`**: Any platform can be added by editing the manifest — no hardcoded platform list. The sync system is now truly runtime-agnostic: add a new `generatedTargets` entry and a corresponding profile, and `sync-runtimes.mjs` projects to it automatically.
+- `shared-skills/` sync block added to `sync-runtimes.mjs`: mirrors `meta-theory.md` and `references/` alongside OpenClaw projections, enabling a portable shared skill layer.
+- `--scope project|global|both` now works consistently across `setup.mjs --update` and `sync:runtimes`: `project` writes to repo-local dirs, `global` writes directly to runtime homes, `both` writes to both.
+- Shared i18n module (`scripts/meta-kim-i18n.mjs`) unifies all install/update strings across 4 languages, replacing scattered hardcoded English in `setup.mjs` and `install-global-skills-all-runtimes.mjs`.
+- Plugin pre-check in `install-global-skills-all-runtimes.mjs`: uses `claude plugins list --json` to detect already-installed plugins before installing, preventing repeated re-install.
+
+### Fixed
+
+- `sync-runtimes.mjs` Codex paths corrected: `.claude/` → `.codex/` for all codex-*-Dir variables.
+- graphify command on Windows: bare `graphify` replaced with `python -m graphify` in both scripts.
+- `--update` mode now prompts for install scope (project/global/both) like install mode, instead of hardcoding `project`.
+- `.gitignore` now correctly ignores derived directories at directory level: `.codex/`, `codex/`, `shared-skills/`, `.meta-kim/`, and `openclaw/workspaces/*/.openclaw/`.
+
 ## [1.4.0] - 2026-04-10
 
 ### Added
@@ -11,6 +28,7 @@ When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the
 - Runtime-neutral canonical source layer under `canonical/`, plus repo-tracked sync manifest (`config/sync.json`) and three runtime profiles for Claude, Codex, and OpenClaw.
 - Local activation configuration via `.meta-kim/local.overrides.json`, with explicit separation between repo `supportedTargets` / `defaultTargets` and machine-level `activeTargets`.
 - `--targets` support across `setup.mjs`, `sync:runtimes`, `sync:global:meta-theory`, and `deps:install:all-runtimes`, so local activation can be multi-selected without shrinking the repo support surface.
+- `--scope` support for `sync:runtimes`: `--scope project` writes to repo-local dirs (default), `--scope global` writes directly to `~/.claude/`, `~/.codex/`, `~/.openclaw/`, with safety assertions to prevent writes outside configured runtime homes.
 
 ### Changed
 
