@@ -12,6 +12,7 @@ import {
   loadRuntimeProfiles,
   loadSyncManifest,
 } from "./meta-kim-sync-config.mjs";
+import { t } from "./meta-kim-i18n.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -1758,171 +1759,94 @@ async function main() {
   let current = 1;
 
   console.log("\n========================================");
-  console.log("Meta_Kim Project Integrity Check");
+  console.log(t.val.headerTitle);
   console.log("========================================");
 
   // 1. Required files
-  step(
-    current++,
-    TOTAL,
-    "Checking required files",
-    "README.md, CLAUDE.md, package.json, sync manifest, canonical runtime assets, run-artifact fixtures, memory assets",
-  );
+  step(current++, TOTAL, t.val.step01, t.val.step01Detail);
   await validateRequiredFiles();
-  pass("All required kernel files present");
+  pass(t.val.step01Pass);
 
   // 2. Workflow contract
-  step(
-    current++,
-    TOTAL,
-    "Validating workflow contract",
-    "single-department run discipline, primary deliverable, closed deliverable chain",
-  );
+  step(current++, TOTAL, t.val.step02, t.val.step02Detail);
   await validateWorkflowContract();
-  pass("Workflow contract is valid");
+  pass(t.val.step02Pass);
 
   // 3. Sync manifest and runtime target catalog
-  step(
-    current++,
-    TOTAL,
-    "Validating sync manifest",
-    "supportedTargets, defaultTargets, availableTargets, generatedTargets",
-  );
+  step(current++, TOTAL, t.val.step03, t.val.step03Detail);
   await validateSyncConfiguration();
-  pass("Sync manifest and runtime target catalog are coherent");
+  pass(t.val.step03Pass);
 
   // 4. Canonical agent definitions
-  step(
-    current++,
-    TOTAL,
-    "Validating canonical agent definitions",
-    "frontmatter completeness + forbidden-marker check + boundary discipline",
-  );
+  step(current++, TOTAL, t.val.step04, t.val.step04Detail);
   const agentIds = await validateClaudeAgents();
-  pass(`${agentIds.length} agents passed: ${agentIds.join(", ")}`);
+  pass(t.val.step04Pass(agentIds.length, agentIds));
 
   // 5. Canonical OpenClaw runtime asset
-  step(
-    current++,
-    TOTAL,
-    "Validating OpenClaw runtime asset",
-    "canonical template agent list, hooks, and allow-list must match canonical agents",
-  );
+  step(current++, TOTAL, t.val.step05, t.val.step05Detail);
   await validateOpenClawArtifacts(agentIds);
-  pass("Canonical OpenClaw runtime asset is valid");
+  pass(t.val.step05Pass);
 
   // 6. Canonical meta-theory skill
-  step(
-    current++,
-    TOTAL,
-    "Checking canonical SKILL.md",
-    "canonical metadata, station deliverable markers, and references",
-  );
+  step(current++, TOTAL, t.val.step06, t.val.step06Detail);
   await validatePortableSkill();
-  pass("Canonical meta-theory skill package is valid");
+  pass(t.val.step06Pass);
 
   // 7. Codex runtime asset template
-  step(
-    current++,
-    TOTAL,
-    "Validating Codex runtime asset",
-    "canonical config template markers",
-  );
+  step(current++, TOTAL, t.val.step07, t.val.step07Detail);
   await validateCodexArtifacts();
-  pass("Canonical Codex runtime asset is valid");
+  pass(t.val.step07Pass);
 
-  // 7. Runtime parity matrix
-  step(
-    current++,
-    TOTAL,
-    "Checking runtime parity matrix",
-    "trigger/hook/review/verification/stop/writeback parity must be documented",
-  );
+  // 8. Runtime parity matrix
+  step(current++, TOTAL, t.val.step08, t.val.step08Detail);
   await validateRuntimeParityMatrix();
-  pass("Runtime parity matrix contains the required governance parity markers");
+  pass(t.val.step08Pass);
 
-  // 8. Run artifact fixtures
-  step(
-    current++,
-    TOTAL,
-    "Checking run artifact fixtures",
-    "valid fixture must pass; invalid public-ready fixture must fail",
-  );
+  // 9. Run artifact fixtures
+  step(current++, TOTAL, t.val.step09, t.val.step09Detail);
   await validateRunArtifactFixtures();
-  pass(
-    "Run artifact validator accepts the valid fixture and rejects the invalid fixture",
-  );
+  pass(t.val.step09Pass);
 
-  // 9. npm scripts
-  step(
-    current++,
-    TOTAL,
-    "Checking package.json scripts",
-    "sync:runtimes / validate / eval:agents / verify:all, etc.",
-  );
+  // 10. npm scripts
+  step(current++, TOTAL, t.val.step10, t.val.step10Detail);
   await validatePackageJson();
-  pass("All required scripts registered");
+  pass(t.val.step10Pass);
 
-  // 10. .gitignore
-  step(
-    current++,
-    TOTAL,
-    "Checking .gitignore rules",
-    "node_modules/ / docs/ / local state isolation, etc.",
-  );
+  // 11. .gitignore
+  step(current++, TOTAL, t.val.step11, t.val.step11Detail);
   await validateGitignore();
-  pass(".gitignore contains all necessary local-state rules");
+  pass(t.val.step11Pass);
 
-  // 11. Canonical Claude settings
-  step(
-    current++,
-    TOTAL,
-    "Checking canonical Claude settings",
-    "permission deny rules / PreToolUse / SubagentStart hooks",
-  );
+  // 12. Canonical Claude settings
+  step(current++, TOTAL, t.val.step12, t.val.step12Detail);
   await validateClaudeSettings();
-  pass("Canonical Claude hooks and permissions configured correctly");
+  pass(t.val.step12Pass);
 
-  // 12. Canonical MCP config
-  step(
-    current++,
-    TOTAL,
-    "Checking canonical MCP config",
-    "meta-kim-runtime service definition and startup command",
-  );
+  // 13. Canonical MCP config
+  step(current++, TOTAL, t.val.step13, t.val.step13Detail);
   await validateMcpConfig();
-  pass("Canonical MCP config is valid");
+  pass(t.val.step13Pass);
 
-  // 13. MCP self-test
-  step(
-    current++,
-    TOTAL,
-    "Running MCP self-test",
-    "start meta-runtime-server and verify agent count",
-  );
+  // 14. MCP self-test
+  step(current++, TOTAL, t.val.step14, t.val.step14Detail);
   await validateMcpSelfTest();
-  pass("MCP self-test passed");
+  pass(t.val.step14Pass);
 
-  // 14. Factory release artifacts (skipped if factory/ not in public repo)
-  step(
-    current++,
-    TOTAL,
-    "Checking factory release artifacts",
-    "100 departments / 1000 specialists / 20 flagship / 1100 runtime packs",
-  );
+  // 15. Factory release artifacts (skipped if factory/ not in public repo)
+  step(current++, TOTAL, t.val.step15, t.val.step15Detail);
   await validateFactoryRelease();
-  pass("Factory artifacts validated (or skipped — not in public repo)");
+  pass(t.val.step15Pass);
 
   console.log("\n========================================");
-  console.log(`All ${TOTAL} checks passed`);
-  console.log(`8 agents ready`);
+  console.log(t.val.footerAll(TOTAL));
+  console.log(t.val.footerAgents(agentIds.length));
   console.log("========================================\n");
 }
 
 try {
   await main();
 } catch (error) {
-  console.error("\n    Validation failed!");
+  console.error("\n    " + t.val.valFailed);
   console.error(`    ${error.message}\n`);
   process.exitCode = 1;
 }
