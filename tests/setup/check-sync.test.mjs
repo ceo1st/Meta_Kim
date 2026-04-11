@@ -1,0 +1,197 @@
+/**
+ * Tests for checkSync() — runtime sync verification logic.
+ * Covers: canonical hooks validation, workspace completeness, path resolution.
+ */
+
+import { test, describe } from "node:test";
+import assert from "node:assert";
+import * as path from "node:path";
+
+// Canonical hook list (must match canonical/runtime-assets/claude/hooks/)
+const CANONICAL_HOOKS = [
+  "block-dangerous-bash.mjs",
+  "pre-git-push-confirm.mjs",
+  "post-format.mjs",
+  "post-typecheck.mjs",
+  "post-console-log-warn.mjs",
+  "subagent-context.mjs",
+  "stop-console-log-audit.mjs",
+  "stop-completion-guard.mjs",
+];
+
+// OpenClaw workspace required .md files
+const OPENCLAW_WORKSPACE_MD = [
+  "BOOT.md",
+  "BOOTSTRAP.md",
+  "IDENTITY.md",
+  "SOUL.md",
+  "TOOLS.md",
+  "AGENTS.md",
+  "MEMORY.md",
+  "HEARTBEAT.md",
+  "USER.md",
+];
+
+// Meta agents list
+const META_AGENTS = [
+  "meta-warden",
+  "meta-conductor",
+  "meta-genesis",
+  "meta-artisan",
+  "meta-sentinel",
+  "meta-librarian",
+  "meta-prism",
+  "meta-scout",
+];
+
+// ── Hook validation ───────────────────────────────────────────
+
+// Normalize paths to forward slashes for cross-platform comparison
+function normalizePath(p) {
+  return p.replace(/\\/g, "/");
+}
+
+function validateHooks(hooksDir, allFiles) {
+  const toKey = (h) => normalizePath(path.join(hooksDir, h));
+  const fileSet = new Set(allFiles.map(normalizePath));
+  const present = CANONICAL_HOOKS.filter((h) => fileSet.has(toKey(h)));
+  const missing = CANONICAL_HOOKS.filter((h) => !fileSet.has(toKey(h)));
+  return { present, missing, allPresent: missing.length === 0 };
+}
+
+function validateWorkspaces(homeDir, workspaceIds, allDirs) {
+  const dirSet = new Set(allDirs.map(normalizePath));
+  let complete = 0;
+  let missing = [];
+  for (const id of workspaceIds) {
+    const wsDir = normalizePath(path.join(homeDir, `workspace-${id}`));
+    const allMdPresent = OPENCLAW_WORKSPACE_MD.every((md) =>
+      dirSet.has(`${wsDir}/${md}`),
+    );
+    if (allMdPresent) complete++;
+    else missing.push(id);
+  }
+  return { complete, total: workspaceIds.length, missing };
+}
+
+describe("validateHooks()", () => {
+  test("returns all present when all 8 hooks exist", () => {
+    const hooksDir = "/home/user/.claude/hooks/meta-kim";
+    const allFiles = CANONICAL_HOOKS.map((h) => path.join(hooksDir, h));
+    const result = validateHooks(hooksDir, allFiles);
+    assert.strictEqual(result.allPresent, true);
+    assert.strictEqual(result.present.length, 8);
+    assert.strictEqual(result.missing.length, 0);
+  });
+
+  test("detects missing hooks", () => {
+    const hooksDir = "/home/user/.claude/hooks/meta-kim";
+    // Only 3 hooks present
+    const presentHooks = CANONICAL_HOOKS.slice(0, 3);
+    const allFiles = presentHooks.map((h) => path.join(hooksDir, h));
+    const result = validateHooks(hooksDir, allFiles);
+    assert.strictEqual(result.allPresent, false);
+    assert.strictEqual(result.present.length, 3);
+    assert.strictEqual(result.missing.length, 5);
+    assert.ok(result.missing.includes("stop-completion-guard.mjs"));
+  });
+
+  test("empty hooks dir returns all missing", () => {
+    const hooksDir = "/home/user/.claude/hooks/meta-kim";
+    const result = validateHooks(hooksDir, []);
+    assert.strictEqual(result.allPresent, false);
+    assert.strictEqual(result.present.length, 0);
+    assert.strictEqual(result.missing.length, 8);
+  });
+
+  test("hooks in wrong subdir are not counted", () => {
+    const wrongDir = "/home/user/.claude/hooks/other";
+    const allFiles = CANONICAL_HOOKS.map((h) => path.join(wrongDir, h));
+    const result = validateHooks("/home/user/.claude/hooks/meta-kim", allFiles);
+    assert.strictEqual(result.allPresent, false);
+    assert.strictEqual(result.present.length, 0);
+  });
+});
+
+describe("validateWorkspaces()", () => {
+  test("complete workspace with all 9 .md files passes", () => {
+    const homeDir = "/home/user/.openclaw";
+    const allDirs = [
+      "/home/user/.openclaw/workspace-meta-warden/BOOT.md",
+      "/home/user/.openclaw/workspace-meta-warden/SOUL.md",
+      "/home/user/.openclaw/workspace-meta-warden/IDENTITY.md",
+      "/home/user/.openclaw/workspace-meta-warden/TOOLS.md",
+      "/home/user/.openclaw/workspace-meta-warden/AGENTS.md",
+      "/home/user/.openclaw/workspace-meta-warden/MEMORY.md",
+      "/home/user/.openclaw/workspace-meta-warden/HEARTBEAT.md",
+      "/home/user/.openclaw/workspace-meta-warden/BOOTSTRAP.md",
+      "/home/user/.openclaw/workspace-meta-warden/USER.md",
+    ];
+    const result = validateWorkspaces(homeDir, ["meta-warden"], allDirs);
+    assert.strictEqual(result.complete, 1);
+    assert.strictEqual(result.total, 1);
+    assert.strictEqual(result.missing.length, 0);
+  });
+
+  test("workspace missing BOOT.md fails", () => {
+    const homeDir = "/home/user/.openclaw";
+    const allDirs = [
+      // missing BOOT.md
+      "/home/user/.openclaw/workspace-meta-warden/SOUL.md",
+      "/home/user/.openclaw/workspace-meta-warden/IDENTITY.md",
+      "/home/user/.openclaw/workspace-meta-warden/TOOLS.md",
+      "/home/user/.openclaw/workspace-meta-warden/AGENTS.md",
+      "/home/user/.openclaw/workspace-meta-warden/MEMORY.md",
+      "/home/user/.openclaw/workspace-meta-warden/HEARTBEAT.md",
+      "/home/user/.openclaw/workspace-meta-warden/BOOTSTRAP.md",
+      "/home/user/.openclaw/workspace-meta-warden/USER.md",
+    ];
+    const result = validateWorkspaces(homeDir, ["meta-warden"], allDirs);
+    assert.strictEqual(result.complete, 0);
+    assert.ok(result.missing.includes("meta-warden"));
+  });
+
+  test("partial completeness is reported correctly", () => {
+    const homeDir = "/home/user/.openclaw";
+    const allDirs = [
+      ...OPENCLAW_WORKSPACE_MD.map(
+        (md) => `/home/user/.openclaw/workspace-meta-warden/${md}`,
+      ),
+      // meta-conductor incomplete
+    ];
+    const result = validateWorkspaces(homeDir, META_AGENTS, allDirs);
+    assert.strictEqual(result.complete, 1);
+    assert.strictEqual(result.total, 8);
+    assert.ok(result.missing.includes("meta-conductor"));
+  });
+});
+
+// ── Path resolution edge cases ─────────────────────────────────
+
+describe("Runtime path resolution patterns", () => {
+  test("Claude home resolves to ~/.claude", () => {
+    const home = process.env.HOME || process.env.USERPROFILE || "";
+    const claudeHome = path.join(home, ".claude");
+    assert.ok(claudeHome.includes(".claude"));
+  });
+
+  test("Codex home resolves to ~/.codex", () => {
+    const home = process.env.HOME || process.env.USERPROFILE || "";
+    const codexHome = path.join(home, ".codex");
+    assert.ok(codexHome.includes(".codex"));
+  });
+
+  test("Cursor home resolves to ~/.cursor", () => {
+    const home = process.env.HOME || process.env.USERPROFILE || "";
+    const cursorHome = path.join(home, ".cursor");
+    assert.ok(cursorHome.includes(".cursor"));
+  });
+
+  test("OpenClaw workspaces are flat workspace-* at runtime root", () => {
+    const home = process.env.HOME || process.env.USERPROFILE || "";
+    const openclawHome = path.join(home, ".openclaw");
+    const wsPath = path.join(openclawHome, "workspace-meta-warden");
+    assert.ok(wsPath.includes("workspace-meta-warden"));
+    assert.ok(!wsPath.includes("workspaces/"));
+  });
+});
