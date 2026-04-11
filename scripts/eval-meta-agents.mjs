@@ -383,7 +383,7 @@ const codexSmokeSchema = JSON.stringify({
     runtime: { type: "string" },
     entrypoint: { type: "string" },
     canonical_skill_root: { type: "string" },
-    runtime_profile: { type: "string" },
+    sync_manifest: { type: "string" },
     has_meta_warden_agent: { type: "boolean" },
     mcp_supported: { type: "boolean" },
     sandbox_configurable: { type: "boolean" },
@@ -393,7 +393,7 @@ const codexSmokeSchema = JSON.stringify({
     "runtime",
     "entrypoint",
     "canonical_skill_root",
-    "runtime_profile",
+    "sync_manifest",
     "has_meta_warden_agent",
     "mcp_supported",
     "sandbox_configurable",
@@ -1171,7 +1171,7 @@ async function runCodexSmoke() {
     cli_version: versionStdout.trim(),
     entrypoint: "AGENTS.md",
     canonical_skill_root: "canonical/skills/meta-theory",
-    runtime_profile: "runtimes/codex.profile.json",
+    sync_manifest: "config/sync.json",
     custom_agents: codexAgentFiles.map((file) => file.replace(/\.toml$/, "")),
     mcp_supported: configExample.includes("[mcp_servers.meta_kim_runtime]"),
     sandbox_configurable: configExample.includes("sandbox_mode"),
@@ -1182,7 +1182,7 @@ async function runCodexSmoke() {
     payload.runtime === "codex" &&
     payload.entrypoint === "AGENTS.md" &&
     payload.canonical_skill_root === "canonical/skills/meta-theory" &&
-    payload.runtime_profile === "runtimes/codex.profile.json" &&
+    payload.sync_manifest === "config/sync.json" &&
     payload.custom_agents.includes("meta-warden") &&
     payload.mcp_supported === true &&
     payload.sandbox_configurable === true &&
@@ -1233,7 +1233,7 @@ async function runCodexLive() {
     cli_version: versionStdout.trim(),
     entrypoint: "AGENTS.md",
     canonical_skill_root: "canonical/skills/meta-theory",
-    runtime_profile: "runtimes/codex.profile.json",
+    sync_manifest: "config/sync.json",
     custom_agents: codexAgentFiles.map((file) => file.replace(/\.toml$/, "")),
     mcp_supported: configExample.includes("[mcp_servers.meta_kim_runtime]"),
     sandbox_configurable: configExample.includes("sandbox_mode"),
@@ -1244,7 +1244,7 @@ async function runCodexLive() {
     payload.runtime === "codex" &&
     payload.entrypoint === "AGENTS.md" &&
     payload.canonical_skill_root === "canonical/skills/meta-theory" &&
-    payload.runtime_profile === "runtimes/codex.profile.json" &&
+    payload.sync_manifest === "config/sync.json" &&
     payload.custom_agents.includes("meta-warden") &&
     payload.mcp_supported === true &&
     payload.sandbox_configurable === true &&
@@ -1260,7 +1260,7 @@ async function runCodexLive() {
       "Read the current Meta_Kim repository and reply with JSON only. " +
       'runtime must be "codex". entrypoint must be "AGENTS.md". ' +
       'canonical_skill_root must be "canonical/skills/meta-theory". ' +
-      'runtime_profile must be "runtimes/codex.profile.json". ' +
+      'sync_manifest must be "config/sync.json". ' +
       "has_meta_warden_agent must be true only if the repo exposes that custom agent. " +
       "mcp_supported, sandbox_configurable, and approvals_configurable must reflect the repository configuration. " +
       "Do not modify files.";
@@ -1315,7 +1315,7 @@ async function runCodexLive() {
     runtimePayload?.runtime === "codex" &&
     runtimePayload?.entrypoint === "AGENTS.md" &&
     runtimePayload?.canonical_skill_root === "canonical/skills/meta-theory" &&
-    runtimePayload?.runtime_profile === "runtimes/codex.profile.json" &&
+    runtimePayload?.sync_manifest === "config/sync.json" &&
     runtimePayload?.has_meta_warden_agent === true &&
     runtimePayload?.mcp_supported === true &&
     runtimePayload?.sandbox_configurable === true &&

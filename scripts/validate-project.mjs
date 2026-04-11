@@ -277,9 +277,6 @@ async function validateRequiredFiles() {
     "canonical/runtime-assets/claude/mcp.json",
     "canonical/runtime-assets/codex/config.toml.example",
     "canonical/runtime-assets/openclaw/openclaw.template.json",
-    "runtimes/claude.profile.json",
-    "runtimes/codex.profile.json",
-    "runtimes/openclaw.profile.json",
     "config/contracts/sync-manifest.schema.json",
     "config/contracts/runtime-profile.schema.json",
     "config/contracts/workflow-contract.json",
@@ -1178,11 +1175,12 @@ async function validatePortableSkill() {
 
 async function validateSyncConfiguration() {
   const manifest = await loadSyncManifest();
-  const profiles = await loadRuntimeProfiles();
+  const profiles = await loadRuntimeProfiles(manifest);
 
   const supportedTargets = manifest.supportedTargets ?? [];
   const defaultTargets = manifest.defaultTargets ?? supportedTargets;
   const availableTargets = manifest.availableTargets ?? Object.keys(profiles);
+  const generatedTargets = manifest.generatedTargets ?? {};
 
   assert(
     supportedTargets.length >= 1,
@@ -1191,7 +1189,7 @@ async function validateSyncConfiguration() {
   assert(
     JSON.stringify([...supportedTargets].sort()) ===
       JSON.stringify(Object.keys(profiles).sort()),
-    "config/sync.json supportedTargets must match the checked-in runtime profiles.",
+    "config/sync.json supportedTargets must match the runtime target catalog.",
   );
   assert(
     defaultTargets.every((target) => supportedTargets.includes(target)),
@@ -1201,7 +1199,14 @@ async function validateSyncConfiguration() {
     availableTargets.every((target) =>
       Object.prototype.hasOwnProperty.call(profiles, target),
     ),
-    "config/sync.json availableTargets must only reference installed runtime profiles.",
+    "config/sync.json availableTargets must only reference known runtime targets.",
+  );
+  assert(
+    supportedTargets.every(
+      (target) =>
+        Array.isArray(generatedTargets[target]) && generatedTargets[target].length > 0,
+    ),
+    "config/sync.json must declare generatedTargets for every supported target.",
   );
 }
 
@@ -1710,15 +1715,15 @@ async function main() {
   await validateWorkflowContract();
   pass("Workflow contract is valid");
 
-  // 3. Sync manifest and runtime profiles
+  // 3. Sync manifest and runtime target catalog
   step(
     current++,
     TOTAL,
     "Validating sync manifest",
-    "supportedTargets, defaultTargets, availableTargets, runtime profile coverage",
+    "supportedTargets, defaultTargets, availableTargets, generatedTargets",
   );
   await validateSyncConfiguration();
-  pass("Sync manifest and runtime profiles are coherent");
+  pass("Sync manifest and runtime target catalog are coherent");
 
   // 4. Canonical agent definitions
   step(

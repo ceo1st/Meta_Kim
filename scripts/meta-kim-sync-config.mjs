@@ -22,7 +22,6 @@ export const canonicalRuntimeAssetsDir = path.join(
   canonicalRoot,
   "runtime-assets",
 );
-export const runtimesDir = path.join(repoRoot, "runtimes");
 export const syncManifestPath = path.join(repoRoot, "config", "sync.json");
 export const localOverridesPath = path.join(
   repoRoot,
@@ -30,6 +29,109 @@ export const localOverridesPath = path.join(
   "local.overrides.json",
 );
 export const supportedTargetIds = ["claude", "codex", "openclaw", "cursor"];
+
+const runtimeProfileCatalog = {
+  claude: {
+    schemaVersion: 1,
+    id: "claude",
+    label: "Claude Code",
+    projection: {
+      supportsRepoProjection: true,
+      supportsLocalActivation: true,
+      assetTypes: [
+        "agents",
+        "skills",
+        "hooks",
+        "config",
+        "mcp",
+        "capabilityIndex",
+      ],
+      outputPaths: {
+        agentsDir: ".claude/agents",
+        skillRoot: ".claude/skills/meta-theory",
+        hooksDir: ".claude/hooks",
+        settingsFile: ".claude/settings.json",
+        mcpFile: ".mcp.json",
+        capabilityIndexDir: ".claude/capability-index",
+      },
+    },
+    activation: {
+      supportsGlobalSkillSync: true,
+      supportsGlobalDependencyInstall: true,
+      supportsGlobalHooks: true,
+      envKeys: ["META_KIM_CLAUDE_HOME", "CLAUDE_HOME"],
+      defaultHomeDir: ".claude",
+    },
+  },
+  codex: {
+    schemaVersion: 1,
+    id: "codex",
+    label: "Codex",
+    projection: {
+      supportsRepoProjection: true,
+      supportsLocalActivation: true,
+      assetTypes: ["agents", "skills", "config"],
+      outputPaths: {
+        agentsDir: ".codex/agents",
+        legacySkillFile: ".codex/skills/meta-theory.md",
+        projectSkillsDir: ".agents/skills",
+        configExampleFile: "codex/config.toml.example",
+      },
+    },
+    activation: {
+      supportsGlobalSkillSync: true,
+      supportsGlobalDependencyInstall: true,
+      supportsGlobalHooks: false,
+      envKeys: ["META_KIM_CODEX_HOME", "CODEX_HOME"],
+      defaultHomeDir: ".codex",
+    },
+  },
+  openclaw: {
+    schemaVersion: 1,
+    id: "openclaw",
+    label: "OpenClaw",
+    projection: {
+      supportsRepoProjection: true,
+      supportsLocalActivation: true,
+      assetTypes: ["workspaces", "skills", "config", "sharedSkills"],
+      outputPaths: {
+        workspacesDir: "openclaw/workspaces",
+        skillsDir: "openclaw/skills",
+        templateConfigFile: "openclaw/openclaw.template.json",
+        sharedSkillsDir: "shared-skills",
+      },
+    },
+    activation: {
+      supportsGlobalSkillSync: true,
+      supportsGlobalDependencyInstall: true,
+      supportsGlobalHooks: false,
+      envKeys: ["META_KIM_OPENCLAW_HOME", "OPENCLAW_HOME"],
+      defaultHomeDir: ".openclaw",
+    },
+  },
+  cursor: {
+    schemaVersion: 1,
+    id: "cursor",
+    label: "Cursor",
+    projection: {
+      supportsRepoProjection: true,
+      supportsLocalActivation: true,
+      assetTypes: ["agents", "skills", "mcp"],
+      outputPaths: {
+        agentsDir: ".cursor/agents",
+        skillRoot: ".cursor/skills/meta-theory",
+        mcpFile: ".cursor/mcp.json",
+      },
+    },
+    activation: {
+      supportsGlobalSkillSync: true,
+      supportsGlobalDependencyInstall: false,
+      supportsGlobalHooks: false,
+      envKeys: ["META_KIM_CURSOR_HOME", "CURSOR_HOME"],
+      defaultHomeDir: ".cursor",
+    },
+  },
+};
 
 export async function readJsonIfExists(filePath) {
   try {
@@ -89,26 +191,26 @@ export function normalizeTargets(rawTargets) {
   return normalized;
 }
 
-export async function loadRuntimeProfiles() {
-  const entries = await fs.readdir(runtimesDir, { withFileTypes: true });
+function cloneRuntimeProfile(profile) {
+  return JSON.parse(JSON.stringify(profile));
+}
+
+export async function loadRuntimeProfiles(manifest = null) {
+  const resolvedManifest = manifest ?? (await loadSyncManifest());
+  const declaredTargets =
+    resolvedManifest.supportedTargets?.length > 0
+      ? normalizeTargets(resolvedManifest.supportedTargets)
+      : [...supportedTargetIds];
   const profiles = {};
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".profile.json")) {
-      continue;
+  for (const targetId of declaredTargets) {
+    const profile = runtimeProfileCatalog[targetId];
+    if (!profile) {
+      throw new Error(`Missing runtime catalog entry: ${targetId}`);
     }
-
-    const profile = JSON.parse(
-      await fs.readFile(path.join(runtimesDir, entry.name), "utf8"),
-    );
-    validateRuntimeProfile(profile, entry.name);
-    profiles[profile.id] = profile;
-  }
-
-  for (const targetId of supportedTargetIds) {
-    if (!profiles[targetId]) {
-      throw new Error(`Missing runtime profile: ${targetId}`);
-    }
+    const clonedProfile = cloneRuntimeProfile(profile);
+    validateRuntimeProfile(clonedProfile, targetId);
+    profiles[targetId] = clonedProfile;
   }
 
   return profiles;
@@ -151,11 +253,11 @@ export async function writeLocalOverrides(nextOverrides) {
 
 export async function resolveTargetContext(argv = process.argv.slice(2)) {
   const cliTargets = parseTargetsArg(argv);
-  const [profiles, manifest, localOverrides] = await Promise.all([
-    loadRuntimeProfiles(),
+  const [manifest, localOverrides] = await Promise.all([
     loadSyncManifest(),
     loadLocalOverrides(),
   ]);
+  const profiles = await loadRuntimeProfiles(manifest);
 
   const availableTargets =
     manifest.availableTargets?.length > 0
@@ -269,7 +371,7 @@ export function assertHomeBound(targetPath, allowedRoots) {
   }
 }
 
-// ── Manifest & profile validation ─────────────────────────────────
+// ── Manifest & runtime target validation ──────────────────────────
 
 export function validateSyncManifest(manifest) {
   if (!manifest || typeof manifest !== "object") {
