@@ -1,4 +1,6 @@
 ---
+version: 1.0.0
+author: KimYx0207
 name: commit-review
 description: Review git commit messages for Meta_Kim format compliance. Trigger when user asks to review commits, shows commit history, or asks "is this commit format correct". This skill validates commit messages against Meta_Kim's convention from CLAUDE.md and flags violations before push.
 version: 1.0.0
@@ -6,6 +8,9 @@ author: KimYx0207
 user-invocable: true
 trigger: "review commit|commit format|commit message|git commit|提交规范|commit lint"
 tools:
+  - shell
+  - filesystem
+---
   - shell
   - filesystem
 ---
