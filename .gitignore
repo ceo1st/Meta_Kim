@@ -38,17 +38,14 @@ backup/
 .backup/
 
 
-# ========== Private / Draft Docs ==========
-docs/zh-CN/
-docs/meta.md
-docs/repo-map.md
-docs/runtime-capability-matrix.md
-docs/runtime-coverage-audit.md
-
-# ========== Images (moved to docs/images/) ==========
-# Only ignore root-level images/, not docs/images/
+# ========== Root-level images (docs/images/ is tracked) ==========
+# README files reference docs/images/ — do NOT ignore docs/images/
 /images/
+# docs/images/ is tracked — contains QR codes, payment images referenced in README
 
-# ========== Third-party Libraries (Downloaded at runtime) ==========
-docs/lib/
+# ========== Lib directories ==========
+# (docs/lib/ may be created by some build tools)
+lib/
+*/lib/
+*/node_modules/
 
