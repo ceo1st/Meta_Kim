@@ -23,7 +23,8 @@ shared-skills/
 runtimes/
 
 # ========== Auto-generated Records (Not source code) ==========
-memory/governance-reviews/
+memory/
+.reports/
 
 # ========== Operational Snapshots (Local Only) ==========
 # These change frequently and are project-internal, not user-facing.
@@ -31,7 +32,6 @@ todos.json
 docs/todo-list.md
 docs/agent-health-report.md
 scripts/generate-todo-list.mjs
-memory/scars/SCAR-*.yaml
 
 # ========== Backup / Temporary ==========
 backup/
@@ -48,4 +48,3 @@ backup/
 lib/
 */lib/
 */node_modules/
-

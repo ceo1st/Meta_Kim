@@ -86,7 +86,7 @@ const STRINGS = {
       headerTitle: "Meta_Kim Project Integrity Check",
       step01: "Checking required files",
       step01Detail:
-        "README.md, CLAUDE.md, package.json, sync manifest, canonical runtime assets, run-artifact fixtures, memory assets",
+        "README.md, CLAUDE.md, package.json, sync manifest, canonical runtime assets, run-artifact fixtures, local-state rules",
       step01Pass: "All required kernel files present",
       step02: "Validating workflow contract",
       step02Detail:
@@ -190,7 +190,7 @@ const STRINGS = {
       headerTitle: "Meta_Kim 项目完整性检查",
       step01: "检查必需文件",
       step01Detail:
-        "README.md, CLAUDE.md, package.json, 同步清单, canonical 运行时资源, run-artifact fixtures, memory assets",
+        "README.md, CLAUDE.md, package.json, 同步清单, canonical 运行时资源, run-artifact fixtures, 本地状态规则",
       step01Pass: "所有必需内核文件就绪",
       step02: "验证工作流合约",
       step02Detail: "单一部门运行规范, 主要交付物, 封闭交付链",
@@ -291,7 +291,7 @@ const STRINGS = {
       headerTitle: "Meta_Kim プロジェクト整合性チェック",
       step01: "必須ファイルのチェック",
       step01Detail:
-        "README.md, CLAUDE.md, package.json, 同期マifest, canonical ランタイムアセット, run-artifact fixtures, memory assets",
+        "README.md, CLAUDE.md, package.json, 同期マifest, canonical ランタイムアセット, run-artifact fixtures, ローカル状態ルール",
       step01Pass: "すべての必須カーネルファイルが存在します",
       step02: "ワークフローコントラクトの検証",
       step02Detail:
@@ -395,7 +395,7 @@ const STRINGS = {
       headerTitle: "Meta_Kim 프로젝트 무결성 검사",
       step01: "필수 파일 확인",
       step01Detail:
-        "README.md, CLAUDE.md, package.json, 동기화 manifest, canonical 런타임 자산, run-artifact fixtures, memory assets",
+        "README.md, CLAUDE.md, package.json, 동기화 manifest, canonical 런타임 자산, run-artifact fixtures, 로컬 상태 규칙",
       step01Pass: "모든 필수 커널 파일이 존재합니다",
       step02: "워크플로 컨트랙트 검증",
       step02Detail:
