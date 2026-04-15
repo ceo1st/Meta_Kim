@@ -210,13 +210,10 @@ if (gitProxy) {
 // Now strip loopback proxies, but skip if META_KIM_GIT_PROXY is already set
 const strippedLoopbackProxyEnv = stripInheritedLoopbackProxyEnv();
 
-// Apply proxy to HTTP/HTTPS env vars for git
+// Apply proxy to HTTP/HTTPS env for git (stdout line suppressed)
 if (gitProxy) {
   process.env.HTTP_PROXY = gitProxy.url;
   process.env.HTTPS_PROXY = gitProxy.url;
-  console.log(
-    `${C.cyan}→${C.reset} ${t.proxyDetected(gitProxy.url, gitProxy.source)}`,
-  );
 } else if (strippedLoopbackProxyEnv.length > 0) {
   console.warn(`${C.yellow}⚠${C.reset} ${t.proxyStrippedHint}`);
 }
