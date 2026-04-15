@@ -1,7 +1,7 @@
 /**
  * Shared i18n for Meta_Kim installation scripts.
- * Import this from setup.mjs and install-global-skills-all-runtimes.mjs
- * to avoid duplicating strings.
+ * Import this from setup.mjs, install-global-skills-all-runtimes.mjs,
+ * and sync-runtimes.mjs to avoid duplicating strings.
  */
 
 import { platform } from "node:os";
@@ -13,13 +13,22 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+/** Align with setup.mjs LANG_ARG_ALIASES so `--lang zh` resolves to zh-CN. */
+const LANG_ALIASES = { zh: "zh-CN", ja: "ja-JP", ko: "ko-KR" };
+function normalizeLangCode(code) {
+  if (!code) return "en";
+  const trimmed = String(code).trim();
+  const lower = trimmed.toLowerCase();
+  return LANG_ALIASES[lower] || trimmed;
+}
+
 function detectLang() {
   const cliIdx = process.argv.indexOf("--lang");
   if (cliIdx >= 0 && process.argv[cliIdx + 1]) {
-    return process.argv[cliIdx + 1];
+    return normalizeLangCode(process.argv[cliIdx + 1]);
   }
   const envLang = process.env.META_KIM_LANG;
-  if (envLang) return envLang;
+  if (envLang) return normalizeLangCode(envLang);
   // Heuristic: Windows with CJK system → Chinese
   if (platform() === "win32") {
     try {
@@ -59,6 +68,25 @@ const STRINGS = {
       `Using proxy for git: ${url} (from ${source})`,
     proxyStrippedHint:
       "Loopback proxy env stripped. Use --proxy <url> or set META_KIM_GIT_PROXY to configure proxy.",
+    // sync-runtimes.mjs — incremental summary + --check
+    syncRuntimesSummaryTitle:
+      "── sync:runtimes (incremental write summary) ──",
+    syncRuntimesSummaryIntro:
+      "Listed counts are paths that changed this run; unchanged paths are omitted.",
+    runtimeGroupClaude: "Claude Code",
+    runtimeGroupCodex: "Codex",
+    runtimeGroupOpenclaw: "OpenClaw",
+    runtimeGroupCursor: "Cursor",
+    syncDetailAgents: (count, teamSize) =>
+      `${count}/${teamSize} agent file(s) updated`,
+    syncDetailWorkspaces: (count, teamSize) =>
+      `${count}/${teamSize} workspace dir(s) with changes`,
+    syncDetailFiles: (count) => `${count} file(s) updated`,
+    syncScopeLine: (scope, targets) =>
+      `Scope: ${scope}  ·  Targets: ${targets}`,
+    syncRuntimesCheckStale: "Generated runtime assets are out of date:",
+    syncRuntimesCheckStaleLine: (file) => `- ${file}`,
+    syncRuntimesCheckOk: "Runtime assets are up to date.",
     proxyFallbackProxy: (label) =>
       `Direct connection failed for "${label}", retrying with proxy...`,
     proxyFallbackProxySuccess: (label) =>
@@ -255,6 +283,23 @@ const STRINGS = {
       `为 git 配置代理：${url}（来源：${source}）`,
     proxyStrippedHint:
       "已移除回环代理环境变量。使用 --proxy <url> 或设置 META_KIM_GIT_PROXY 环境变量来配置代理。",
+    syncRuntimesSummaryTitle: "── sync:runtimes（本轮增量写入摘要）──",
+    syncRuntimesSummaryIntro:
+      "下列数量为本次运行中有变更的路径；未列出的路径表示已与 canonical 一致。",
+    runtimeGroupClaude: "Claude Code",
+    runtimeGroupCodex: "Codex",
+    runtimeGroupOpenclaw: "OpenClaw",
+    runtimeGroupCursor: "Cursor",
+    syncDetailAgents: (count, teamSize) =>
+      `${count}/${teamSize} 个 agent 文件已更新`,
+    syncDetailWorkspaces: (count, teamSize) =>
+      `${count}/${teamSize} 个 workspace 目录有变更`,
+    syncDetailFiles: (count) => `已更新 ${count} 个文件`,
+    syncScopeLine: (scope, targets) =>
+      `范围：${scope}  ·  目标工具：${targets}`,
+    syncRuntimesCheckStale: "生成的运行时资源已过期：",
+    syncRuntimesCheckStaleLine: (file) => `- ${file}`,
+    syncRuntimesCheckOk: "运行时资源已是最新。",
     proxyFallbackProxy: (label) => `"${label}" 直连失败，正在尝试代理连接...`,
     proxyFallbackProxySuccess: (label) =>
       `"${label}" 代理连接成功，本次会话使用代理。`,
@@ -428,6 +473,23 @@ const STRINGS = {
       `git プロキシ設定: ${url}（来源: ${source}）`,
     proxyStrippedHint:
       "ループバックプロキシ環境変数を削除しました。--proxy <url> または META_KIM_GIT_PROXY 環境変数でプロキシを設定してください。",
+    syncRuntimesSummaryTitle: "── sync:runtimes（増分書き込み要約）──",
+    syncRuntimesSummaryIntro:
+      "表示件数は今回変更されたパスのみです。変更のないパスは省略されます。",
+    runtimeGroupClaude: "Claude Code",
+    runtimeGroupCodex: "Codex",
+    runtimeGroupOpenclaw: "OpenClaw",
+    runtimeGroupCursor: "Cursor",
+    syncDetailAgents: (count, teamSize) =>
+      `${count}/${teamSize} 件のエージェントファイルを更新`,
+    syncDetailWorkspaces: (count, teamSize) =>
+      `${count}/${teamSize} 件のワークスペースディレクトリに変更あり`,
+    syncDetailFiles: (count) => `${count} ファイルを更新`,
+    syncScopeLine: (scope, targets) =>
+      `スコープ: ${scope}  ·  ターゲット: ${targets}`,
+    syncRuntimesCheckStale: "生成されたランタイム資産が古くなっています:",
+    syncRuntimesCheckStaleLine: (file) => `- ${file}`,
+    syncRuntimesCheckOk: "ランタイム資産は最新です。",
     proxyFallbackProxy: (label) =>
       `"${label}" 直接接続失敗、プロキシで再試行中...`,
     proxyFallbackProxySuccess: (label) =>
@@ -618,6 +680,23 @@ const STRINGS = {
       `git 프록시 설정: ${url}（출처: ${source}）`,
     proxyStrippedHint:
       "루프백 프록시 환경변수가 제거되었습니다. --proxy <url> 또는 META_KIM_GIT_PROXY 환경변수로 프록시를 설정하세요.",
+    syncRuntimesSummaryTitle: "── sync:runtimes（증분 쓰기 요약）──",
+    syncRuntimesSummaryIntro:
+      "표시된 개수는 이번 실행에서 변경된 경로입니다. 변경이 없으면 생략됩니다.",
+    runtimeGroupClaude: "Claude Code",
+    runtimeGroupCodex: "Codex",
+    runtimeGroupOpenclaw: "OpenClaw",
+    runtimeGroupCursor: "Cursor",
+    syncDetailAgents: (count, teamSize) =>
+      `${count}/${teamSize}개 에이전트 파일 업데이트됨`,
+    syncDetailWorkspaces: (count, teamSize) =>
+      `${count}/${teamSize}개 워크스페이스 디렉터리에 변경 있음`,
+    syncDetailFiles: (count) => `${count}개 파일 업데이트됨`,
+    syncScopeLine: (scope, targets) =>
+      `범위: ${scope}  ·  대상: ${targets}`,
+    syncRuntimesCheckStale: "생성된 런타임 자산이 오래되었습니다:",
+    syncRuntimesCheckStaleLine: (file) => `- ${file}`,
+    syncRuntimesCheckOk: "런타임 자산이 최신입니다.",
     proxyFallbackProxy: (label) =>
       `"${label}" 직접 연결 실패, 프록시로 재시도 중...`,
     proxyFallbackProxySuccess: (label) =>

@@ -9,6 +9,11 @@
  *   node setup.mjs --check      # Environment check only
  *   node setup.mjs --silent     # Non-interactive (CI / scripts)
  *   node setup.mjs --skills a,b # Limit global skill repos (non-interactive / CI)
+ *
+ * Optional prompts (off by default — install uses scope "both" and skips proxy UI):
+ *   --prompt-install-scope      # Ask repo vs home vs both
+ *   --prompt-proxy              # Ask Windows system proxy for git (META_KIM_GIT_PROXY)
+ *   META_KIM_PROMPT_INSTALL_SCOPE=1 / META_KIM_PROMPT_PROXY=1
  */
 
 import { execSync, spawnSync } from "node:child_process";
@@ -67,6 +72,14 @@ const args = process.argv.slice(2);
 const updateMode = args.includes("--update") || args.includes("-u");
 const checkOnly = args.includes("--check");
 const silentMode = args.includes("--silent") || !process.stdout.isTTY;
+
+/** Interactive extras (default off): full install uses scope "both" and skips proxy prompts. */
+const promptInstallScope =
+  args.includes("--prompt-install-scope") ||
+  process.env.META_KIM_PROMPT_INSTALL_SCOPE === "1";
+const promptProxy =
+  args.includes("--prompt-proxy") ||
+  process.env.META_KIM_PROMPT_PROXY === "1";
 
 /** Maps `node setup.mjs --lang zh` etc. to canonical language codes (defined before --lang handling). */
 const LANG_ARG_ALIASES = { zh: "zh-CN", ja: "ja-JP", ko: "ko-KR" };
@@ -1769,8 +1782,8 @@ function detectWindowsSystemProxy() {
 async function askProxyConfig() {
   const localOverrides = await loadLocalOverrides();
 
-  // Silent mode: skip (no proxy)
-  if (silentMode) {
+  // Non-interactive or prompts disabled: no git proxy in localOverrides (use HTTPS_PROXY for tools if set)
+  if (silentMode || !promptProxy) {
     return null;
   }
 
@@ -1881,13 +1894,13 @@ ${C.dim}${t.installOverviewEstimated}${C.reset}${t.installOverviewTime}
 /** Execute with progress indicator */
 async function withProgress(label, fn) {
   console.log("");
-  process.stdout.write(`${C.dim}→${C.reset} ${label}...`);
+  console.log(`${C.dim}→${C.reset} ${label}`);
 
   try {
     await fn();
     return true;
   } catch (err) {
-    console.log(` ${C.red}✗${C.reset}`);
+    console.log(`${C.red}✗${C.reset}`);
     throw err;
   }
 }
@@ -1899,7 +1912,7 @@ async function withProgress(label, fn) {
  * Returns: 'project' | 'global' | 'both'
  */
 async function askInstallScope() {
-  if (silentMode) return "both"; // 默认全部安装
+  if (silentMode || !promptInstallScope) return "both";
 
   heading(t.installScopeHeading);
 
@@ -1948,16 +1961,15 @@ async function ensureGlobalSkillsDir() {
     return true;
   }
 
-  // Improved prompt with better context
   const promptLines = t.globalDirPrompt.split("\n");
-  console.log(`
-  ${C.bold}${t.globalDirTitle}${C.reset}
-
-  ${promptLines[0]}
-  ${C.dim}•${C.reset} ${promptLines[1].split("— ")[1]}
-  ${C.dim}•${C.reset} ${promptLines[2].split("— ")[1]}
-  ${C.dim}•${C.reset} ${promptLines[3].split("— ")[1]}
-`);
+  console.log("");
+  console.log(`${C.bold}${t.globalDirTitle}${C.reset}`);
+  console.log("");
+  console.log(`${promptLines[0]}`);
+  console.log(`${C.dim}•${C.reset} ${promptLines[1].split("— ")[1]}`);
+  console.log(`${C.dim}•${C.reset} ${promptLines[2].split("— ")[1]}`);
+  console.log(`${C.dim}•${C.reset} ${promptLines[3].split("— ")[1]}`);
+  console.log("");
 
   const shouldInstall = await askYesNo(t.globalInstallPrompt, true);
   if (!shouldInstall) {
@@ -2292,18 +2304,22 @@ async function detectRuntimes() {
     !runtimes.openclaw &&
     !runtimes.cursor
   ) {
-    console.log(`\n  ${C.yellow}⚠ ${t.noRuntime}${C.reset}`);
+    console.log("");
+    console.log(`${C.yellow}⚠ ${t.noRuntime}${C.reset}`);
     console.log(`${C.dim}${t.noRuntimeHint1}${C.reset}`);
     console.log(
       `${C.dim}${fmt(t.noRuntimeHint2, {
         claudeCodeDocs:
           EXTERNAL_URLS.claudeCodeDocs ||
           "https://docs.anthropic.com/en/docs/claude-code",
-      })}${C.reset}\n`,
+      })}${C.reset}`,
     );
+    console.log("");
     const proceed = await askYesNo(t.continueAnyway, false);
     if (!proceed) {
-      console.log(`\n  ${C.dim}${t.setupCancelled}${C.reset}\n`);
+      console.log("");
+      console.log(`${C.dim}${t.setupCancelled}${C.reset}`);
+      console.log("");
       process.exit(0);
     }
   }
@@ -2372,7 +2388,6 @@ function runNodeScript(scriptRelative, extraArgs = [], envOverrides = {}) {
 // ── Step 3: Auto-configure project files ────────────────
 
 async function autoConfigure(installScope = "project") {
-  heading(t.stepConfig);
   const syncResult = runNodeScript("scripts/sync-runtimes.mjs", [
     "--scope",
     installScope,
@@ -2488,7 +2503,7 @@ async function installAllSkills() {
   heading(t.stepSkills);
   if (!silentMode) {
     console.log(`${C.dim}${t.shipsSkills(SKILLS.length)}${C.reset}`);
-    SKILLS.forEach((s) => console.log(`    ${C.dim}•${C.reset} ${s.name}`));
+    SKILLS.forEach((s) => console.log(`${C.dim}•${C.reset} ${s.name}`));
     console.log();
   }
   installDeps();
@@ -2809,15 +2824,15 @@ function showNextSteps(runtimes) {
       ] || r.name === t.platformClauleCode,
   );
   for (const row of platformRows) {
-    console.log(`${C.dim}  • ${row.name}: ${row.cap}${C.reset}`);
+    console.log(`${C.dim}• ${row.name}: ${row.cap}${C.reset}`);
   }
   console.log("");
   console.log(
     `${C.bold}${C.cyan}● ${t.postInstallNotesLayerActivation}${C.reset}`,
   );
-  console.log(`${C.dim}  ${t.layer1Label} — ${t.layer1Note}${C.reset}`);
-  console.log(`${C.dim}  ${t.layer2Label} — ${t.layer2Note}${C.reset}`);
-  console.log(`${C.dim}  ${t.layer3Label} — ${t.layer3Note}${C.reset}`);
+  console.log(`${C.dim}${t.layer1Label} — ${t.layer1Note}${C.reset}`);
+  console.log(`${C.dim}${t.layer2Label} — ${t.layer2Note}${C.reset}`);
+  console.log(`${C.dim}${t.layer3Label} — ${t.layer3Note}${C.reset}`);
   console.log("");
   console.log(
     `${C.dim}${C.yellow}★ ${t.postInstallNotesReminder} ${t.postInstallNotesReminderText}${C.reset}`,

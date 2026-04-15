@@ -19,6 +19,7 @@ import {
   resolveRuntimeProjection,
   resolveRuntimeAllowedRoots,
 } from "./meta-kim-sync-config.mjs";
+import { t } from "./meta-kim-i18n.mjs";
 
 const cliArgs = process.argv.slice(2);
 const checkOnly = process.argv.includes("--check");
@@ -790,6 +791,7 @@ async function main() {
 Options:
   --scope <project|global|both>  Write projection to repo (default: project)
   --targets <ids>                 Comma-separated runtime IDs (claude,codex,openclaw)
+  --lang <code>                   Messages: en | zh-CN | ja-JP | ko-KR (aliases: zh, ja, ko)
   --check                        Show what would be synced without writing
   --help, -h                     Show this help
 
@@ -1076,16 +1078,16 @@ Examples:
   }
 
   if (checkOnly && changedFiles.length > 0) {
-    console.error("Generated runtime assets are out of date:");
+    console.error(t.syncRuntimesCheckStale);
     for (const file of changedFiles) {
-      console.error(`- ${file}`);
+      console.error(t.syncRuntimesCheckStaleLine(file));
     }
     process.exitCode = 1;
     return;
   }
 
   if (checkOnly) {
-    console.log("Runtime assets are up to date.");
+    console.log(t.syncRuntimesCheckOk);
     return;
   }
 
@@ -1167,79 +1169,110 @@ Examples:
     ).length,
   };
 
+  const teamSize = agents.length;
   const groups = [
     {
-      name: "Claude Code",
+      name: t.runtimeGroupClaude,
       entries: [
         {
           label: dirs.displayPaths.claudeAgents,
           count: layerCounts.claudeAgents,
+          summaryKind: "agents",
         },
         {
           label: dirs.displayPaths.claudeSkill,
           count: layerCounts.claudeSkill,
+          summaryKind: "files",
         },
         {
           label: dirs.displayPaths.claudeHooks,
           count: layerCounts.claudeHooks,
+          summaryKind: "files",
         },
         {
           label: dirs.displayPaths.claudeSettings,
           count: layerCounts.claudeSettings,
+          summaryKind: "files",
         },
-        { label: dirs.displayPaths.claudeMcp, count: layerCounts.claudeMcp },
+        {
+          label: dirs.displayPaths.claudeMcp,
+          count: layerCounts.claudeMcp,
+          summaryKind: "files",
+        },
       ],
     },
     {
-      name: "Codex",
+      name: t.runtimeGroupCodex,
       entries: [
         {
           label: dirs.displayPaths.codexAgents,
           count: layerCounts.codexAgents,
+          summaryKind: "agents",
         },
-        { label: dirs.displayPaths.codexSkills, count: layerCounts.codexSkill },
+        {
+          label: dirs.displayPaths.codexSkills,
+          count: layerCounts.codexSkill,
+          summaryKind: "files",
+        },
         {
           label: dirs.displayPaths.codexProjectSkills,
           count: layerCounts.codexProjectSkill,
+          summaryKind: "files",
         },
         {
           label: dirs.displayPaths.codexConfig,
           count: layerCounts.codexConfig,
+          summaryKind: "files",
         },
       ],
     },
     {
-      name: "OpenClaw",
+      name: t.runtimeGroupOpenclaw,
       entries: [
         {
           label: dirs.displayPaths.openclawWorkspaces,
           count: layerCounts.openclawWorkspace,
+          summaryKind: "workspaces",
         },
         {
           label: dirs.displayPaths.openclawSkills,
           count: layerCounts.openclawSkill,
+          summaryKind: "files",
         },
         {
           label: dirs.displayPaths.openclawTemplate,
           count: layerCounts.openclawTemplate,
+          summaryKind: "files",
         },
       ],
     },
     {
-      name: "Cursor",
+      name: t.runtimeGroupCursor,
       entries: [
         {
           label: dirs.displayPaths.cursorAgents,
           count: layerCounts.cursorAgents,
+          summaryKind: "agents",
         },
         {
           label: dirs.displayPaths.cursorSkill,
           count: layerCounts.cursorSkill,
+          summaryKind: "files",
         },
-        { label: dirs.displayPaths.cursorMcp, count: layerCounts.cursorMcp },
+        {
+          label: dirs.displayPaths.cursorMcp,
+          count: layerCounts.cursorMcp,
+          summaryKind: "files",
+        },
       ],
     },
   ];
+
+  const pathColWidth = 36;
+  console.log("");
+  console.log(t.syncRuntimesSummaryTitle);
+  console.log(t.syncRuntimesSummaryIntro);
+  console.log("");
 
   for (const group of groups) {
     const activeEntries = group.entries.filter(
@@ -1248,15 +1281,23 @@ Examples:
     if (activeEntries.length === 0) {
       continue;
     }
-    console.log(`${group.name}:`);
+    console.log(`${group.name}`);
     for (const entry of activeEntries) {
-      console.log(
-        `  ${entry.label} ${entry.count} file${entry.count !== 1 ? "s" : ""}`,
-      );
+      const pathCol = String(entry.label).padEnd(pathColWidth);
+      let detail = "";
+      if (entry.summaryKind === "agents") {
+        detail = t.syncDetailAgents(entry.count, teamSize);
+      } else if (entry.summaryKind === "workspaces") {
+        detail = t.syncDetailWorkspaces(entry.count, teamSize);
+      } else {
+        detail = t.syncDetailFiles(entry.count);
+      }
+      console.log(`${pathCol} ${detail}`);
     }
+    console.log("");
   }
 
-  console.log(`\nScope: ${scope} | Targets: ${selectedTargets.join(",")}`);
+  console.log(t.syncScopeLine(scope, selectedTargets.join(", ")));
 }
 
 await main();
