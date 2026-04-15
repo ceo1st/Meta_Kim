@@ -68,9 +68,18 @@ const updateMode = args.includes("--update") || args.includes("-u");
 const checkOnly = args.includes("--check");
 const silentMode = args.includes("--silent") || !process.stdout.isTTY;
 
+/** Maps `node setup.mjs --lang zh` etc. to canonical language codes (defined before --lang handling). */
+const LANG_ARG_ALIASES = { zh: "zh-CN", ja: "ja-JP", ko: "ko-KR" };
+function normalizeLangCliArg(arg) {
+  if (!arg) return null;
+  const trimmed = String(arg).trim();
+  const lower = trimmed.toLowerCase();
+  return LANG_ARG_ALIASES[lower] || trimmed;
+}
+
 const langIdx = args.indexOf("--lang");
 const langArg = langIdx >= 0 && args[langIdx + 1] ? args[langIdx + 1] : null;
-let currentLangCode = langArg || "en"; // Current language code for passing to child scripts
+let currentLangCode = langArg ? normalizeLangCliArg(langArg) : "en";
 
 const RUNTIME_CHOICES = [
   { id: "claude", label: "Claude Code" },
@@ -244,6 +253,11 @@ const I18N = {
     setupError: "Setup error:",
     selectLang: "Select language / 选择语言 / 言語を選択 / 언어 선택",
     choose: (n) => `Choose (1-${n})`,
+    /** Shown under @inquirer select (replaces default English key hints). */
+    inquirerSingleHotkeys: "↑↓ navigate · ⏎ confirm",
+    /** Shown under @inquirer checkbox — space / a / i match default shortcuts. */
+    inquirerMultiHotkeys:
+      "↑↓ move · space toggle · ⏎ confirm · a all · i invert",
     globalInstallPrompt:
       "Meta_Kim skills install to ~/.claude/skills/ (global). Install globally?",
     globalDirReady: (p) => `Global skills dir ready: ${p}`,
@@ -506,6 +520,9 @@ const I18N = {
     setupError: "安装出错：",
     selectLang: "Select language / 选择语言 / 言語を選択 / 언어 선택",
     choose: (n) => `选择 (1-${n})`,
+    inquirerSingleHotkeys: "↑↓ 移动选项 · ⏎ 确认",
+    inquirerMultiHotkeys:
+      "↑↓ 移动 · 空格 勾选/取消 · ⏎ 确认 · a 全选 · i 反选",
     globalInstallPrompt:
       "Meta_Kim 技能安装到 ~/.claude/skills/（全局）。是否全局安装？",
     globalDirReady: (p) => `全局技能目录就绪：${p}`,
@@ -762,6 +779,9 @@ const I18N = {
     setupError: "セットアップエラー：",
     selectLang: "Select language / 选择语言 / 言語を選択 / 언어 선택",
     choose: (n) => `選択 (1-${n})`,
+    inquirerSingleHotkeys: "↑↓ 移動 · ⏎ 確定",
+    inquirerMultiHotkeys:
+      "↑↓ 移動 · Space 切替 · ⏎ 確定 · a 全選択 · i 反転",
     globalInstallPrompt:
       "Meta_Kim スキルは ~/.claude/skills/（グローバル）にインストールされます。グローバルインストールしますか？",
     globalDirReady: (p) => `グローバルスキルディレクトリ準備完了：${p}`,
@@ -1039,6 +1059,9 @@ const I18N = {
     setupError: "설정 오류:",
     selectLang: "Select language / 选择语言 / 言語を選択 / 언어 선택",
     choose: (n) => `선택 (1-${n})`,
+    inquirerSingleHotkeys: "↑↓ 이동 · ⏎ 확인",
+    inquirerMultiHotkeys:
+      "↑↓ 이동 · Space 선택 토글 · ⏎ 확인 · a 전체 · i 반전",
     globalInstallPrompt:
       "Meta_Kim 스킬을 ~/.claude/skills/ (전역)에 설치합니다. 전역 설치할까요?",
     globalDirReady: (p) => `전역 스킬 디렉토리 준비됨: ${p}`,
@@ -1072,7 +1095,8 @@ const I18N = {
     selectSkillDependencies:
       "전역 ~/.*/skills/에 설치할 서드파티 스킬 저장소를 선택하세요",
     inputTargetsHint: (d) => `번호 입력, 쉼표로 다중 선택；Enter로 기본값 ${d}`,
-    inputSkillIdsHint: (d) => `번호 입력, 쉼표로 다중 선택；Enter로 기본값 ${d}`,
+    inputSkillIdsHint: (d) =>
+      `번호 입력, 쉼표로 다중 선택；Enter로 기본값 ${d}`,
     warnUnknownSkillId: (id) => `알 수 없는 스킬 id(무시): ${id}`,
     depSummaryAll: "9개 의존성 모두 확인 완료",
     depSummarySome: (ok, total) =>
@@ -1326,87 +1350,168 @@ async function askYesNo(question, defaultYes = true) {
   return answer.toLowerCase().startsWith("y");
 }
 
+// ── Interactive lists ───────────────────────────────────
+//
+// TTY: @inquirer/prompts (select / checkbox) — reliable ↑↓ / Space / Enter on Windows, Cursor, narrow panels.
+// Non-TTY: numbered readline fallback (CI / pipes).
+//
+// Layout: blank line before each prompt block; newline after question so options sit below a clear gap.
+
+const ANSI_STRIP_RE = /\x1b\[[0-9;]*m/g;
+function stripAnsi(s) {
+  return String(s ?? "").replace(ANSI_STRIP_RE, "");
+}
+
+function blankLineBeforeInquirerPrompt() {
+  console.log("");
+}
+
+/** Trailing \\n on message yields a visual blank line before the choice list (see @inquirer/select render). */
+function inquirerPromptQuestionLine(text) {
+  return `${stripAnsi(text)}\n`;
+}
+
+function inquirerThemeSingle() {
+  return {
+    style: {
+      keysHelpTip: () => t.inquirerSingleHotkeys,
+    },
+  };
+}
+
+function inquirerThemeMulti() {
+  return {
+    style: {
+      keysHelpTip: () => t.inquirerMultiHotkeys,
+    },
+  };
+}
+
+function formatSelectChoiceLabel(option) {
+  const text =
+    typeof option === "string"
+      ? option
+      : option.label || option.toString();
+  return stripAnsi(text);
+}
+
+/** Static list for non-interactive / piped stdin (no @inquirer). */
+function printSelectMenu(question, options, selected) {
+  console.log(`\n${C.bold}?${C.reset} ${question}`);
+  for (let i = 0; i < options.length; i++) {
+    const prefix = i === selected ? `${C.green}▶${C.reset} ` : "  ";
+    const text =
+      typeof options[i] === "string"
+        ? options[i]
+        : options[i].label || options[i].toString();
+    console.log(`${C.dim}${i + 1}.${C.reset} ${prefix}${text}`);
+  }
+}
+
+function printMultiMenu(question, choices, focused, selected) {
+  console.log(`\n${C.bold}?${C.reset} ${question}`);
+  for (let i = 0; i < choices.length; i++) {
+    const isFocused = i === focused;
+    const isSelected = selected.has(choices[i].id);
+    const focusMark = isFocused ? `${C.yellow}▶${C.reset} ` : "  ";
+    const checkMark = isSelected ? `${C.green}✓${C.reset}` : " ";
+    const text = choices[i].label || choices[i].toString();
+    const idStr = choices[i].id || "";
+    console.log(
+      `${C.dim}${i + 1}.${C.reset} [${checkMark}] ${focusMark}${text} ${C.dim}(${idStr})${C.reset}`,
+    );
+  }
+}
+
+async function keyboardSelect(question, options) {
+  if (!process.stdin.isTTY) {
+    printSelectMenu(question, options, 0);
+    const answer = await ask(t.choose(options.length));
+    const idx = parseInt(answer, 10) - 1;
+    return idx >= 0 && idx < options.length ? idx : 0;
+  }
+
+  const { select } = await import("@inquirer/prompts");
+
+  const choices = options.map((o, i) => ({
+    name: formatSelectChoiceLabel(o),
+    value: i,
+  }));
+
+  blankLineBeforeInquirerPrompt();
+  const answer = await select({
+    message: inquirerPromptQuestionLine(question),
+    choices,
+    default: 0,
+    loop: true,
+    theme: inquirerThemeSingle(),
+  });
+
+  return typeof answer === "number" &&
+    answer >= 0 &&
+    answer < options.length
+    ? answer
+    : 0;
+}
+
+async function keyboardMultiSelect(question, choices, defaultIds, hintText) {
+  if (!process.stdin.isTTY) {
+    printMultiMenu(question, choices, 0, new Set(defaultIds));
+    const answer = await ask(
+      `${hintText(`${C.dim}${defaultIds.join(", ")}${C.reset}`)}`,
+    );
+    if (!answer) return defaultIds;
+    const parts = answer
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (!parts.length) return defaultIds;
+    return parts.map((part) => {
+      if (/^\d+$/.test(part)) {
+        const index = parseInt(part, 10) - 1;
+        return choices[index]?.id ?? part;
+      }
+      return part.toLowerCase();
+    });
+  }
+
+  const { checkbox } = await import("@inquirer/prompts");
+
+  const cbChoices = choices.map((c) => ({
+    name: stripAnsi(`${c.label || ""} (${c.id || ""})`),
+    value: c.id,
+    checked: defaultIds.includes(c.id),
+  }));
+
+  blankLineBeforeInquirerPrompt();
+  const picked = await checkbox({
+    message: inquirerPromptQuestionLine(question),
+    choices: cbChoices,
+    required: false,
+    theme: inquirerThemeMulti(),
+  });
+
+  return Array.isArray(picked) ? picked : defaultIds;
+}
+
+/** Alias for compatibility — redirect to keyboardSelect */
 async function askSelect(question, options) {
-  console.log(`\n${C.bold}?${C.reset} ${question}\n`);
-  options.forEach((opt, i) => {
-    console.log(`${C.dim}${i + 1}.${C.reset} ${opt}`);
-  });
-  console.log("");
-  const answer = await ask(t.choose(options.length));
-  const idx = parseInt(answer, 10) - 1;
-  return idx >= 0 && idx < options.length ? idx : 0;
+  return keyboardSelect(question, options);
 }
 
+/** Alias for compatibility — redirect to keyboardMultiSelect */
 async function askMultiSelectTargets(question, choices, defaultIds) {
-  if (silentMode) {
-    return defaultIds;
-  }
-
-  const defaultSet = new Set(defaultIds);
-  console.log(`\n${C.bold}?${C.reset} ${question}\n`);
-  choices.forEach((choice, index) => {
-    const marker = defaultSet.has(choice.id) ? `${C.green}x${C.reset}` : " ";
-    console.log(
-      `${C.dim}${index + 1}.${C.reset} [${marker}] ${choice.label} ${C.dim}(${choice.id})${C.reset}`,
-    );
-  });
-  console.log("");
-  const answer = await ask(
-    `${t.inputTargetsHint(`${C.dim}${defaultIds.join(", ")}${C.reset}`)}`,
-  );
-  if (!answer) {
-    return defaultIds;
-  }
-
-  const parts = answer
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const mapped = parts.map((part) => {
-    if (/^\d+$/.test(part)) {
-      const index = Number.parseInt(part, 10) - 1;
-      return choices[index]?.id ?? part;
-    }
-    return part.toLowerCase();
-  });
-
-  return normalizeTargets(mapped);
+  return keyboardMultiSelect(question, choices, defaultIds, t.inputTargetsHint);
 }
 
+/** Alias for compatibility — redirect to keyboardMultiSelect */
 async function askMultiSelectSkillRepos(question, choices, defaultIds) {
-  if (silentMode) {
-    return defaultIds;
-  }
-
-  const defaultSet = new Set(defaultIds);
-  console.log(`\n${C.bold}?${C.reset} ${question}\n`);
-  choices.forEach((choice, index) => {
-    const marker = defaultSet.has(choice.id) ? `${C.green}x${C.reset}` : " ";
-    console.log(
-      `${C.dim}${index + 1}.${C.reset} [${marker}] ${choice.label} ${C.dim}(${choice.id})${C.reset}`,
-    );
-  });
-  console.log("");
-  const answer = await ask(
-    `${t.inputSkillIdsHint(`${C.dim}${defaultIds.join(", ")}${C.reset}`)}`,
+  return keyboardMultiSelect(
+    question,
+    choices,
+    defaultIds,
+    t.inputSkillIdsHint,
   );
-  if (!answer) {
-    return defaultIds;
-  }
-
-  const parts = answer
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const mapped = parts.map((part) => {
-    if (/^\d+$/.test(part)) {
-      const index = Number.parseInt(part, 10) - 1;
-      return choices[index]?.id ?? part;
-    }
-    return part;
-  });
-
-  return normalizeSkillIds(mapped);
 }
 
 async function resolveSelectedSkillDependencyIds() {
@@ -1534,7 +1639,8 @@ async function askProxyConfig() {
 
 async function selectLanguage() {
   if (langArg) {
-    const match = LANGUAGES.find((l) => l.code === langArg);
+    const code = normalizeLangCliArg(langArg);
+    const match = LANGUAGES.find((l) => l.code === code);
     if (match) {
       t = I18N[match.code];
       currentLangCode = match.code;
@@ -1591,9 +1697,7 @@ function showInstallOverview(activeTargets, installScope, skillIds = []) {
     installScope === "project"
       ? ""
       : `\n${C.dim}${t.installOverviewSkillList}${C.reset}${
-          skillIds.length > 0
-            ? skillIds.join(", ")
-            : t.installOverviewNoSkills
+          skillIds.length > 0 ? skillIds.join(", ") : t.installOverviewNoSkills
         }`;
 
   console.log(`
@@ -1647,35 +1751,21 @@ async function askInstallScope() {
     },
     {
       id: "both",
-      label: t.installScopeBothLabel,
+      label: `${t.installScopeBothLabel}`,
       desc: t.installScopeBothDesc,
     },
   ];
 
-  console.log(`${C.bold}${C.dim}?${C.reset} ${t.installScopePrompt}\n`);
+  const idx = await keyboardSelect(
+    t.installScopePrompt,
+    scopes.map((s) => ({
+      ...s,
+      label: `${s.label}${s.id === "both" ? ` ${C.dim}(default)${C.reset}` : ""}  ${C.dim}${s.desc}${C.reset}`,
+    })),
+  );
 
-  scopes.forEach((scope, i) => {
-    const defaultMark =
-      scope.id === "both" ? `${C.green}(default)${C.reset} ` : "";
-    console.log(
-      `${C.dim}${i + 1}.${C.reset} ${C.bold}${scope.label}${C.reset} ${defaultMark}`,
-    );
-    console.log(`${C.dim}${scope.desc}${C.reset}\n`);
-  });
-
-  const answer = await ask(t.choose(3));
-  const idx = parseInt(answer, 10) - 1;
-
-  // 默认选择 both (idx=2)，无效输入也返回 both
-  const selected = idx >= 0 && idx < 3 ? scopes[idx].id : "both";
-
-  const scopeName = {
-    project: "project-only",
-    global: "global-only",
-    both: "both",
-  }[selected];
-
-  info(t.selectedScope(scopeName));
+  const selected = scopes[idx]?.id || "both";
+  info(t.selectedScope(selected));
   return selected;
 }
 
@@ -2754,7 +2844,12 @@ async function runInstall() {
           : {};
         const skillArgs =
           selectedSkillIds.length > 0
-            ? ["--targets", activeTargets.join(","), "--skills", selectedSkillIds.join(",")]
+            ? [
+                "--targets",
+                activeTargets.join(","),
+                "--skills",
+                selectedSkillIds.join(","),
+              ]
             : ["--targets", activeTargets.join(","), "--skills", ""];
         const installResult = runNodeScript(
           "scripts/install-global-skills-all-runtimes.mjs",
