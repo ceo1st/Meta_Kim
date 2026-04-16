@@ -4,6 +4,26 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.0.7] - 2026-04-16
+
+### Changed
+
+- **Documentation (CLAUDE.md)**: Clarified generated/runtime wiring vs canonical edit targets; Cursor as fourth runtime projection; expanded maintenance commands (`check`, `check:global:meta-theory`, `deps:update`, `graphify:install`, `prompt:next-iteration`, etc.); graphify working-directory notes.
+
+### Fixed
+
+- **Runtime configs — no hardcoded model**: OpenClaw template, Codex `config.toml.example`, `validate-project.mjs`, `discover-global-capabilities.mjs`, and `eval-meta-agents.mjs` no longer inject or validate a default model; CLIs own model selection.
+
+- **CLI / i18n**: `setup.mjs` log alignment and progress output; `sync-runtimes.mjs` incremental/`--check` messages use `meta-kim-i18n` with `zh`/`ja`/`ko` LANG aliases.
+
+### Added
+
+- **Skills manifest / install**: `pluginHookCompat` and `installRoot` schema; `planning-with-files` canonical layout under `skills/` with plugins junction for upstream Stop hooks; Cursor target labels in i18n; sanitizer stops rewriting planning-with-files hook paths.
+
+### Chore
+
+- **install**: Suppress noisy stdout from git proxy detection while still applying proxy env.
+
 ## [2.0.6] - 2026-04-15
 
 ### Changed
