@@ -201,11 +201,7 @@ async function scanOpenClawAgents(baseDir) {
         modified: stat?.mtime ?? new Date(0),
         metadata: {
           name: agent.name || agent.id,
-          model:
-            agent.model ||
-            config?.agents?.defaults?.model?.primary ||
-            config?.agents?.defaults?.model ||
-            "unknown",
+          model: agent.model || "unknown",
           workspace: workspacePath,
           source: "openclaw.json",
           default: Boolean(agent.default),

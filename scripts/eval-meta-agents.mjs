@@ -16,9 +16,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 const rawArgs = process.argv.slice(2);
 const requireAllRuntimes = process.argv.includes("--require-all-runtimes");
-const evalMode = rawArgs.includes("--live") || rawArgs.includes("--mode=live")
-  ? "live"
-  : "smoke";
+const evalMode =
+  rawArgs.includes("--live") || rawArgs.includes("--mode=live")
+    ? "live"
+    : "smoke";
 const runtimeArg = rawArgs.find((arg) => arg.startsWith("--runtime="));
 const selectedRuntimes = new Set(
   runtimeArg
@@ -27,14 +28,18 @@ const selectedRuntimes = new Set(
         .split(",")
         .map((item) => item.trim().toLowerCase())
         .filter(Boolean)
-    : ["claude", "codex", "openclaw"]
+    : ["claude", "codex", "openclaw"],
 );
 const openclawTemplateConfigPath = path.join(
   canonicalRuntimeAssetsDir,
   "openclaw",
-  "openclaw.template.json"
+  "openclaw.template.json",
 );
-const prepareOpenClawScriptPath = path.join(repoRoot, "scripts", "prepare-openclaw-local.mjs");
+const prepareOpenClawScriptPath = path.join(
+  repoRoot,
+  "scripts",
+  "prepare-openclaw-local.mjs",
+);
 const activeChildren = new Map();
 let cleanupInFlight = false;
 
@@ -175,7 +180,7 @@ async function resolveCliCommand(spec) {
   throw new Error(
     `${unixName} command not found. This Node process may inherit a shorter PATH than your usual shell ` +
       `(npm global shims are often under %APPDATA%\\npm). Set ${envKey} to the full path of the executable, ` +
-      `or run the same command from a terminal where "${unixName}" already works.`
+      `or run the same command from a terminal where "${unixName}" already works.`,
   );
 }
 
@@ -261,7 +266,7 @@ async function cleanupActiveChildren(reason) {
   }
 
   await Promise.allSettled(
-    entries.map(({ child }) => terminateChildTree(child))
+    entries.map(({ child }) => terminateChildTree(child)),
   );
 }
 
@@ -307,7 +312,9 @@ async function probeClisOnly() {
       });
       const sampleArgs = unixName === "openclaw" ? ["--help"] : ["--version"];
       const argv0 =
-        spec.file === "cmd.exe" ? spec.toArgs(sampleArgs).slice(0, 3).join(" ") : spec.file;
+        spec.file === "cmd.exe"
+          ? spec.toArgs(sampleArgs).slice(0, 3).join(" ")
+          : spec.file;
       return {
         name: unixName,
         found: true,
@@ -403,43 +410,209 @@ const codexSmokeSchema = JSON.stringify({
 
 const claudeCases = {
   "meta-warden": {
-    ownGroups: [["统筹", "协调", "编排", "orchestration", "coordination", "质量标准", "quality standard", "CEO"], ["quality gate", "meta-review", "verification", "commission", "dispatch approval", "闸门", "校验", "验证闭环"], ["综合", "合成", "整合", "审计", "CEO报告", "最终", "final synthesis", "synthesis", "report", "audit", "evolution backlog"]],
-    refuseGroups: [["具体分析", "质量分析", "技术分析", "analysis"], ["工具发现", "tool discovery", "Scout", "scout", "SOUL", "soul"]],
-    artifactGroups: [["报告", "report", "综合", "synthesis", "go/no-go", "仲裁"]],
+    ownGroups: [
+      [
+        "统筹",
+        "协调",
+        "编排",
+        "orchestration",
+        "coordination",
+        "质量标准",
+        "quality standard",
+        "CEO",
+      ],
+      [
+        "quality gate",
+        "meta-review",
+        "verification",
+        "commission",
+        "dispatch approval",
+        "闸门",
+        "校验",
+        "验证闭环",
+      ],
+      [
+        "综合",
+        "合成",
+        "整合",
+        "审计",
+        "CEO报告",
+        "最终",
+        "final synthesis",
+        "synthesis",
+        "report",
+        "audit",
+        "evolution backlog",
+      ],
+    ],
+    refuseGroups: [
+      ["具体分析", "质量分析", "技术分析", "analysis"],
+      ["工具发现", "tool discovery", "Scout", "scout", "SOUL", "soul"],
+    ],
+    artifactGroups: [
+      ["报告", "report", "综合", "synthesis", "go/no-go", "仲裁"],
+    ],
   },
   "meta-genesis": {
-    ownGroups: [["SOUL", "soul", "提示词", "prompt"], ["人格", "灵魂", "identity", "system", "系统", "stress testing", "behavioral anchors"], ["架构", "设计", "design", "decision rules", "thinking framework", "anti-ai-slop"]],
-    refuseGroups: [["Hook", "hook", "权限", "安全", "security", "memory"], ["MCP", "skill", "技能", "记忆", "memory", "matching"]],
+    ownGroups: [
+      ["SOUL", "soul", "提示词", "prompt"],
+      [
+        "人格",
+        "灵魂",
+        "identity",
+        "system",
+        "系统",
+        "stress testing",
+        "behavioral anchors",
+      ],
+      [
+        "架构",
+        "设计",
+        "design",
+        "decision rules",
+        "thinking framework",
+        "anti-ai-slop",
+      ],
+    ],
+    refuseGroups: [
+      ["Hook", "hook", "权限", "安全", "security", "memory"],
+      ["MCP", "skill", "技能", "记忆", "memory", "matching"],
+    ],
     artifactGroups: [["SOUL", "soul", "prompt", "提示词"]],
   },
   "meta-artisan": {
-    ownGroups: [["skill", "技能"], ["MCP", "工具", "ROI", "评分", "精选", "tool"], ["匹配", "装备", "能力", "matching", "loadout", "capability"]],
-    refuseGroups: [["SOUL", "prompt", "提示词"], ["记忆", "memory", "Hook", "hook", "钩子", "安全", "security"]],
+    ownGroups: [
+      ["skill", "技能"],
+      ["MCP", "工具", "ROI", "评分", "精选", "tool"],
+      ["匹配", "装备", "能力", "matching", "loadout", "capability"],
+    ],
+    refuseGroups: [
+      ["SOUL", "prompt", "提示词"],
+      ["记忆", "memory", "Hook", "hook", "钩子", "安全", "security"],
+    ],
     artifactGroups: [["skill", "MCP", "能力清单", "映射", "report"]],
   },
   "meta-sentinel": {
-    ownGroups: [["安全", "风险", "权限", "security", "threat"], ["Hook", "hook", "守卫"], ["回滚", "rollback", "边界", "策略", "三级", "CAN", "CANNOT", "NEVER"]],
-    refuseGroups: [["SOUL", "prompt", "提示词"], ["工具发现", "tool discovery", "skill", "技能", "工作流", "编排", "workflow", "orchestration"]],
-    artifactGroups: [["Hook", "hook", "回滚", "rollback", "安全规则", "security rules", "守卫", "audit"]],
+    ownGroups: [
+      ["安全", "风险", "权限", "security", "threat"],
+      ["Hook", "hook", "守卫"],
+      ["回滚", "rollback", "边界", "策略", "三级", "CAN", "CANNOT", "NEVER"],
+    ],
+    refuseGroups: [
+      ["SOUL", "prompt", "提示词"],
+      [
+        "工具发现",
+        "tool discovery",
+        "skill",
+        "技能",
+        "工作流",
+        "编排",
+        "workflow",
+        "orchestration",
+      ],
+    ],
+    artifactGroups: [
+      [
+        "Hook",
+        "hook",
+        "回滚",
+        "rollback",
+        "安全规则",
+        "security rules",
+        "守卫",
+        "audit",
+      ],
+    ],
   },
   "meta-librarian": {
-    ownGroups: [["记忆", "memory", "知识", "MEMORY"], ["连续性", "沉淀", "架构", "architecture", "continuity", "persistence"], ["上下文", "档案", "索引", "保质期", "淘汰规则", "protocol", "strategy", "expiration"]],
-    refuseGroups: [["SOUL", "prompt", "提示词", "design"], ["skill", "技能", "Hook", "hook", "权限", "security", "workflow"]],
+    ownGroups: [
+      ["记忆", "memory", "知识", "MEMORY"],
+      ["连续性", "沉淀", "架构", "architecture", "continuity", "persistence"],
+      [
+        "上下文",
+        "档案",
+        "索引",
+        "保质期",
+        "淘汰规则",
+        "protocol",
+        "strategy",
+        "expiration",
+      ],
+    ],
+    refuseGroups: [
+      ["SOUL", "prompt", "提示词", "design"],
+      ["skill", "技能", "Hook", "hook", "权限", "security", "workflow"],
+    ],
     artifactGroups: [["记忆", "索引", "档案", "memory"]],
   },
   "meta-conductor": {
-    ownGroups: [["编排", "workflow", "工作流", "orchestration"], ["阶段", "phase", "节奏", "rhythm", "节拍"], ["牌组", "卡牌", "card deck", "发牌", "调度", "分发", "协作", "分工", "delivery shell", "交付外壳", "handoff", "sequencing"]],
-    refuseGroups: [["SOUL", "prompt", "提示词"], ["技能匹配", "技能到 agent", "skill→agent", "matching", "安全", "权限", "记忆", "security", "memory"]],
-    artifactGroups: [["workflow", "工作流", "计划", "编排", "orchestration", "牌组", "card deck"]],
+    ownGroups: [
+      ["编排", "workflow", "工作流", "orchestration"],
+      ["阶段", "phase", "节奏", "rhythm", "节拍"],
+      [
+        "牌组",
+        "卡牌",
+        "card deck",
+        "发牌",
+        "调度",
+        "分发",
+        "协作",
+        "分工",
+        "delivery shell",
+        "交付外壳",
+        "handoff",
+        "sequencing",
+      ],
+    ],
+    refuseGroups: [
+      ["SOUL", "prompt", "提示词"],
+      [
+        "技能匹配",
+        "技能到 agent",
+        "skill→agent",
+        "matching",
+        "安全",
+        "权限",
+        "记忆",
+        "security",
+        "memory",
+      ],
+    ],
+    artifactGroups: [
+      [
+        "workflow",
+        "工作流",
+        "计划",
+        "编排",
+        "orchestration",
+        "牌组",
+        "card deck",
+      ],
+    ],
   },
   "meta-prism": {
-    ownGroups: [["质量", "审查", "review", "quality", "forensics"], ["slop", "漂移", "缺陷", "defect", "evolution signal"], ["验证", "回归", "verification", "regression", "assertion", "tracking"]],
-    refuseGroups: [["工具发现", "tool discovery", "Scout", "scout"], ["统筹", "coordination", "Warden", "warden", "SOUL", "soul", "design"]],
+    ownGroups: [
+      ["质量", "审查", "review", "quality", "forensics"],
+      ["slop", "漂移", "缺陷", "defect", "evolution signal"],
+      ["验证", "回归", "verification", "regression", "assertion", "tracking"],
+    ],
+    refuseGroups: [
+      ["工具发现", "tool discovery", "Scout", "scout"],
+      ["统筹", "coordination", "Warden", "warden", "SOUL", "soul", "design"],
+    ],
     artifactGroups: [["审查", "报告", "缺陷", "review", "report", "analysis"]],
   },
   "meta-scout": {
     ownGroups: [
-      ["发现", "discovery", "扫描", "baseline", "基线", "capability", "能力基线"],
+      [
+        "发现",
+        "discovery",
+        "扫描",
+        "baseline",
+        "基线",
+        "capability",
+        "能力基线",
+      ],
       ["工具", "tool", "skill", "MCP", "ROI"],
       ["生态", "外部", "引入", "external", "candidate", "adoption"],
     ],
@@ -461,7 +634,9 @@ const claudeCases = {
         "dispatch",
       ],
     ],
-    artifactGroups: [["清单", "地图", "调研", "扫描", "分析报告", "report", "recommendation"]],
+    artifactGroups: [
+      ["清单", "地图", "调研", "扫描", "分析报告", "report", "recommendation"],
+    ],
   },
 };
 
@@ -645,7 +820,11 @@ function parseLastJson(raw) {
       } catch {}
     }
 
-    for (let index = trimmed.lastIndexOf("{"); index >= 0; index = trimmed.lastIndexOf("{", index - 1)) {
+    for (
+      let index = trimmed.lastIndexOf("{");
+      index >= 0;
+      index = trimmed.lastIndexOf("{", index - 1)
+    ) {
       try {
         return JSON.parse(trimmed.slice(index));
       } catch {}
@@ -666,7 +845,10 @@ function extractCodexReply(raw) {
   const events = parseJsonLines(raw);
   const lastMessage = [...events]
     .reverse()
-    .find((event) => event.type === "item.completed" && event.item?.type === "agent_message");
+    .find(
+      (event) =>
+        event.type === "item.completed" && event.item?.type === "agent_message",
+    );
 
   if (!lastMessage?.item?.text) {
     throw new Error("Codex did not emit a final agent message.");
@@ -689,7 +871,9 @@ async function resolveOpenClawCommand() {
 
 function extractOpenClawReply(raw) {
   const anchoredObject = extractJsonObjectByAnchor(raw, '"payloads"');
-  const parsed = anchoredObject ? JSON.parse(anchoredObject) : parseLastJson(raw);
+  const parsed = anchoredObject
+    ? JSON.parse(anchoredObject)
+    : parseLastJson(raw);
   if (!parsed) {
     return { raw: raw.trim() };
   }
@@ -775,10 +959,15 @@ function isOptionalRuntimeUnavailable(message) {
 
 function summarizeClaudeRuntime(discovery, results) {
   const allRetryableSkipped =
-    results.length > 0 && results.every((result) => result.skipped === true && result.retryable === true);
-  const hardFailures = results.filter((result) => result.ok === false && result.skipped !== true);
+    results.length > 0 &&
+    results.every(
+      (result) => result.skipped === true && result.retryable === true,
+    );
+  const hardFailures = results.filter(
+    (result) => result.ok === false && result.skipped !== true,
+  );
   const partialRetryableSkips = results.filter(
-    (result) => result.skipped === true && result.retryable === true
+    (result) => result.skipped === true && result.retryable === true,
   );
 
   if (!discovery.ok || hardFailures.length > 0) {
@@ -870,8 +1059,8 @@ async function runCommandWithIgnoredStdin(file, args, options = {}) {
         void terminateChildTree(child).finally(() => {
           settle(
             new Error(
-              `Command timed out after ${options.timeout}ms: ${file} ${args.join(" ")}`
-            )
+              `Command timed out after ${options.timeout}ms: ${file} ${args.join(" ")}`,
+            ),
           );
         });
       }, options.timeout);
@@ -898,14 +1087,16 @@ async function runCommandWithIgnoredStdin(file, args, options = {}) {
         return;
       }
 
-      const failureDetails = [stderr.trim(), stdout.trim()].filter(Boolean).join("\n");
+      const failureDetails = [stderr.trim(), stdout.trim()]
+        .filter(Boolean)
+        .join("\n");
       const suffix = signal ? ` (signal: ${signal})` : "";
       settle(
         new Error(
           `Command failed: ${file} ${args.join(" ")}${suffix}${
             failureDetails ? `\n${failureDetails}` : ""
-          }`
-        )
+          }`,
+        ),
       );
     });
   });
@@ -932,7 +1123,8 @@ function openClawStructuredPayloadLooksReal(agentId, payload) {
     Array.isArray(delegates) &&
     delegates.length >= 2 &&
     delegates.every((item) => String(item ?? "").trim().length >= 1);
-  const artifactOk = typeof artifact === "string" && artifact.trim().length >= 4;
+  const artifactOk =
+    typeof artifact === "string" && artifact.trim().length >= 4;
 
   return ownsOk && refusesOk && delegatesOk && artifactOk;
 }
@@ -987,8 +1179,9 @@ async function loadClaudeAgentIds() {
 }
 
 async function createOpenClawEvalConfig() {
-  const rawConfig = JSON.parse(await fs.readFile(openclawTemplateConfigPath, "utf8"));
-  const defaultModel = rawConfig?.agents?.defaults?.model;
+  const rawConfig = JSON.parse(
+    await fs.readFile(openclawTemplateConfigPath, "utf8"),
+  );
   const config = {
     ...rawConfig,
     agents: {
@@ -998,28 +1191,37 @@ async function createOpenClawEvalConfig() {
         workspace: String(agent.workspace ?? "")
           .replace("__REPO_ROOT__\\", `${repoRoot}\\`)
           .replace("__REPO_ROOT__/", `${repoRoot}/`),
-        ...(typeof defaultModel === "string" && defaultModel.trim()
-          ? { model: defaultModel.trim() }
-          : {}),
       })),
     },
   };
 
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "meta-kim-openclaw-"));
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "meta-kim-openclaw-"),
+  );
   const configPath = path.join(tempDir, "openclaw.eval.json");
-  await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  await fs.writeFile(
+    configPath,
+    `${JSON.stringify(config, null, 2)}\n`,
+    "utf8",
+  );
 
   return { tempDir, configPath };
 }
 
 async function runClaudeDiscovery(agentIds) {
-  logProgress(`Claude discovery: checking ${agentIds.length} registered agent(s)`);
+  logProgress(
+    `Claude discovery: checking ${agentIds.length} registered agent(s)`,
+  );
   const cmd = await getResolvedClaudeCommand();
-  const { stdout } = await runCommandWithIgnoredStdin(cmd.file, cmd.toArgs(["agents"]), {
-    cwd: repoRoot,
-    timeout: 120_000,
-    env: { ...process.env, NO_COLOR: "1" },
-  });
+  const { stdout } = await runCommandWithIgnoredStdin(
+    cmd.file,
+    cmd.toArgs(["agents"]),
+    {
+      cwd: repoRoot,
+      timeout: 120_000,
+      env: { ...process.env, NO_COLOR: "1" },
+    },
+  );
 
   const missing = agentIds.filter((agentId) => !stdout.includes(agentId));
   return {
@@ -1077,13 +1279,17 @@ async function runClaudeCases(agentIds) {
           cwd: repoRoot,
           timeout: 150_000,
           env: { ...process.env, NO_COLOR: "1" },
-        }
+        },
       );
 
       const payload = extractClaudeStructured(stdout);
-      const { score, matchedGroups, missedGroups } = scoreClaudeCase(caseConfig, payload);
+      const { score, matchedGroups, missedGroups } = scoreClaudeCase(
+        caseConfig,
+        payload,
+      );
       const scoutDrift =
-        agentId === "meta-scout" && metaScoutOwnsDriftsArtisanOrConductor(payload);
+        agentId === "meta-scout" &&
+        metaScoutOwnsDriftsArtisanOrConductor(payload);
       results.push({
         agentId,
         ok: payload.agent === agentId && score >= 0.8 && !scoutDrift,
@@ -1146,7 +1352,7 @@ async function runCodexSmoke() {
         cwd: repoRoot,
         timeout: 30_000,
         env: { ...process.env, NO_COLOR: "1" },
-      }
+      },
     ));
   } catch (error) {
     if (isOptionalRuntimeUnavailable(error.message)) {
@@ -1163,7 +1369,9 @@ async function runCodexSmoke() {
 
   const configExamplePath = path.join(repoRoot, "codex", "config.toml.example");
   const configExample = await fs.readFile(configExamplePath, "utf8");
-  const codexAgentFiles = (await fs.readdir(path.join(repoRoot, ".codex", "agents")))
+  const codexAgentFiles = (
+    await fs.readdir(path.join(repoRoot, ".codex", "agents"))
+  )
     .filter((file) => file.endsWith(".toml"))
     .sort();
   const payload = {
@@ -1208,7 +1416,7 @@ async function runCodexLive() {
         cwd: repoRoot,
         timeout: 30_000,
         env: { ...process.env, NO_COLOR: "1" },
-      }
+      },
     ));
   } catch (error) {
     if (isOptionalRuntimeUnavailable(error.message)) {
@@ -1225,7 +1433,9 @@ async function runCodexLive() {
 
   const configExamplePath = path.join(repoRoot, "codex", "config.toml.example");
   const configExample = await fs.readFile(configExamplePath, "utf8");
-  const codexAgentFiles = (await fs.readdir(path.join(repoRoot, ".codex", "agents")))
+  const codexAgentFiles = (
+    await fs.readdir(path.join(repoRoot, ".codex", "agents"))
+  )
     .filter((file) => file.endsWith(".toml"))
     .sort();
   const payload = {
@@ -1283,7 +1493,7 @@ async function runCodexLive() {
         cwd: repoRoot,
         timeout: 180_000,
         env: { ...process.env, NO_COLOR: "1" },
-      }
+      },
     );
 
     runtimePayload = extractCodexReply(stdout);
@@ -1330,18 +1540,14 @@ async function runCodexLive() {
     },
   };
 }
- 
+
 async function collectOpenClawBaseStatus() {
   logProgress("OpenClaw smoke: preparing local config and validating hooks");
-  await runCommandWithIgnoredStdin(
-    "node",
-    [prepareOpenClawScriptPath],
-    {
-      cwd: repoRoot,
-      timeout: 120_000,
-      env: { ...process.env, NO_COLOR: "1" },
-    }
-  );
+  await runCommandWithIgnoredStdin("node", [prepareOpenClawScriptPath], {
+    cwd: repoRoot,
+    timeout: 120_000,
+    env: { ...process.env, NO_COLOR: "1" },
+  });
 
   const command = await resolveOpenClawCommand();
   const tempConfig = await createOpenClawEvalConfig();
@@ -1358,9 +1564,12 @@ async function collectOpenClawBaseStatus() {
       cwd: repoRoot,
       timeout: 60_000,
       env,
-    }
+    },
   );
-  const validationOutput = mergeCommandOutput(validation.stdout, validation.stderr);
+  const validationOutput = mergeCommandOutput(
+    validation.stdout,
+    validation.stderr,
+  );
 
   let hooksDiscovery = {
     ok: false,
@@ -1374,7 +1583,7 @@ async function collectOpenClawBaseStatus() {
         cwd: repoRoot,
         timeout: 60_000,
         env,
-      }
+      },
     );
     const hooksOutput = mergeCommandOutput(hooks.stdout, hooks.stderr);
     const hooksLower = hooksOutput.toLowerCase();
@@ -1415,13 +1624,18 @@ async function runOpenClawSmoke() {
       status: ok ? "passed" : "failed",
       ok,
       mode: "smoke",
-      configOk: baseStatus.validationOutput.toLowerCase().includes("config valid"),
+      configOk: baseStatus.validationOutput
+        .toLowerCase()
+        .includes("config valid"),
       hooksOk: baseStatus.hooksDiscovery.ok,
       hooksDiscovery: baseStatus.hooksDiscovery.output,
       validation: baseStatus.validationOutput,
     };
   } finally {
-    await fs.rm(baseStatus.tempConfig.tempDir, { recursive: true, force: true });
+    await fs.rm(baseStatus.tempConfig.tempDir, {
+      recursive: true,
+      force: true,
+    });
   }
 }
 
@@ -1433,7 +1647,9 @@ async function runOpenClawLive() {
 
     for (const agentId of smokeAgents) {
       try {
-        logProgress(`OpenClaw live case ${agentResults.length + 1}/${smokeAgents.length}: ${agentId}`);
+        logProgress(
+          `OpenClaw live case ${agentResults.length + 1}/${smokeAgents.length}: ${agentId}`,
+        );
         const caseConfig = claudeCases[agentId];
         const prompt =
           "你正在做 Meta_Kim 元 agent 角色边界自检。只输出一段 JSON，不要解释。" +
@@ -1462,27 +1678,39 @@ async function runOpenClawLive() {
             cwd: repoRoot,
             timeout: 180_000,
             env: baseStatus.env,
-          }
+          },
         );
 
-        const payload = extractOpenClawReply(mergeCommandOutput(stdout, stderr));
+        const payload = extractOpenClawReply(
+          mergeCommandOutput(stdout, stderr),
+        );
         const injectionOk =
           payload.wrapper?.meta?.systemPromptReport?.injectedWorkspaceFiles?.every(
-            (item) => item.missing === false
+            (item) => item.missing === false,
           ) ?? false;
         const injectedWorkspaceFiles =
-          payload.wrapper?.meta?.systemPromptReport?.injectedWorkspaceFiles?.map((item) => ({
-            name: item.name,
-            missing: item.missing,
-            truncated: item.truncated,
-          })) ?? [];
+          payload.wrapper?.meta?.systemPromptReport?.injectedWorkspaceFiles?.map(
+            (item) => ({
+              name: item.name,
+              missing: item.missing,
+              truncated: item.truncated,
+            }),
+          ) ?? [];
 
-        const structuralOk = openClawStructuredPayloadLooksReal(agentId, payload);
+        const structuralOk = openClawStructuredPayloadLooksReal(
+          agentId,
+          payload,
+        );
         const scored = caseConfig
           ? scoreClaudeCase(caseConfig, payload)
-          : { score: 0, matchedGroups: [], missedGroups: ["missing-case-config"] };
+          : {
+              score: 0,
+              matchedGroups: [],
+              missedGroups: ["missing-case-config"],
+            };
         const scoutDrift =
-          agentId === "meta-scout" && metaScoutOwnsDriftsArtisanOrConductor(payload);
+          agentId === "meta-scout" &&
+          metaScoutOwnsDriftsArtisanOrConductor(payload);
         const boundaryOk =
           structuralOk &&
           caseConfig != null &&
@@ -1527,14 +1755,19 @@ async function runOpenClawLive() {
         baseStatus.validationOutput.toLowerCase().includes("config valid") &&
         baseStatus.hooksDiscovery.ok &&
         agentResults.every((result) => result.ok && result.injectionOk),
-      configOk: baseStatus.validationOutput.toLowerCase().includes("config valid"),
+      configOk: baseStatus.validationOutput
+        .toLowerCase()
+        .includes("config valid"),
       hooksOk: baseStatus.hooksDiscovery.ok,
       hooksDiscovery: baseStatus.hooksDiscovery.output,
       validation: baseStatus.validationOutput,
       agentResults,
     };
   } finally {
-    await fs.rm(baseStatus.tempConfig.tempDir, { recursive: true, force: true });
+    await fs.rm(baseStatus.tempConfig.tempDir, {
+      recursive: true,
+      force: true,
+    });
   }
 }
 
@@ -1545,7 +1778,9 @@ async function main() {
       throw new Error(`Unknown runtime filter: ${runtimeName}`);
     }
   }
-  logProgress(`starting ${evalMode} evaluation for ${[...selectedRuntimes].join(", ")}`);
+  logProgress(
+    `starting ${evalMode} evaluation for ${[...selectedRuntimes].join(", ")}`,
+  );
 
   const agentIds = await loadClaudeAgentIds();
   const report = {
@@ -1586,9 +1821,7 @@ async function main() {
     if (isRuntimeSelected("codex")) {
       try {
         report.codex =
-          evalMode === "live"
-            ? await runCodexLive()
-            : await runCodexSmoke();
+          evalMode === "live" ? await runCodexLive() : await runCodexSmoke();
       } catch (error) {
         report.codex = isOptionalRuntimeUnavailable(error.message)
           ? {
@@ -1637,15 +1870,27 @@ async function main() {
   }
 
   const runtimeStatuses = [
-    isRuntimeSelected("claude") ? summarizeRuntimeReport("claude", report.claude) : null,
-    isRuntimeSelected("codex") ? summarizeRuntimeReport("codex", report.codex) : null,
-    isRuntimeSelected("openclaw") ? summarizeRuntimeReport("openclaw", report.openclaw) : null,
+    isRuntimeSelected("claude")
+      ? summarizeRuntimeReport("claude", report.claude)
+      : null,
+    isRuntimeSelected("codex")
+      ? summarizeRuntimeReport("codex", report.codex)
+      : null,
+    isRuntimeSelected("openclaw")
+      ? summarizeRuntimeReport("openclaw", report.openclaw)
+      : null,
   ].filter(Boolean);
 
   report.summary = {
-    passed: runtimeStatuses.filter((item) => item.status === "passed").map((item) => item.runtime),
-    skipped: runtimeStatuses.filter((item) => item.status === "skipped").map((item) => item.runtime),
-    failed: runtimeStatuses.filter((item) => item.status === "failed").map((item) => item.runtime),
+    passed: runtimeStatuses
+      .filter((item) => item.status === "passed")
+      .map((item) => item.runtime),
+    skipped: runtimeStatuses
+      .filter((item) => item.status === "skipped")
+      .map((item) => item.runtime),
+    failed: runtimeStatuses
+      .filter((item) => item.status === "failed")
+      .map((item) => item.runtime),
     strictRuntimesRequired: requireAllRuntimes,
   };
 

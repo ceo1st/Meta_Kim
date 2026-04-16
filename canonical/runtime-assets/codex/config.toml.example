@@ -6,8 +6,7 @@
 # Project skills are auto-discovered from:
 #   REPLACE_WITH_REPO_ROOT/.agents/skills/
 
-model = "gpt-5.4"
-model_reasoning_effort = "medium"
+# model and model_reasoning_effort are inherited from your Codex CLI configuration
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 

@@ -1200,12 +1200,6 @@ async function validateOpenClawArtifacts(agentIds) {
   const sortedConfigIds = [...configIds].sort();
 
   assert(
-    typeof templateConfig.agents?.defaults?.model === "string" &&
-      templateConfig.agents.defaults.model.length >= 1,
-    "canonical/runtime-assets/openclaw/openclaw.template.json is missing a default model.",
-  );
-
-  assert(
     JSON.stringify(sortedConfigIds) === JSON.stringify(sortedAgentIds),
     "canonical OpenClaw template agent list is out of sync with canonical/agents.",
   );
