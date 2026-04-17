@@ -57,6 +57,7 @@ export function buildMetaKimHooksTemplate(absHooksDir) {
       {
         matcher: "*",
         hooks: [
+          cmd("stop-compaction.mjs"),
           cmd("stop-console-log-audit.mjs"),
           cmd("stop-completion-guard.mjs"),
         ],
@@ -85,6 +86,7 @@ const REPO_META_KIM_HOOK_FILES = [
   "post-typecheck.mjs",
   "post-console-log-warn.mjs",
   "subagent-context.mjs",
+  "stop-compaction.mjs",
   "stop-console-log-audit.mjs",
   "stop-completion-guard.mjs",
 ];
@@ -183,10 +185,7 @@ export function mergePermissionsDenyUnion(canonicalPerm, basePerm) {
   }
   const merged = { ...canonicalPerm, ...basePerm };
   const deny = [
-    ...new Set([
-      ...(canonicalPerm?.deny ?? []),
-      ...(basePerm?.deny ?? []),
-    ]),
+    ...new Set([...(canonicalPerm?.deny ?? []), ...(basePerm?.deny ?? [])]),
   ];
   if (deny.length) {
     merged.deny = deny;

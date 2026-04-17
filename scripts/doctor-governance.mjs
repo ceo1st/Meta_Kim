@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import {
   detectProfileCollision,
   ensureProfileState,
+  getProfilePaths,
   toRepoRelative,
 } from "./meta-kim-local-state.mjs";
 import { resolveTargetContext } from "./meta-kim-sync-config.mjs";
@@ -31,6 +32,7 @@ const EXPECTED_CLAUDE_HOOK_COMMANDS = [
   "node .claude/hooks/post-typecheck.mjs",
   "node .claude/hooks/post-console-log-warn.mjs",
   "node .claude/hooks/subagent-context.mjs",
+  "node .claude/hooks/stop-compaction.mjs",
   "node .claude/hooks/stop-console-log-audit.mjs",
   "node .claude/hooks/stop-completion-guard.mjs",
 ];
@@ -191,6 +193,37 @@ async function checkLocalState() {
   };
 }
 
+async function writeDoctorCache({
+  profile,
+  failed,
+  canonicalLines,
+  mirrorLines,
+  runtimeLines,
+  localLines,
+}) {
+  const state = getProfilePaths({ profile });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const cacheFile = path.join(state.doctorCacheDir, `${timestamp}.json`);
+  const cache = {
+    timestamp,
+    nodeVersion: process.version,
+    passed: !failed,
+    sections: {
+      canonical: canonicalLines.join("\n"),
+      mirror: mirrorLines.join("\n"),
+      runtime: runtimeLines.join("\n"),
+      local: localLines.join("\n"),
+    },
+    profile,
+    profileKey: state.profileKey,
+  };
+  await fs.writeFile(cacheFile, JSON.stringify(cache, null, 2), "utf8");
+  // Also write latest.json symlink-equivalent (overwrite)
+  const latest = path.join(state.doctorCacheDir, "latest.json");
+  await fs.writeFile(latest, JSON.stringify(cache, null, 2), "utf8");
+  console.log(`  [cache] written to ${toRepoRelative(cacheFile)}`);
+}
+
 async function main() {
   console.log("meta-kim doctor:governance");
   const canonicalLines = [];
@@ -198,6 +231,7 @@ async function main() {
   const runtimeLines = [];
   const localLines = [];
   let failed = false;
+  let profile = "default";
 
   try {
     const schemaVersion = await checkContract();
@@ -248,6 +282,7 @@ async function main() {
 
   try {
     const localState = await checkLocalState();
+    profile = localState.profile;
     localLines.push(
       `  [ok] profile=${localState.profile} runtime=${localState.runtimeFamily} key=${localState.profileKey}`,
     );
@@ -271,6 +306,21 @@ async function main() {
   console.log(runtimeLines.join("\n"));
   console.log("Local index health");
   console.log(localLines.join("\n"));
+
+  // Write cache last (non-blocking for the overall result)
+  try {
+    await writeDoctorCache({
+      profile,
+      failed,
+      canonicalLines,
+      mirrorLines,
+      runtimeLines,
+      localLines,
+    });
+  } catch (e) {
+    console.error(`  [warn] failed to write doctor cache: ${e.message}`);
+  }
+
   if (failed) {
     console.error(
       "\nDoctor finished with failures. Fix the items above, then run: npm run sync:runtimes && npm run validate",

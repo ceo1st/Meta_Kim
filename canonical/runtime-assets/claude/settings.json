@@ -60,6 +60,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node .claude/hooks/stop-compaction.mjs"
+          },
+          {
+            "type": "command",
             "command": "node .claude/hooks/stop-console-log-audit.mjs"
           },
           {
