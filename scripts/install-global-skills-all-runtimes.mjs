@@ -19,7 +19,7 @@
  */
 
 import { execFileSync, execSync, spawnSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { createWriteStream, existsSync, readFileSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -82,6 +82,68 @@ const installFailures = [];
 const archiveFallbacks = [];
 const repairedInstallRoots = [];
 const sanitizedSkillIssues = [];
+
+// ── Log file tee ───────────────────────────────────────────────────────────
+
+/**
+ * Parse --log-file <path> from CLI args.
+ * Returns the log file path or null if not specified.
+ */
+function parseLogFileArg(argv = process.argv.slice(2)) {
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === "--log-file" && argv[i + 1] !== undefined) {
+      return path.resolve(argv[i + 1]);
+    }
+    if (argv[i].startsWith("--log-file=")) {
+      return path.resolve(argv[i].slice("--log-file=".length));
+    }
+  }
+  return null;
+}
+
+/**
+ * Set up a tee that writes all stdout/stderr to BOTH the terminal and a log file.
+ * Returns the resolved log file path, or null if logging was not enabled.
+ */
+async function setupTeeStdout(logFilePath) {
+  if (!logFilePath) return null;
+
+  // Ensure parent directory exists
+  await fs.mkdir(path.dirname(logFilePath), { recursive: true });
+
+  const logStream = createWriteStream(logFilePath, {
+    flags: "w",
+    encoding: "utf8",
+  });
+
+  // Tee wrapper: write to both the original destination and the log file
+  function teeWrite(originalWrite, chunk) {
+    const str =
+      chunk instanceof Buffer ? chunk.toString("utf8") : String(chunk);
+    originalWrite(str);
+    logStream.write(str);
+  }
+
+  // Replace stdout/stderr write methods with tee versions
+  const origStdoutWrite = process.stdout.write.bind(process.stdout);
+  const origStderrWrite = process.stderr.write.bind(process.stderr);
+
+  process.stdout.write = (chunk, ...rest) => {
+    teeWrite((s) => origStdoutWrite(s), chunk);
+    return true;
+  };
+  process.stderr.write = (chunk, ...rest) => {
+    teeWrite((s) => origStderrWrite(s), chunk);
+    return true;
+  };
+
+  // Also intercept console.log/error/warn by patching the underlying write
+  // (already handled by stdout/stderr write override)
+
+  return logFilePath;
+}
+
+const logFileResolved = await setupTeeStdout(parseLogFileArg(cliArgs));
 
 const PROXY_ENV_KEYS = [
   "HTTP_PROXY",
@@ -2285,6 +2347,11 @@ async function main() {
   console.log(t.noteCodexOpenclaw);
   console.log(t.activeTargets(activeTargets));
   console.log(t.metaKimRoot(repoRoot));
+
+  // Print log file path if logging was active
+  if (logFileResolved) {
+    console.log(`\n${C.cyan}📋 ${t.logSaved(logFileResolved)}${C.reset}`);
+  }
 }
 
 main().catch((err) => {

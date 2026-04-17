@@ -145,6 +145,7 @@ const STRINGS = {
       "Note: Codex/OpenClaw have no Claude Code plugin format — same repos are mirrored as skill directories only.",
     activeTargets: (targets) => `Active runtime targets: ${targets.join(", ")}`,
     metaKimRoot: (root) => `Meta_Kim repo (canonical source root): ${root}`,
+    logSaved: (path) => `Full log saved to: ${path}`,
     warnManifestMissing: "skills manifest missing — no skills to install",
     warnRepairLegacyLayout: (id, dir) =>
       `repairing legacy install layout for ${id}: ${dir}`,
@@ -358,6 +359,7 @@ const STRINGS = {
       "注意：Codex/OpenClaw 没有 Claude Code 插件格式——同名仓库只作为技能目录镜像。",
     activeTargets: (targets) => `活跃运行时目标：${targets.join(", ")}`,
     metaKimRoot: (root) => `Meta_Kim 仓库（正典源根目录）：${root}`,
+    logSaved: (path) => `完整日志已保存至：${path}`,
     warnManifestMissing: "缺少技能清单 — 无技能可安装",
     warnRepairLegacyLayout: (id, dir) => `正在修复遗留安装布局 ${id}：${dir}`,
     warnRepairLegacySharedRoot: (dir) =>
@@ -560,6 +562,7 @@ const STRINGS = {
     activeTargets: (targets) =>
       `アクティブランタイムターゲット：${targets.join(", ")}`,
     metaKimRoot: (root) => `Meta_Kim リポジトリ（正典ソースルート）：${root}`,
+    logSaved: (path) => `フルログ保存先：${path}`,
     warnManifestMissing:
       "スキルマニフェストが見つかりません — インストールするスキルがありません",
     warnRepairLegacyLayout: (id, dir) =>
@@ -774,6 +777,7 @@ const STRINGS = {
       "참고: Codex/OpenClaw에는 Claude Code 플러그인 형식이 없습니다 — 동일한 저장소는 스킬 디렉토리로만 미러링됩니다.",
     activeTargets: (targets) => `활성 런타임 대상：${targets.join(", ")}`,
     metaKimRoot: (root) => `Meta_Kim 저장소 (정본 소스 루트)：${root}`,
+    logSaved: (path) => `전체 로그 저장 위치：${path}`,
     warnManifestMissing: "스킬 매니페스트 누락 — 설치할 스킬이 없습니다",
     warnRepairLegacyLayout: (id, dir) =>
       `레거시 설치 레이아웃 복구 중 ${id}：${dir}`,
