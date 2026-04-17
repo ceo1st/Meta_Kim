@@ -80,13 +80,13 @@ const promptInstallScope =
 const promptProxy =
   args.includes("--prompt-proxy") || process.env.META_KIM_PROMPT_PROXY === "1";
 
-/** Generates a unique log file path for the skills install session. */
-const INSTALL_LOG_FILE = join(
-  homedir(),
-  ".cache",
-  "meta-kim-setup",
-  `install-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.log`,
-);
+/** Maps `node setup.mjs --lang zh` etc. to canonical language codes (defined before --lang handling). */
+// const INSTALL_LOG_FILE = join(
+//   homedir(),
+//   ".cache",
+//   "meta-kim-setup",
+//   `install-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.log`,
+// );
 
 /** Maps `node setup.mjs --lang zh` etc. to canonical language codes (defined before --lang handling). */
 const LANG_ARG_ALIASES = { zh: "zh-CN", ja: "ja-JP", ko: "ko-KR" };
@@ -3169,7 +3169,7 @@ async function runInstall() {
         const proxyEnv = localOverrides.gitProxy
           ? { META_KIM_GIT_PROXY: localOverrides.gitProxy }
           : {};
-        const skillArgs = (
+        const skillArgs =
           selectedSkillIds.length > 0
             ? [
                 "--targets",
@@ -3177,8 +3177,8 @@ async function runInstall() {
                 "--skills",
                 selectedSkillIds.join(","),
               ]
-            : ["--targets", activeTargets.join(","), "--skills", ""]
-        ).concat(["--log-file", INSTALL_LOG_FILE]);
+            : ["--targets", activeTargets.join(","), "--skills", ""];
+        // ).concat(["--log-file", INSTALL_LOG_FILE]);
         const installResult = runNodeScript(
           "scripts/install-global-skills-all-runtimes.mjs",
           skillArgs,
@@ -3302,7 +3302,7 @@ async function runUpdate() {
     const proxyEnv = localOverrides.gitProxy
       ? { META_KIM_GIT_PROXY: localOverrides.gitProxy }
       : {};
-    const updateSkillArgs = (
+    const updateSkillArgs =
       updateSkillIds.length > 0
         ? [
             "--update",
@@ -3311,8 +3311,8 @@ async function runUpdate() {
             "--skills",
             updateSkillIds.join(","),
           ]
-        : ["--update", "--targets", activeTargets.join(","), "--skills", ""]
-    ).concat(["--log-file", INSTALL_LOG_FILE]);
+        : ["--update", "--targets", activeTargets.join(","), "--skills", ""];
+      // ).concat(["--log-file", INSTALL_LOG_FILE]);
     const updateInstallResult = runNodeScript(
       "scripts/install-global-skills-all-runtimes.mjs",
       updateSkillArgs,

@@ -19,7 +19,7 @@
  */
 
 import { execFileSync, execSync, spawnSync, spawn } from "node:child_process";
-import { createWriteStream, existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -2356,10 +2356,10 @@ async function main() {
   console.log(t.activeTargets(activeTargets));
   console.log(t.metaKimRoot(repoRoot));
 
-  // Print log file path if logging was active
-  if (logFileResolved) {
-    console.log(`\n${C.cyan}📋 ${t.logSaved(logFileResolved)}${C.reset}`);
-  }
+  // // Print log file path if logging was active
+  // if (logFileResolved) {
+  //   console.log(`\n${C.cyan}📋 ${t.logSaved(logFileResolved)}${C.reset}`);
+  // }
 }
 
 main().catch((err) => {
