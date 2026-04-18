@@ -475,6 +475,7 @@ Possible causes:
     installOverviewTime: "2-5 minutes (depends on network speed)",
     // Progress step strings
     progressPrepareDir: "Prepare global skills directory",
+    progressNpmInstall: "Install npm dependencies",
     progressSyncConfig: "Sync tool configurations",
     progressInstallSkills: "Install global skills (may take several minutes)",
     progressSyncMeta: "Sync meta-theory",
@@ -849,6 +850,7 @@ ${r ? `原始错误：${r}` : ""}
     installOverviewTime: "2-5 分钟（取决于网络速度）",
     // 进度步骤字符串
     progressPrepareDir: "准备全局技能目录",
+    progressNpmInstall: "安装 npm 依赖",
     progressSyncConfig: "同步配置文件",
     progressInstallSkills: "安装全局技能（可能需要几分钟）",
     progressSyncMeta: "同步 meta-theory",
@@ -1248,6 +1250,7 @@ ${r ? `生エラー：${r}` : ""}
     installOverviewTime: "2-5分（ネットワーク速度によります）",
     // 進捗ステップ文字列
     progressPrepareDir: "グローバルスキルディレクトリを準備",
+    progressNpmInstall: "npm依存関係をインストール",
     progressSyncConfig: "設定を同期",
     progressInstallSkills:
       "グローバルスキルをインストール（数分かかる場合があります）",
@@ -1635,6 +1638,7 @@ ${r ? `원본 오류：${r}` : ""}
     installOverviewTime: "2-5분(네트워크 속도에 따라 다름)",
     // 진행 단계 문자열
     progressPrepareDir: "전역 스킬 디렉토리 준비",
+    progressNpmInstall: "npm 의존성 설치",
     progressSyncConfig: "설정 동기화",
     progressInstallSkills: "전역 스킬 설치(몇 분 소요될 수 있음)",
     progressSyncMeta: "meta-theory 동기화",
@@ -3514,6 +3518,28 @@ async function runInstall() {
 
   // 项目本地同步 (project-only 或 both)
   if (needProject) {
+    stepNum++;
+    await withProgress(t.stepLabel(stepNum, t.progressNpmInstall), async () => {
+      if (
+        existsSync(join(PROJECT_DIR, "node_modules", "@modelcontextprotocol"))
+      ) {
+        skip(t.nodeModulesExist);
+        return true;
+      }
+      info(t.runningNpm);
+      const result = spawnSync("npm", ["install"], {
+        cwd: PROJECT_DIR,
+        stdio: "inherit",
+        shell: isWin,
+      });
+      if (result.status === 0) {
+        ok(t.npmDone);
+        return true;
+      }
+      warn(t.npmFailed);
+      return false;
+    });
+
     stepNum++;
     await withProgress(t.stepLabel(stepNum, t.progressSyncConfig), async () => {
       const configResult = await autoConfigure(installScope);
