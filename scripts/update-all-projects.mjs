@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * 批量更新所有使用 Meta_Kim 的项目
- * 
+ *
  * 用法：
  *   node scripts/update-all-projects.mjs
- * 
+ *
  * 配置：在项目根目录创建 projects.json
  *   [
  *     "C:/Users/admin/Desktop/Project1",
@@ -41,13 +41,13 @@ function loadProjects() {
 function runInProject(projectDir, command, args) {
   console.log(`\n📂 ${projectDir}`);
   console.log(`   运行: ${command} ${args.join(" ")}`);
-  
+
   const result = spawnSync(command, args, {
     cwd: projectDir,
     stdio: "inherit",
     shell: true,
   });
-  
+
   return result.status === 0;
 }
 
@@ -57,7 +57,7 @@ async function main() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   const projects = loadProjects();
-  
+
   if (projects.length === 0) {
     console.log("❌ 没有配置项目列表！");
     console.log("\n请创建 projects.json 文件：");
@@ -86,18 +86,21 @@ async function main() {
     const hasClaude = existsSync(join(project, ".claude"));
     const hasCodex = existsSync(join(project, ".codex"));
     const hasOpenclaw = existsSync(join(project, "openclaw"));
-    
+
     if (!hasClaude && !hasCodex && !hasOpenclaw) {
       console.log(`⏭️  跳过（非 Meta_Kim 项目）: ${project}`);
       continue;
     }
 
-    // 运行 npm run sync:runtimes（如果项目有这个脚本）
+    // 运行 npm run meta:sync（如果项目有这个脚本，兼容新旧命名）
     const pkgPath = join(project, "package.json");
     if (existsSync(pkgPath)) {
       const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-      if (pkg.scripts?.["sync:runtimes"]) {
-        const ok = runInProject(project, "npm", ["run", "sync:runtimes"]);
+      const syncScript =
+        pkg.scripts?.["meta:sync"] || pkg.scripts?.["sync:runtimes"];
+      if (syncScript) {
+        const cmd = pkg.scripts?.["meta:sync"] ? "meta:sync" : "sync:runtimes";
+        const ok = runInProject(project, "npm", ["run", cmd]);
         if (ok) {
           console.log(`   ✅ 成功`);
           successCount++;
@@ -106,7 +109,7 @@ async function main() {
           failCount++;
         }
       } else {
-        console.log(`⏭️  跳过（无 sync:runtimes 脚本）: ${project}`);
+        console.log(`⏭️  跳过（无 meta:sync 脚本）: ${project}`);
       }
     }
   }

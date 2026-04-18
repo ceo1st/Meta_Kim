@@ -1505,7 +1505,7 @@ async function installAllSkillsForRuntime(label, runtimeHome, runtimeId) {
   }
 }
 
-function installClaudePlugins() {
+async function installClaudePlugins() {
   if (skipPlugins || CLAUDE_PLUGIN_SPECS.length === 0) {
     return;
   }
@@ -1545,19 +1545,34 @@ function installClaudePlugins() {
     return;
   }
 
-  // Load installed plugin versions from installed_plugins.json
-  // Format: { "<bareName>": "<installedVersion>" }
-  let installedPlugins = {};
+  // Load installed plugin records from installed_plugins.json
+  // Format: { version: 2, plugins: { "<fullKey>": [records] } }
+  let installedPluginsFile = { version: 2, plugins: {} };
   const configHome =
     process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
-  const installedPluginsPath = path.join(configHome, "installed_plugins.json");
+  // Claude Code writes installed_plugins.json under the plugins/ subdirectory
+  const installedPluginsPath = path.join(
+    configHome,
+    "plugins",
+    "installed_plugins.json",
+  );
   try {
     if (existsSync(installedPluginsPath)) {
       const raw = readFileSync(installedPluginsPath, "utf8");
-      installedPlugins = JSON.parse(raw);
+      installedPluginsFile = JSON.parse(raw);
+      if (!installedPluginsFile.plugins) installedPluginsFile.plugins = {};
     }
   } catch {
-    // If file missing or corrupt, fall through with empty map
+    // If file missing or corrupt, fall through with fresh structure
+  }
+
+  // Flat lookup by bare name (first matching record across all full keys)
+  function getInstalledRecord(bareName) {
+    const key = Object.keys(installedPluginsFile.plugins).find((k) =>
+      k.startsWith(bareName + "@"),
+    );
+    const records = installedPluginsFile.plugins[key];
+    return records?.[0] ?? null;
   }
 
   // Probe currently-active plugins via CLI (for bare-name dedup in non-update mode)
@@ -1580,12 +1595,55 @@ function installClaudePlugins() {
     }
   }
 
+  /**
+   * Fetch the latest plugin version from GitHub marketplace.json.
+   * Returns version string or null if unreachable/unparseable.
+   * Version source: .claude-plugin/marketplace.json → plugins[].version
+   */
+  async function fetchLatestPluginVersion(repoFull) {
+    // repoFull format: "owner/repo"
+    const url = `https://api.github.com/repos/${repoFull}/contents/.claude-plugin%2Fmarketplace.json`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "user-agent": "meta-kim/2.0",
+          accept: "application/vnd.github.v3+json",
+        },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = Buffer.from(data.content, "base64").toString("utf8");
+      const m = JSON.parse(content);
+      // marketplace.json format: { plugins: [{ name, version, ... }] }
+      if (m.plugins && Array.isArray(m.plugins)) {
+        const found = m.plugins.find((p) => p.name);
+        return found?.version ?? null;
+      }
+      // Fallback: top-level version (some older formats)
+      return m.version ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   for (const spec of CLAUDE_PLUGIN_SPECS) {
     const bareName = spec.split("@")[0];
-    const installedVersion = installedPlugins[bareName];
+    // Parse repo from spec: "owner/repo"
+    // spec format is "bareName@marketplace" — resolve repo from skills.json manifest
+    const pluginRepoMap = {
+      superpowers: "obra/superpowers",
+      "everything-claude-code": "affaan-m/everything-claude-code",
+      "code-simplifier": "claude-plugins-official/code-simplifier",
+      "rust-analyzer-lsp": "claude-plugins-official/rust-analyzer-lsp",
+      "claude-md-management": "claude-plugins-official/claude-md-management",
+      "pyright-lsp": "claude-plugins-official/pyright-lsp",
+    };
+    const repoFull = pluginRepoMap[bareName] ?? `${bareName}/${bareName}`;
+    const localRecord = getInstalledRecord(bareName);
+    const localVersion = localRecord?.version ?? null;
 
     if (!updateMode) {
-      // Non-update mode: skip if bare name is already installed (original behavior)
+      // Non-update mode: skip if bare name is already installed
       if (installedNames.has(bareName)) {
         console.log(
           `${C.yellow}⊘${C.reset} ${C.dim}${t.skipAlreadyInstalled(bareName)}${C.reset}`,
@@ -1593,21 +1651,29 @@ function installClaudePlugins() {
         continue;
       }
     } else {
-      // Update mode: check version; reinstall if mismatch or unknown
-      if (installedVersion !== undefined && installedVersion !== "unknown") {
-        if (installedVersion === spec) {
+      // Update mode: fetch latest from GitHub and compare
+      const latestVersion = await fetchLatestPluginVersion(repoFull);
+      if (latestVersion) {
+        if (localVersion === latestVersion) {
           console.log(
-            `${C.yellow}⊘${C.reset} ${C.dim}${t.skipAlreadyInstalled(bareName)}${C.reset}`,
+            `${C.green}✓${C.reset} ${C.dim}${bareName} ${latestVersion} — ${t.labelUpToDate}${C.reset}`,
           );
           continue;
         }
         console.log(
-          `${C.cyan}↺${C.reset} ${t.pluginUpdateVersionMismatch(spec, installedVersion, spec)}`,
+          `${C.cyan}↺${C.reset} ${bareName}: ${C.dim}${localVersion ?? "unknown"}${C.reset} → ${C.bold}${latestVersion}${C.reset} ${C.dim}(${repoFull})${C.reset}`,
         );
       } else {
-        console.log(
-          `${C.cyan}↺${C.reset} ${t.pluginUpdateUnknownVersion(spec)}`,
-        );
+        // GitHub unreachable or unparseable — warn but proceed with install
+        if (localVersion) {
+          console.log(
+            `${C.yellow}⚠${C.reset} ${C.dim}${bareName} — ${t.labelCannotCheckGitHub}${C.reset} ${C.dim}(${t.labelUsingLocalRecord(localVersion)})${C.reset}`,
+          );
+        } else {
+          console.log(
+            `${C.yellow}⚠${C.reset} ${C.dim}${bareName} — ${t.labelCannotCheckGitHub}${C.reset}`,
+          );
+        }
       }
     }
 
@@ -1631,11 +1697,46 @@ function installClaudePlugins() {
     // Record installed version so --update mode can detect future mismatches.
     // Both update-mode reinstalls and first-time installs write here.
     if (p.status === 0) {
-      installedPlugins[bareName] = spec;
+      // Priority: (1) GitHub API version, (2) parse version from installPath dir name.
+      // installPath format: ~/.claude/plugins/cache/{marketplace}/{name}/{version}/
+      // The directory name IS the version — more reliable than GitHub API rate limits.
+      let resolvedVersion = await fetchLatestPluginVersion(repoFull);
+      if (!resolvedVersion && localRecord?.installPath) {
+        const dirName = path.basename(localRecord.installPath);
+        // Directory name matches "1.2.0" or "v1.2.0" pattern
+        const v = dirName.match(/^v?(\d+\.\d+\.\d+.*)$/)?.[1] ?? dirName;
+        if (v && v !== dirName) resolvedVersion = v;
+      }
+      // Update installPath to new version dir if version changed (update mode)
+      let resolvedInstallPath = localRecord?.installPath ?? "";
+      if (updateMode && resolvedVersion) {
+        // Reconstruct installPath with new version
+        const oldPathParts = (localRecord?.installPath ?? "")
+          .split(path.sep)
+          .filter(Boolean);
+        if (oldPathParts.length >= 2) {
+          // Replace last path segment (version dir) with new version
+          oldPathParts[oldPathParts.length - 1] = resolvedVersion;
+          resolvedInstallPath = oldPathParts.join(path.sep);
+        }
+      }
+      const newRecord = {
+        scope: "user",
+        installPath: resolvedInstallPath,
+        version: resolvedVersion ?? spec,
+        installedAt: localRecord?.installedAt ?? new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        ...(localRecord?.gitCommitSha
+          ? { gitCommitSha: localRecord.gitCommitSha }
+          : {}),
+      };
+      // Keep full key format: "bareName@marketplace"
+      const fullKey = spec;
+      installedPluginsFile.plugins[fullKey] = [newRecord];
       try {
         fs.writeFileSync(
           installedPluginsPath,
-          JSON.stringify(installedPlugins, null, 2),
+          JSON.stringify(installedPluginsFile, null, 2),
           "utf8",
         );
       } catch {
@@ -2205,7 +2306,7 @@ async function main() {
   }
 
   if (activeTargets.includes("claude")) {
-    installClaudePlugins();
+    await installClaudePlugins();
   }
 
   // Optional: graphify (code knowledge graph)

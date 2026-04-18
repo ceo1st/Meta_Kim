@@ -69,7 +69,7 @@ const STRINGS = {
     proxyStrippedHint:
       "Loopback proxy env stripped. Use --proxy <url> or set META_KIM_GIT_PROXY to configure proxy.",
     // sync-runtimes.mjs — incremental summary + --check
-    syncRuntimesSummaryTitle: "── sync:runtimes (incremental write summary) ──",
+    syncRuntimesSummaryTitle: "── meta:sync (incremental write summary) ──",
     syncRuntimesSummaryIntro:
       "Listed counts are paths that changed this run; unchanged paths are omitted.",
     runtimeGroupClaude: "Claude Code",
@@ -106,6 +106,9 @@ const STRINGS = {
     warnPluginFailed: (spec, code) =>
       `[WARN] plugin install failed: ${spec} (exit ${code})`,
     skipAlreadyInstalled: (name) => `${name} — already installed`,
+    labelUpToDate: "up to date",
+    labelCannotCheckGitHub: "cannot reach GitHub — skipping version check",
+    labelUsingLocalRecord: (v) => `using local record: ${v}`,
     installingPlugin: (spec) => `Installing plugin: ${spec}`,
     pluginUpdateVersionMismatch: (spec, installedVer, specVer) =>
       `[UPDATE] ${spec} version mismatch: installed ${installedVer}, manifest ${specVer} — reinstalling`,
@@ -250,7 +253,8 @@ const STRINGS = {
       step09Pass:
         "Run artifact validator accepts the valid fixture and rejects the invalid fixture",
       step10: "Checking package.json scripts",
-      step10Detail: "sync:runtimes / validate / eval:agents / verify:all, etc.",
+      step10Detail:
+        "meta:sync / meta:validate / meta:eval:agents / meta:verify:all, etc.",
       step10Pass: "All required scripts registered",
       step11: "Checking .gitignore rules",
       step11Detail: "node_modules/ / docs/ / local state isolation, etc.",
@@ -293,7 +297,7 @@ const STRINGS = {
       `为 git 配置代理：${url}（来源：${source}）`,
     proxyStrippedHint:
       "已移除回环代理环境变量。使用 --proxy <url> 或设置 META_KIM_GIT_PROXY 环境变量来配置代理。",
-    syncRuntimesSummaryTitle: "── sync:runtimes（本轮增量写入摘要）──",
+    syncRuntimesSummaryTitle: "── meta:sync（本轮增量写入摘要）──",
     syncRuntimesSummaryIntro:
       "下列数量为本次运行中有变更的路径；未列出的路径表示已与 canonical 一致。",
     runtimeGroupClaude: "Claude Code",
@@ -326,6 +330,9 @@ const STRINGS = {
     warnClaNotFound:
       "未找到 claude CLI — 跳过插件安装。请先安装 Claude Code CLI，然后运行 --plugins-only。",
     skipAlreadyInstalled: (name) => `${name} — 已安装`,
+    labelUpToDate: "已是最新",
+    labelCannotCheckGitHub: "无法连接 GitHub — 跳过版本检测",
+    labelUsingLocalRecord: (v) => `使用本地记录：${v}`,
     installingPlugin: (spec) => `正在安装插件：${spec}`,
     warnPluginFailed: (spec, code) =>
       `[WARN] 插件安装失败：${spec}（退出码 ${code}）`,
@@ -451,7 +458,8 @@ const STRINGS = {
       step09Detail: "有效 fixture 需通过；无效 public-ready fixture 需拒绝",
       step09Pass: "Run artifact 验证器接受有效 fixture 并拒绝无效 fixture",
       step10: "检查 package.json scripts",
-      step10Detail: "sync:runtimes / validate / eval:agents / verify:all, etc.",
+      step10Detail:
+        "meta:sync / meta:validate / meta:eval:agents / meta:verify:all, etc.",
       step10Pass: "所有必需脚本已注册",
       step11: "检查 .gitignore 规则",
       step11Detail: "node_modules/ / docs/ / local state isolation, etc.",
@@ -493,7 +501,7 @@ const STRINGS = {
       `git プロキシ設定: ${url}（来源: ${source}）`,
     proxyStrippedHint:
       "ループバックプロキシ環境変数を削除しました。--proxy <url> または META_KIM_GIT_PROXY 環境変数でプロキシを設定してください。",
-    syncRuntimesSummaryTitle: "── sync:runtimes（増分書き込み要約）──",
+    syncRuntimesSummaryTitle: "── meta:sync（増分書き込み要約）──",
     syncRuntimesSummaryIntro:
       "表示件数は今回変更されたパスのみです。変更のないパスは省略されます。",
     runtimeGroupClaude: "Claude Code",
@@ -526,6 +534,10 @@ const STRINGS = {
     warnClaNotFound:
       "claude CLI が見つかりません — プラグインインストールをスキップ。Claude Code CLI をインストール後、--plugins-only を再実行してください。",
     skipAlreadyInstalled: (name) => `${name} — インストール済み`,
+    labelUpToDate: "最新バージョン",
+    labelCannotCheckGitHub:
+      "GitHub に接続できません — バージョンチェックをスキップ",
+    labelUsingLocalRecord: (v) => `ローカルレコードを使用：${v}`,
     installingPlugin: (spec) => `プラグインをインストール中：${spec}`,
     warnPluginFailed: (spec, code) =>
       `[WARN] プラグインインストール失敗：${spec}（終了 ${code}）`,
@@ -666,7 +678,8 @@ const STRINGS = {
       step09Pass:
         "Run artifact バリデーターは有効な fixture を受け入れ、無効な fixture を拒否します",
       step10: "package.json scripts のチェック",
-      step10Detail: "sync:runtimes / validate / eval:agents / verify:all, etc.",
+      step10Detail:
+        "meta:sync / meta:validate / meta:eval:agents / meta:verify:all, etc.",
       step10Pass: "すべての必須スクリプトが登録済みです",
       step11: ".gitignore ルールのチェック",
       step11Detail: "node_modules/ / docs/ / local state isolation, etc.",
@@ -710,7 +723,7 @@ const STRINGS = {
       `git 프록시 설정: ${url}（출처: ${source}）`,
     proxyStrippedHint:
       "루프백 프록시 환경변수가 제거되었습니다. --proxy <url> 또는 META_KIM_GIT_PROXY 환경변수로 프록시를 설정하세요.",
-    syncRuntimesSummaryTitle: "── sync:runtimes（증분 쓰기 요약）──",
+    syncRuntimesSummaryTitle: "── meta:sync（증분 쓰기 요약）──",
     syncRuntimesSummaryIntro:
       "표시된 개수는 이번 실행에서 변경된 경로입니다. 변경이 없으면 생략됩니다.",
     runtimeGroupClaude: "Claude Code",
@@ -742,6 +755,9 @@ const STRINGS = {
     warnClaNotFound:
       "claude CLI를 찾을 수 없음 — 플러그인 설치 건너뜀. Claude Code CLI를 설치한 후 --plugins-only를 다시 실행하세요.",
     skipAlreadyInstalled: (name) => `${name} — 이미 설치됨`,
+    labelUpToDate: "최신 버전",
+    labelCannotCheckGitHub: "GitHub 연결 불가 — 버전 확인 건너뜀",
+    labelUsingLocalRecord: (v) => `로컬 레코드 사용：${v}`,
     installingPlugin: (spec) => `플러그인 설치 중：${spec}`,
     warnPluginFailed: (spec, code) =>
       `[WARN] 플러그인 설치 실패：${spec}（종료 코드 ${code}）`,
@@ -879,7 +895,8 @@ const STRINGS = {
       step09Pass:
         "Run artifact 밸리데이터가 유효한 fixture를 수락하고 무효한 fixture를 거부합니다",
       step10: "package.json scripts 확인",
-      step10Detail: "sync:runtimes / validate / eval:agents / verify:all, etc.",
+      step10Detail:
+        "meta:sync / meta:validate / meta:eval:agents / meta:verify:all, etc.",
       step10Pass: "모든 필수 스크립트가 등록되어 있습니다",
       step11: ".gitignore 규칙 확인",
       step11Detail: "node_modules/ / docs/ / local state isolation, etc.",

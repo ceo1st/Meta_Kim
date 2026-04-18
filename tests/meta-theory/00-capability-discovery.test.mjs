@@ -540,12 +540,12 @@ describe("Part F: Command Discovery", async () => {
     const scripts = pkg.scripts || {};
 
     assert.ok(
-      scripts.validate || scripts["validate:run"],
-      "package.json should have validate or validate:run script",
+      scripts["meta:validate"] || scripts["meta:validate:run"],
+      "package.json should have meta:validate or meta:validate:run script",
     );
     assert.ok(
-      scripts["doctor:governance"] || scripts["doctor"],
-      "package.json should have doctor:governance or doctor script",
+      scripts["meta:doctor:governance"] || scripts["meta:doctor"],
+      "package.json should have meta:doctor:governance or meta:doctor script",
     );
   });
 

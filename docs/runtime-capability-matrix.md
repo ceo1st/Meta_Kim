@@ -92,11 +92,11 @@ npm run discover:global -- --json
 每次修改 agent prompt 或共享 skill 后：
 
 1. 先改主源文件。
-2. 运行 `npm run sync:runtimes`。
-3. 运行 `npm run discover:global`（新增：更新全局能力索引）。
-4. 运行 `npm run validate`。
-5. 日常运行 `npm run eval:agents`（no-LLM smoke）。
-6. 需要真实 runtime prompt 验收时运行 `npm run eval:agents:live`。
+2. 运行 `npm run meta:sync`。
+3. 运行 `npm run meta:check:global`（新增：更新全局能力索引）。
+4. 运行 `npm run meta:validate`。
+5. 日常运行 `npm run meta:eval:agents`（no-LLM smoke）。
+6. 需要真实 runtime prompt 验收时运行 `npm run meta:eval:agents:live`。
 7. 如果运行时契约变化，再更新 `README.md`、`CLAUDE.md`、`AGENTS.md`。
 
 ## 五、行为一致性对照表
@@ -122,9 +122,9 @@ npm run discover:global -- --json
 README 只能解释口径，不能承担一致性本身。真正防漂移要靠：
 
 - canonical source 固定为 `canonical/agents/*.md`、`canonical/skills/meta-theory/SKILL.md`、`config/contracts/workflow-contract.json`
-- `npm run sync:runtimes` 生成 Codex / OpenClaw mirrors
-- `npm run validate` 检查 mirror 是否与 canonical 一致
-- `npm run eval:agents` 做轻量 runtime smoke
-- `npm run eval:agents:live` 做真实 prompt-backed runtime acceptance
+- `npm run meta:sync` 生成 Codex / OpenClaw mirrors
+- `npm run meta:validate` 检查 mirror 是否与 canonical 一致
+- `npm run meta:eval:agents` 做轻量 runtime smoke
+- `npm run meta:eval:agents:live` 做真实 prompt-backed runtime acceptance
 
 如果某一端只能在 README 里声明“等价”，但 validator 和 smoke/live acceptance 都无法证明，那它就不算真正等价。

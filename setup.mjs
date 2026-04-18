@@ -234,13 +234,31 @@ const I18N = {
     shipsSkills: (n) => `Meta_Kim ships ${n} skills:`,
     runningNpm: "Running npm install ...",
     npmDone: "npm dependencies installed",
-    npmFailed: "npm install failed",
+    npmFailed: `
+✗ npm install failed
+
+Possible causes:
+1. Network error → Check your internet connection and proxy settings
+2. Node version mismatch → Ensure Node ${MIN_NODE_VERSION}+ is installed
+3. Permission issue → Run: npm install --no-optional
+
+→ Fix: Run the command manually to see full output: npm install
+`,
     nodeModulesExist: "node_modules exists (use --update to reinstall)",
     skillUpdated: (n) => `${n} — updated`,
     skillInstalled: (n) => `${n} — installed`,
     skillExists: (n) => `${n} — already installed`,
     skillSubdirInstalled: (n, s) => `${n} — installed (subdir: ${s})`,
-    skillFailed: (n, r) => `${n} — failed (${r})`,
+    skillFailed: (n, r) => `
+✗ Skill installation failed: ${n}
+
+Possible causes:
+1. Network timeout → Run: npm run meta:sync -- --skills
+2. Permission denied → Run with sudo/administrator
+3. Repo not found → Check the skill repository URL
+
+${r ? `Raw error: ${r}` : ""}
+`,
     skillUpdateFailed: (n) =>
       `${n} — update skipped (non-fast-forward; keeping existing)`,
     skillSubdirNotFound: (n) => `${n} — subdir not found`,
@@ -374,7 +392,19 @@ const I18N = {
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "Installing graphify (code knowledge graph)...",
     graphifyInstalled: "graphify installed and Claude skill registered",
-    graphifyInstallFailed: "graphify installation failed (non-blocking)",
+    graphifyUpgrading: "Upgrading graphify to latest version...",
+    graphifyUpgraded: (v) => `graphify upgraded to ${v}`,
+    graphifyUpgradeFailed: `graphify upgrade failed (non-blocking)`,
+    graphifyInstallFailed: `
+✗ graphify installation failed (non-blocking)
+
+Possible causes:
+1. Python not found → Ensure Python 3.10+ is installed and in PATH
+2. pip error → Run: pip install graphifyy manually to see details
+3. Network error → Check your internet/proxy connection
+
+→ Fix: Run: pip install graphifyy && python -m graphify claude install
+`,
     graphifyAlreadyInstalled: (v) => `graphify ${v} — already installed`,
     graphifySkillRegistering: (p) => `Registering graphify ${p} skill...`,
     graphifySkillRegistered: (p) => `graphify ${p} skill registered`,
@@ -399,6 +429,9 @@ const I18N = {
       "MCP Memory Service installation failed (non-blocking)",
     mcpMemoryAlreadyInstalled: (v) =>
       `MCP Memory Service ${v} — already installed`,
+    mcpMemoryUpgrading: "Upgrading MCP Memory Service to latest version...",
+    mcpMemoryUpgraded: (v) => `MCP Memory Service upgraded to ${v}`,
+    mcpMemoryUpgradeFailed: "MCP Memory Service upgrade failed (non-blocking)",
     mcpMemoryServerRegistered: "MCP Memory Service registered in .mcp.json",
     mcpMemoryServerExists: ".mcp.json already has MCP Memory Service",
     askMcpMemoryInstall:
@@ -451,14 +484,60 @@ const I18N = {
     installCancelled: "Installation cancelled",
     installComplete: "Installation complete!",
     // Warning messages
-    warnConfigSyncFailed: "Config sync failed, continuing...",
-    warnSkillsInstallFailed:
-      "Global skills install failed, check error messages",
-    warnMetaTheorySyncFailed: "meta-theory sync failed, check error messages",
-    warnSkillsUpdateFailed: "Global skills update failed, check error messages",
+    warnConfigSyncFailed: `
+⚠ Config sync failed, continuing...
+
+Possible causes:
+1. File locked → Close IDE/Explorer on the target directory
+2. Permission denied → Run as administrator
+3. Git conflict → Resolve conflicts in canonical/ and retry
+
+→ Fix: Run: node scripts/sync-runtimes.mjs --scope both
+`,
+    warnSkillsInstallFailed: `
+⚠ Global skills install failed
+
+Possible causes:
+1. Directory locked (EBUSY) → Close Explorer/IDE, wait for antivirus, then retry
+2. Network error → Check proxy settings with: node setup.mjs --prompt-proxy
+3. Repo not found → Verify the skill repository URL is correct
+
+→ Fix: Run: node setup.mjs --update
+→ Hint: If EBUSY, close programs holding the skills folder, then manually delete any *.staged-* temp dirs.
+`,
+    warnMetaTheorySyncFailed: `
+⚠ meta-theory sync failed
+
+Possible causes:
+1. Directory locked → Close programs holding ~/.claude/skills/
+2. Permission denied → Check write permissions on global skills dir
+3. Network error → Verify proxy settings
+
+→ Fix: Run: node scripts/sync-global-meta-theory.mjs --targets claude
+`,
+    warnSkillsUpdateFailed: `
+⚠ Global skills update failed
+
+Possible causes:
+1. Directory locked (EBUSY) → Close Explorer/IDE, wait for antivirus, then retry
+2. Git fetch failed → Check network/proxy connection
+3. Conflicts → Review staged files and resolve manually
+
+→ Hint: If EBUSY, close programs holding the skills folder, then manually delete any *.staged-* temp dirs.
+→ Fix: Run: node setup.mjs --update
+`,
     warnSkillsUpdateFailedHint:
       "If the log shows EBUSY or 'resource busy', close Explorer/IDE on the skills folder, wait for antivirus/indexing to finish, then retry. You can delete leftover *.staged-* dirs manually once nothing holds the path.",
-    warnMetaTheoryUpdateFailed: "meta-theory sync failed, check error messages",
+    warnMetaTheoryUpdateFailed: `
+⚠ meta-theory sync failed
+
+Possible causes:
+1. Directory locked → Close programs holding ~/.claude/skills/
+2. Permission denied → Check write permissions on global skills dir
+3. Network error → Verify proxy settings
+
+→ Fix: Run: node scripts/sync-global-meta-theory.mjs --targets claude
+`,
     warnManifestLoadFail: (msg) => `Failed to load skills manifest: ${msg}`,
     labelOptional: "(optional)",
     selectedScope: (name) => `Selected: ${name}`,
@@ -545,13 +624,31 @@ const I18N = {
     shipsSkills: (n) => `Meta_Kim 内置 ${n} 个技能：`,
     runningNpm: "正在运行 npm install ...",
     npmDone: "npm 依赖安装完成",
-    npmFailed: "npm install 失败",
+    npmFailed: `
+✗ npm install 失败
+
+可能原因：
+1. 网络错误 → 检查网络连接和代理设置
+2. Node 版本不兼容 → 确保已安装 Node ${MIN_NODE_VERSION}+
+3. 权限问题 → 运行：npm install --no-optional
+
+修复：手动运行命令查看完整输出：npm install
+`,
     nodeModulesExist: "node_modules 已存在（使用 --update 重新安装）",
     skillUpdated: (n) => `${n} — 已更新`,
     skillInstalled: (n) => `${n} — 已安装`,
     skillExists: (n) => `${n} — 已安装`,
     skillSubdirInstalled: (n, s) => `${n} — 已安装 (子目录: ${s})`,
-    skillFailed: (n, r) => `${n} — 安装失败 (${r})`,
+    skillFailed: (n, r) => `
+✗ 技能安装失败：${n}
+
+可能原因：
+1. 网络超时 → 运行：npm run meta:sync -- --skills
+2. 权限被拒绝 → 使用 sudo/管理员权限运行
+3. 仓库未找到 → 检查技能仓库 URL
+
+${r ? `原始错误：${r}` : ""}
+`,
     skillUpdateFailed: (n) =>
       `${n} — 更新跳过（非 fast-forward，保留现有版本）`,
     skillSubdirNotFound: (n) => `${n} — 子目录未找到`,
@@ -676,7 +773,19 @@ const I18N = {
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "正在安装 graphify（代码知识图谱）...",
     graphifyInstalled: "graphify 已安装，Claude 技能已注册",
-    graphifyInstallFailed: "graphify 安装失败（不影响其他功能）",
+    graphifyUpgrading: "正在升级 graphify 至最新版本...",
+    graphifyUpgraded: (v) => `graphify 已升级至 ${v}`,
+    graphifyUpgradeFailed: `graphify 升级失败（不影响其他功能）`,
+    graphifyInstallFailed: `
+✗ graphify 安装失败（不影响其他功能）
+
+可能原因：
+1. Python 未找到 → 确保 Python 3.10+ 已安装并在 PATH 中
+2. pip 错误 → 运行：pip install graphifyy 查看详细错误
+3. 网络错误 → 检查网络/代理连接
+
+修复：pip install graphifyy && python -m graphify claude install
+`,
     graphifyAlreadyInstalled: (v) => `graphify ${v} — 已安装`,
     graphifySkillRegistering: (p) => `正在注册 graphify ${p} 技能...`,
     graphifySkillRegistered: (p) => `graphify ${p} 技能已注册`,
@@ -696,6 +805,9 @@ const I18N = {
     mcpMemoryInstalled: "MCP Memory Service 已安装",
     mcpMemoryInstallFailed: "MCP Memory Service 安装失败（不影响其他功能）",
     mcpMemoryAlreadyInstalled: (v) => `MCP Memory Service ${v} — 已安装`,
+    mcpMemoryUpgrading: "正在升级 MCP Memory Service 至最新版本...",
+    mcpMemoryUpgraded: (v) => `MCP Memory Service 已升级至 ${v}`,
+    mcpMemoryUpgradeFailed: "MCP Memory Service 升级失败（不影响其他功能）",
     mcpMemoryServerRegistered: "MCP Memory Service 已注册到 .mcp.json",
     mcpMemoryServerExists: ".mcp.json 已包含 MCP Memory Service",
     askMcpMemoryInstall:
@@ -746,13 +858,60 @@ const I18N = {
     installCancelled: "安装已取消",
     installComplete: "安装完成！",
     // Warning messages
-    warnConfigSyncFailed: "配置同步失败，继续安装...",
-    warnSkillsInstallFailed: "全局技能安装失败，请检查错误信息",
-    warnMetaTheorySyncFailed: "meta-theory 同步失败，请检查错误信息",
-    warnSkillsUpdateFailed: "全局技能更新失败，请检查错误信息",
+    warnConfigSyncFailed: `
+⚠ 配置同步失败，继续安装...
+
+可能原因：
+1. 文件被锁定 → 关闭目标目录的 IDE/资源管理器窗口
+2. 权限被拒绝 → 以管理员身份运行
+3. Git 冲突 → 解决 canonical/ 中的冲突后重试
+
+修复：node scripts/sync-runtimes.mjs --scope both
+`,
+    warnSkillsInstallFailed: `
+⚠ 全局技能安装失败
+
+可能原因：
+1. 目录被锁定（EBUSY）→ 关闭资源管理器/IDE，等待杀毒/索引完成后重试
+2. 网络错误 → 使用 node setup.mjs --prompt-proxy 检查代理设置
+3. 仓库未找到 → 验证技能仓库 URL 是否正确
+
+修复：node setup.mjs --update
+提示：如遇 EBUSY，先关闭占用 skills 目录的程序，然后手动删除残留的 *.staged-* 临时目录。
+`,
+    warnMetaTheorySyncFailed: `
+⚠ meta-theory 同步失败
+
+可能原因：
+1. 目录被锁定 → 关闭占用 ~/.claude/skills/ 的程序
+2. 权限被拒绝 → 检查全局技能目录的写入权限
+3. 网络错误 → 验证代理设置
+
+修复：node scripts/sync-global-meta-theory.mjs --targets claude
+`,
+    warnSkillsUpdateFailed: `
+⚠ 全局技能更新失败
+
+可能原因：
+1. 目录被锁定（EBUSY）→ 关闭资源管理器/IDE，等待杀毒/索引完成后重试
+2. Git fetch 失败 → 检查网络/代理连接
+3. 冲突 → 查看 staged 文件并手动解决
+
+提示：如遇 EBUSY，先关闭占用 skills 目录的程序，然后手动删除残留的 *.staged-* 临时目录。
+修复：node setup.mjs --update
+`,
     warnSkillsUpdateFailedHint:
       "若日志含 EBUSY/目录被占用：请先关闭对该目录的资源管理器窗口与 IDE 监视、等待杀毒/索引结束后再重试；解锁后可手动删除残留的 *.staged-* 临时目录。",
-    warnMetaTheoryUpdateFailed: "meta-theory 同步失败，请检查错误信息",
+    warnMetaTheoryUpdateFailed: `
+⚠ meta-theory 同步失败
+
+可能原因：
+1. 目录被锁定 → 关闭占用 ~/.claude/skills/ 的程序
+2. 权限被拒绝 → 检查全局技能目录的写入权限
+3. 网络错误 → 验证代理设置
+
+修复：node scripts/sync-global-meta-theory.mjs --targets claude
+`,
     warnManifestLoadFail: (msg) => `加载技能清单失败：${msg}`,
     labelOptional: "（可选）",
     selectedScope: (name) => `已选择：${name}`,
@@ -842,14 +1001,32 @@ const I18N = {
     shipsSkills: (n) => `Meta_Kim には ${n} 個のスキルが含まれています：`,
     runningNpm: "npm install を実行中...",
     npmDone: "npm 依存関係のインストール完了",
-    npmFailed: "npm install に失敗しました",
+    npmFailed: `
+✗ npm install に失敗しました
+
+考えられる原因：
+1. ネットワークエラー → インターネット接続とプロキシ設定を確認
+2. Node バージョンが不一致 → Node ${MIN_NODE_VERSION}+ がインストールされていることを確認
+3. 権限の問題 → 実行：npm install --no-optional
+
+修正：手動で実行して詳細を確認：npm install
+`,
     nodeModulesExist: "node_modules が存在します（--update で再インストール）",
     skillUpdated: (n) => `${n} — 更新済み`,
     skillInstalled: (n) => `${n} — インストール済み`,
     skillExists: (n) => `${n} — インストール済み`,
     skillSubdirInstalled: (n, s) =>
       `${n} — インストール済み (サブディレクトリ: ${s})`,
-    skillFailed: (n, r) => `${n} — 失敗 (${r})`,
+    skillFailed: (n, r) => `
+✗ スキルインストール失敗：${n}
+
+考えられる原因：
+1. ネットワークタイムアウト → 実行：npm run meta:sync -- --skills
+2. 権限が拒否されました → sudo/管理者権限で実行
+3. リポジトリが見つかりません → スキルリポジトリの URL を確認
+
+${r ? `生エラー：${r}` : ""}
+`,
     skillUpdateFailed: (n) =>
       `${n} — 更新スキップ（非 fast-forward、既存版を維持）`,
     skillSubdirNotFound: (n) => `${n} — サブディレクトリが見つかりません`,
@@ -981,7 +1158,19 @@ const I18N = {
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "graphify をインストール中（コードナレッジグラフ）...",
     graphifyInstalled: "graphify インストール完了、Claude スキル登録済み",
-    graphifyInstallFailed: "graphify インストール失敗（非ブロッキング）",
+    graphifyUpgrading: "graphify を最新バージョンにアップグレード中...",
+    graphifyUpgraded: (v) => `graphify を ${v} にアップグレードしました`,
+    graphifyUpgradeFailed: `graphify アップグレード失敗（非ブロッキング）`,
+    graphifyInstallFailed: `
+✗ graphify インストール失敗（非ブロッキング）
+
+考えられる原因：
+1. Python が見つかりません → Python 3.10+ がインストールされ PATH に含まれていることを確認
+2. pip エラー → 実行：pip install graphifyy で詳細を確認
+3. ネットワークエラー → ネットワーク/プロキシ接続を確認
+
+修正：pip install graphifyy && python -m graphify claude install
+`,
     graphifyAlreadyInstalled: (v) => `graphify ${v} — インストール済み`,
     graphifySkillRegistering: (p) => `graphify ${p} スキルを登録中...`,
     graphifySkillRegistered: (p) => `graphify ${p} スキル登録済み`,
@@ -1005,6 +1194,12 @@ const I18N = {
       "MCP Memory Service インストール失敗（非ブロッキング）",
     mcpMemoryAlreadyInstalled: (v) =>
       `MCP Memory Service ${v} — すでにインストール済み`,
+    mcpMemoryUpgrading:
+      "MCP Memory Service を最新バージョンにアップグレード中...",
+    mcpMemoryUpgraded: (v) =>
+      `MCP Memory Service を ${v} にアップグレードしました`,
+    mcpMemoryUpgradeFailed:
+      "MCP Memory Service アップグレード失敗（非ブロッキング）",
     mcpMemoryServerRegistered:
       "MCP Memory Service が .mcp.json に登録されました",
     mcpMemoryServerExists:
@@ -1063,16 +1258,60 @@ const I18N = {
     installCancelled: "インストールがキャンセルされました",
     installComplete: "インストール完了！",
     // 警告メッセージ
-    warnConfigSyncFailed: "設定同期失敗、続行します...",
-    warnSkillsInstallFailed:
-      "グローバルスキルインストール失敗、エラーを確認してください",
-    warnMetaTheorySyncFailed: "meta-theory 同期失敗、エラーを確認してください",
-    warnSkillsUpdateFailed:
-      "グローバルスキル更新失敗、エラーを確認してください",
+    warnConfigSyncFailed: `
+⚠ 設定同期失敗、続行します...
+
+考えられる原因：
+1. ファイルがロックされています → ターゲットディレクトリで IDE/エクスプローラーを閉じる
+2. 権限が拒否されました → 管理者として実行
+3. Git 競合 → canonical/ の競合を解決してから再試行
+
+修正：node scripts/sync-runtimes.mjs --scope both
+`,
+    warnSkillsInstallFailed: `
+⚠ グローバルスキルインストール失敗
+
+考えられる原因：
+1. ディレクトリがロックされています（EBUSY）→ エクスプローラー/IDE を閉じ、ウイルス対策/インデックス完了を待ってから再試行
+2. ネットワークエラー → node setup.mjs --prompt-proxy でプロキシ設定を確認
+3. リポジトリが見つかりません → スキルリポジトリの URL が正しいか確認
+
+修正：node setup.mjs --update
+ヒント：EBUSY の場合、スキルフォルダを使用しているプログラムを閉じてから、*.staged-* の一時ディレクトリを手動で削除してください。
+`,
+    warnMetaTheorySyncFailed: `
+⚠ meta-theory 同期失敗
+
+考えられる原因：
+1. ディレクトリがロックされています → ~/.claude/skills/ を使用しているプログラムを閉じる
+2. 権限が拒否されました → グローバルスキルディレクトリの書き込み権限を確認
+3. ネットワークエラー → プロキシ設定を確認
+
+修正：node scripts/sync-global-meta-theory.mjs --targets claude
+`,
+    warnSkillsUpdateFailed: `
+⚠ グローバルスキル更新失敗
+
+考えられる原因：
+1. ディレクトリがロックされています（EBUSY）→ エクスプローラー/IDE を閉じ、ウイルス対策/インデックス完了を待ってから再試行
+2. Git fetch に失敗しました → ネットワーク/プロキシ接続を確認
+3. 競合 → ステージされたファイルを確認し、手動で解決
+
+ヒント：EBUSY の場合、スキルフォルダを使用しているプログラムを閉じてから、*.staged-* の一時ディレクトリを手動で削除してください。
+修正：node setup.mjs --update
+`,
     warnSkillsUpdateFailedHint:
       "ログに EBUSY 等がある場合: スキルフォルダを開いているエクスプローラー/IDE を閉じ、ウイルス対策/インデックス完了を待って再実行。*.staged-* は解放後に手動削除可。",
-    warnMetaTheoryUpdateFailed:
-      "meta-theory 同期失敗、エラーを確認してください",
+    warnMetaTheoryUpdateFailed: `
+⚠ meta-theory 同期失敗
+
+考えられる原因：
+1. ディレクトリがロックされています → ~/.claude/skills/ を使用しているプログラムを閉じる
+2. 権限が拒否されました → グローバルスキルディレクトリの書き込み権限を確認
+3. ネットワークエラー → プロキシ設定を確認
+
+修正：node scripts/sync-global-meta-theory.mjs --targets claude
+`,
     warnManifestLoadFail: (msg) => `スキルマニフェストの読み込みに失敗：${msg}`,
     labelOptional: "（オプション）",
     selectedScope: (name) => `選択済み：${name}`,
@@ -1163,13 +1402,31 @@ const I18N = {
     shipsSkills: (n) => `Meta_Kim에는 ${n}개의 스킬이 포함되어 있습니다:`,
     runningNpm: "npm install 실행 중...",
     npmDone: "npm 의존성 설치 완료",
-    npmFailed: "npm install 실패",
+    npmFailed: `
+✗ npm install 실패
+
+가능한 원인：
+1. 네트워크 오류 → 인터넷 연결 및 프록시 설정 확인
+2. Node 버전 불일치 → Node ${MIN_NODE_VERSION}+ 가 설치되어 있는지 확인
+3. 권한 문제 → 실행：npm install --no-optional
+
+수정：수동으로 실행하여 세부 정보 확인：npm install
+`,
     nodeModulesExist: "node_modules가 존재합니다 (--update로 재설치)",
     skillUpdated: (n) => `${n} — 업데이트됨`,
     skillInstalled: (n) => `${n} — 설치됨`,
     skillExists: (n) => `${n} — 이미 설치됨`,
     skillSubdirInstalled: (n, s) => `${n} — 설치됨 (하위디렉토리: ${s})`,
-    skillFailed: (n, r) => `${n} — 실패 (${r})`,
+    skillFailed: (n, r) => `
+✗ 스킬 설치 실패：${n}
+
+가능한 원인：
+1. 네트워크 타임아웃 → 실행：npm run meta:sync -- --skills
+2. 권한 거부 → sudo/관리자 권한으로 실행
+3. 리포지토리를 찾을 수 없음 → 스킬 리포지토리 URL 확인
+
+${r ? `원본 오류：${r}` : ""}
+`,
     skillUpdateFailed: (n) =>
       `${n} — 업데이트 건너뜀（非 fast-forward, 기존 버전 유지）`,
     skillSubdirNotFound: (n) => `${n} — 하위디렉토리를 찾을 수 없음`,
@@ -1297,7 +1554,19 @@ const I18N = {
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "graphify 설치 중 (코드 지식 그래프)...",
     graphifyInstalled: "graphify 설치 완료, Claude 스킬 등록됨",
-    graphifyInstallFailed: "graphify 설치 실패 (비차단)",
+    graphifyUpgrading: "graphify을(를) 최신 버전으로 업그레이드 중...",
+    graphifyUpgraded: (v) => `graphify이(가) ${v}(으)로 업그레이드되었습니다`,
+    graphifyUpgradeFailed: `graphify 업그레이드 실패 (비차단)`,
+    graphifyInstallFailed: `
+✗ graphify 설치 실패 (비차단)
+
+가능한 원인：
+1. Python을 찾을 수 없음 → Python 3.10+ 가 설치되어 있고 PATH에 있는지 확인
+2. pip 오류 → 실행：pip install graphifyy 로 세부 정보 확인
+3. 네트워크 오류 → 네트워크/프록시 연결 확인
+
+수정：pip install graphifyy && python -m graphify claude install
+`,
     graphifyAlreadyInstalled: (v) => `graphify ${v} — 이미 설치됨`,
     graphifySkillRegistering: (p) => `graphify ${p} 스킬 등록 중...`,
     graphifySkillRegistered: (p) => `graphify ${p} 스킬 등록됨`,
@@ -1319,6 +1588,11 @@ const I18N = {
     mcpMemoryInstalled: "MCP Memory Service 설치 완료",
     mcpMemoryInstallFailed: "MCP Memory Service 설치 실패 (비차단)",
     mcpMemoryAlreadyInstalled: (v) => `MCP Memory Service ${v} — 이미 설치됨`,
+    mcpMemoryUpgrading:
+      "MCP Memory Service을(를) 최신 버전으로 업그레이드 중...",
+    mcpMemoryUpgraded: (v) =>
+      `MCP Memory Service이(가) ${v}(으)로 업그레이드되었습니다`,
+    mcpMemoryUpgradeFailed: "MCP Memory Service 업그레이드 실패 (비차단)",
     mcpMemoryServerRegistered: "MCP Memory Service 가 .mcp.json 에 등록됨",
     mcpMemoryServerExists: ".mcp.json 에 이미 MCP Memory Service 있음",
     askMcpMemoryInstall:
@@ -1370,15 +1644,60 @@ const I18N = {
     installCancelled: "설치가 취소되었습니다",
     installComplete: "설치 완료!",
     // 경고 메시지
-    warnConfigSyncFailed: "구성 동기화 실패, 계속 진행...",
-    warnSkillsInstallFailed: "전역 스킬 설치 실패, 오류 메시지를 확인하세요",
-    warnMetaTheorySyncFailed:
-      "meta-theory 동기화 실패, 오류 메시지를 확인하세요",
-    warnSkillsUpdateFailed: "전역 스킬 업데이트 실패, 오류 메시지를 확인하세요",
+    warnConfigSyncFailed: `
+⚠ 구성 동기화 실패, 계속 진행...
+
+가능한 원인：
+1. 파일이 잠겨 있습니다 → 대상 디렉토리의 IDE/탐색기를 닫으세요
+2. 권한 거부 → 관리자로 실행
+3. Git 충돌 → canonical/ 의 충돌을 해결한 후 재시도
+
+수정：node scripts/sync-runtimes.mjs --scope both
+`,
+    warnSkillsInstallFailed: `
+⚠ 전역 스킬 설치 실패
+
+가능한 원인：
+1. 디렉토리가 잠겨 있습니다（EBUSY）→ 탐색기/IDE를 닫고, 백신/인덱싱이 끝난 뒤 재시도
+2. 네트워크 오류 → node setup.mjs --prompt-proxy 로 프록시 설정 확인
+3. 리포지토리를 찾을 수 없음 → 스킬 리포지토리 URL이 올바른지 확인
+
+수정：node setup.mjs --update
+힌트：EBUSY인 경우 skills 폴더를 사용하는 프로그램을 닫은 후 *.staged-* 임시 폴더를 수동으로 삭제하세요.
+`,
+    warnMetaTheorySyncFailed: `
+⚠ meta-theory 동기화 실패
+
+가능한 원인：
+1. 디렉토리가 잠겨 있습니다 → ~/.claude/skills/ 를 사용하는 프로그램 닫기
+2. 권한 거부 → 전역 스킬 디렉토리의 쓰기 권한 확인
+3. 네트워크 오류 → 프록시 설정 확인
+
+수정：node scripts/sync-global-meta-theory.mjs --targets claude
+`,
+    warnSkillsUpdateFailed: `
+⚠ 전역 스킬 업데이트 실패
+
+가능한 원인：
+1. 디렉토리가 잠겨 있습니다（EBUSY）→ 탐색기/IDE를 닫고, 백신/인덱싱이 끝난 뒤 재시도
+2. Git fetch 실패 → 네트워크/프록시 연결 확인
+3. 충돌 → 스테이지된 파일을 확인하고 수동으로 해결
+
+힌트：EBUSY인 경우 skills 폴더를 사용하는 프로그램을 닫은 후 *.staged-* 임시 폴더를 수동으로 삭제하세요.
+수정：node setup.mjs --update
+`,
     warnSkillsUpdateFailedHint:
-      "로그에 EBUSY 등이 있으면: 탐색기/IDE로 skills 폴더를 닫고, 백신/인덱싱이 끝난 뒤 재시도. 잠금 해제 후 *.staged-* 폴더는 수동 삭제 가능.",
-    warnMetaTheoryUpdateFailed:
-      "meta-theory 동기화 실패, 오류 메시지를 확인하세요",
+      "로그에 EBUSY 등이 있으면: 탐색기/IDE로 skills 폴더를 닫고, 후원/인덱싱이 끝난 뒤 재시도. 잠금 해제 후 *.staged-* 폴더는 수동 삭제 가능.",
+    warnMetaTheoryUpdateFailed: `
+⚠ meta-theory 동기화 실패
+
+가능한 원인：
+1. 디렉토리가 잠겨 있습니다 → ~/.claude/skills/ 를 사용하는 프로그램 닫기
+2. 권한 거부 → 전역 스킬 디렉토리의 쓰기 권한 확인
+3. 네트워크 오류 → 프록시 설정 확인
+
+수정：node scripts/sync-global-meta-theory.mjs --targets claude
+`,
     warnManifestLoadFail: (msg) => `스킬 매니페스트 로드 실패：${msg}`,
     labelOptional: "(선택)",
     selectedScope: (name) => `선택됨：${name}`,
@@ -2367,6 +2686,22 @@ async function selectActiveTargets(runtimes) {
     activeTargets: chosenTargets,
   });
   info(t.savedActiveTargets(chosenTargets.join(", ")));
+
+  // Platform capability transparency: warn if Claude Code is not selected
+  const hasClaude = chosenTargets.includes("claude");
+  if (!hasClaude) {
+    console.log(`
+⚠  平台能力提示:
+   您选择的平台暂不支持以下功能:
+   • Hook 自动化 (PreToolUse/PostToolUse)
+   • Layer 1 Memory 自动激活
+   • CLI 快速命令 (npm run meta:xxx)
+
+   推荐: Claude Code 提供最完整的 Meta_Kim 体验。
+         https://docs.anthropic.com/claude-code
+`);
+  }
+
   return chosenTargets;
 }
 
@@ -2538,7 +2873,7 @@ const GRAPHIFY_PLATFORM_MAP = {
   cursor: "cursor",
 };
 
-async function installPythonTools(activeTargets) {
+async function installPythonTools(activeTargets, inUpdateMode = false) {
   heading(t.stepPythonTools);
   const python = checkPython310();
   if (!python) {
@@ -2552,7 +2887,29 @@ async function installPythonTools(activeTargets) {
   if (pipShow.status === 0) {
     const version =
       extractPipShowVersion(readProcessText(pipShow)) ?? "unknown";
-    ok(t.graphifyAlreadyInstalled(version));
+    if (inUpdateMode) {
+      // Upgrade in update mode
+      info(t.graphifyUpgrading);
+      const upgradeResult = runPythonModule(
+        python,
+        ["-m", "pip", "install", "--upgrade", "graphifyy"],
+        undefined,
+        { stdio: "pipe" },
+      );
+      if (upgradeResult.status !== 0) {
+        const stderr = readProcessText(upgradeResult);
+        warn(t.graphifyUpgradeFailed);
+        if (stderr) {
+          console.log(`${C.dim}${t.pipErrorDetail(stderr)}${C.reset}`);
+        }
+        return;
+      }
+      const newVersion =
+        extractPipShowVersion(readProcessText(upgradeResult)) ?? version;
+      ok(t.graphifyUpgraded(newVersion));
+    } else {
+      ok(t.graphifyAlreadyInstalled(version));
+    }
   } else {
     // Install graphify
     info(t.graphifyInstalling);
@@ -2626,13 +2983,33 @@ function checkMcpMemoryService(spawnFn = spawnSync) {
   };
 }
 
-async function installMcpMemoryServiceStep() {
+async function installMcpMemoryServiceStep(inUpdateMode = false) {
   heading(t.stepMcpMemory);
 
   // Check if already installed
   const existing = checkMcpMemoryService();
   if (existing.installed) {
-    ok(t.mcpMemoryAlreadyInstalled(existing.version ?? "unknown"));
+    if (inUpdateMode) {
+      // Upgrade in update mode
+      info(t.mcpMemoryUpgrading);
+      const upgradeResult = spawnSync(
+        "pip",
+        ["install", "--upgrade", "mcp-memory-service"],
+        { encoding: "utf8", shell: false, stdio: "pipe" },
+      );
+      if (upgradeResult.status !== 0) {
+        const stderr = readProcessText(upgradeResult);
+        warn(t.mcpMemoryUpgradeFailed);
+        if (stderr) {
+          console.log(`${C.dim}${t.pipErrorDetail(stderr)}${C.reset}`);
+        }
+        return;
+      }
+      const newVersion = checkMcpMemoryService().version ?? "latest";
+      ok(t.mcpMemoryUpgraded(newVersion));
+    } else {
+      ok(t.mcpMemoryAlreadyInstalled(existing.version ?? "unknown"));
+    }
   } else {
     // Ask user (unless in silent mode)
     const want = await askYesNo(t.askMcpMemoryInstall, true);
@@ -2809,10 +3186,10 @@ function showNextSteps(runtimes) {
     `${C.dim}node setup.mjs --check           # ${t.cmdCheck}${C.reset}`,
   );
   console.log(
-    `${C.dim}npm run doctor:governance         # ${t.cmdDoctor}${C.reset}`,
+    `${C.dim}npm run meta:doctor:governance    # ${t.cmdDoctor}${C.reset}`,
   );
   console.log(
-    `${C.dim}npm run verify:all                # ${t.cmdVerify}${C.reset}`,
+    `${C.dim}npm run meta:verify:all           # ${t.cmdVerify}${C.reset}`,
   );
 
   console.log("");
@@ -3240,6 +3617,25 @@ async function runInstall() {
   });
 
   console.log(`\n${C.bold}${C.green}✓ ${t.installComplete}${C.reset}\n`);
+
+  // Post-install activation status table
+  const activationStatus = `
+┌─────────────────────────────────────────────────────────────┐
+│  Meta_Kim 安装概览                                           │
+├─────────────────────────────────────────────────────────────┤
+│  ✓ Layer 1 (Memory)      已自动激活 — 记忆在本次会话生效      │
+│  ✓ Layer 2 (Graphify)    已安装 — 下次 git 操作时生成图谱     │
+│  ○ Layer 3 (SQLite-Vec)  未启动 — 需要运行 MCP 服务           │
+│     启动命令: npm run meta:doctor  选择 "运行环境诊断"         │
+├─────────────────────────────────────────────────────────────┤
+│  接下来:                                                    │
+│  1. 运行 npm run meta:check 验证安装状态                    │
+│  2. 在当前目录启动 Claude Code 开始使用                      │
+│  3. 遇到问题? 运行 npm run meta:doctor                     │
+└─────────────────────────────────────────────────────────────┘
+`;
+  console.log(activationStatus);
+
   showNextSteps(runtimes);
 }
 
@@ -3271,14 +3667,14 @@ async function runUpdate() {
   console.log("");
   const wantPython = await askYesNo(t.askPythonToolsUpdate, true);
   if (wantPython) {
-    await installPythonTools(activeTargets);
+    await installPythonTools(activeTargets, true);
   } else {
     skip(`${C.dim}${t.pythonToolsSkipped}${C.reset}`);
   }
 
   // ── 2.5 [Optional] MCP Memory Service (Layer 3) ─────────────────
   console.log("");
-  await installMcpMemoryServiceStep();
+  await installMcpMemoryServiceStep(true);
 
   // ── 3. sync-runtimes (scope from user selection) ──────────────────
   if (updateScope === "global") {
@@ -3312,7 +3708,7 @@ async function runUpdate() {
             updateSkillIds.join(","),
           ]
         : ["--update", "--targets", activeTargets.join(","), "--skills", ""];
-      // ).concat(["--log-file", INSTALL_LOG_FILE]);
+    // ).concat(["--log-file", INSTALL_LOG_FILE]);
     const updateInstallResult = runNodeScript(
       "scripts/install-global-skills-all-runtimes.mjs",
       updateSkillArgs,

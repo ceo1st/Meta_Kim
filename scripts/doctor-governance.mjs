@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Narrow governance health check: contract readable, Claude hook commands match
- * expected set, runtime mirrors in sync, sample run artifact passes validate:run.
+ * expected set, runtime mirrors in sync, sample run artifact passes meta:validate:run.
  *
  * Keep EXPECTED_CLAUDE_HOOK_COMMANDS in sync with scripts/validate-project.mjs.
  */
@@ -150,11 +150,11 @@ async function checkValidateRun() {
     parsed = JSON.parse((stdout ?? "").trim() || "{}");
   } catch {
     throw new Error(
-      `validate:run output was not JSON: ${String(stdout).slice(0, 240)}`,
+      `meta:validate:run output was not JSON: ${String(stdout).slice(0, 240)}`,
     );
   }
   if (!parsed.ok) {
-    throw new Error("validate:run reported ok: false");
+    throw new Error("meta:validate:run reported ok: false");
   }
   if (process.env.DOCTOR_GOVERNANCE_VERBOSE === "1" && stdout?.trim()) {
     process.stdout.write(stdout);
@@ -246,11 +246,11 @@ async function main() {
   try {
     await checkValidateRun();
     canonicalLines.push(
-      `  [ok] validate:run on ${path.relative(repoRoot, FIXTURE).replace(/\\/g, "/")}`,
+      `  [ok] meta:validate:run on ${path.relative(repoRoot, FIXTURE).replace(/\\/g, "/")}`,
     );
   } catch (e) {
     failed = true;
-    canonicalLines.push(`  [fail] validate:run: ${e.message}`);
+    canonicalLines.push(`  [fail] meta:validate:run: ${e.message}`);
     if (e.stderr) {
       canonicalLines.push(String(e.stderr).trim());
     }
@@ -258,7 +258,9 @@ async function main() {
 
   try {
     await checkSync();
-    mirrorLines.push("  [ok] npm run check:runtimes (mirrors match canonical)");
+    mirrorLines.push(
+      "  [ok] npm run meta:check:runtimes (mirrors match canonical)",
+    );
   } catch (e) {
     failed = true;
     mirrorLines.push(`  [fail] sync: ${e.message}`);
@@ -323,7 +325,7 @@ async function main() {
 
   if (failed) {
     console.error(
-      "\nDoctor finished with failures. Fix the items above, then run: npm run sync:runtimes && npm run validate",
+      "\nDoctor finished with failures. Fix the items above, then run: npm run meta:sync && npm run meta:validate",
     );
     process.exitCode = 1;
   } else {

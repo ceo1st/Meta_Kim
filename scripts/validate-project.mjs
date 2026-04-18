@@ -1073,8 +1073,8 @@ async function validateRuntimeParityMatrix() {
     "stop condition parity",
     "writeback parity",
     "run artifact parity",
-    "`npm run eval:agents`",
-    "`npm run eval:agents:live`",
+    "`npm run meta:eval:agents`",
+    "`npm run meta:eval:agents:live`",
   ]) {
     assert(
       raw.includes(marker),
@@ -1340,17 +1340,23 @@ async function validateCodexArtifacts() {
 async function validatePackageJson() {
   const packageJsonPath = path.join(repoRoot, "package.json");
   const pkg = JSON.parse(await fs.readFile(packageJsonPath, "utf8"));
+  assert(pkg.scripts?.["meta:sync"], "package.json is missing meta:sync.");
   assert(
-    pkg.scripts?.["sync:runtimes"],
-    "package.json is missing sync:runtimes.",
+    pkg.scripts?.["meta:validate"],
+    "package.json is missing meta:validate.",
   );
-  assert(pkg.scripts?.validate, "package.json is missing validate.");
   assert(
-    pkg.scripts?.["validate:run"],
-    "package.json is missing validate:run.",
+    pkg.scripts?.["meta:validate:run"],
+    "package.json is missing meta:validate:run.",
   );
-  assert(pkg.scripts?.["eval:agents"], "package.json is missing eval:agents.");
-  assert(pkg.scripts?.["verify:all"], "package.json is missing verify:all.");
+  assert(
+    pkg.scripts?.["meta:eval:agents"],
+    "package.json is missing meta:eval:agents.",
+  );
+  assert(
+    pkg.scripts?.["meta:verify:all"],
+    "package.json is missing meta:verify:all.",
+  );
   assert(
     !pkg.scripts?.["sync:global:meta-theory:codex-active"],
     "package.json should not keep the legacy sync:global:meta-theory:codex-active script.",
@@ -1360,26 +1366,26 @@ async function validatePackageJson() {
     "package.json is missing prepare:openclaw-local.",
   );
   assert(
-    pkg.scripts?.["deps:install"] ===
+    pkg.scripts?.["meta:deps:install"] ===
       "node scripts/install-global-skills-all-runtimes.mjs --targets claude",
-    "package.json deps:install must use the Node-based installer with --targets claude.",
+    "package.json meta:deps:install must use the Node-based installer with --targets claude.",
   );
   assert(
-    pkg.scripts?.["deps:update"] ===
+    pkg.scripts?.["meta:deps:update"] ===
       "node scripts/install-global-skills-all-runtimes.mjs --update --targets claude",
-    "package.json deps:update must use the Node-based installer with --targets claude.",
+    "package.json meta:deps:update must use the Node-based installer with --targets claude.",
   );
   assert(
-    pkg.scripts?.["test:setup"] === "node --test tests/setup/*.test.mjs",
-    "package.json must expose test:setup for installer regression coverage.",
+    pkg.scripts?.["meta:test:setup"] === "node --test tests/setup/*.test.mjs",
+    "package.json must expose meta:test:setup for installer regression coverage.",
   );
   assert(
-    pkg.scripts?.["verify:all"]?.includes("npm run test:setup"),
-    "package.json verify:all must include npm run test:setup.",
+    pkg.scripts?.["meta:verify:all"]?.includes("npm run meta:test:setup"),
+    "package.json meta:verify:all must include npm run meta:test:setup.",
   );
   assert(
-    pkg.scripts?.["verify:all:live"]?.includes("npm run test:setup"),
-    "package.json verify:all:live must include npm run test:setup.",
+    pkg.scripts?.["meta:verify:all:live"]?.includes("npm run meta:test:setup"),
+    "package.json meta:verify:all:live must include npm run meta:test:setup.",
   );
   assert(
     pkg.dependencies?.["@modelcontextprotocol/sdk"],
