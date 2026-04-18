@@ -423,7 +423,7 @@ IF .claude/capability-index/meta-kim-capabilities.json is missing OR stale for t
 
 IF discover:global lists few skills/agents but the task needs Meta_Kim third-party skills (install-deps list)
   AND ~/.codex/skills or ~/.openclaw/skills are empty on this machine
-  → operator should run npm run deps:install:all-runtimes (or npm run deps:install for Claude-only), then npm run discover:global again
+  → operator should run npm run meta:deps:install:all-runtimes (or npm run meta:deps:install for Claude-only), then npm run discover:global again
 
 Read .claude/capability-index/meta-kim-capabilities.json
 Search for agents declaring the needed capability

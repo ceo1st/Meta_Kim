@@ -364,9 +364,9 @@ Useful supporting commands:
 - `npm run test:mcp`
 - `npm run graphify:install` / `npm run graphify:update` — helper wrappers around graphify setup
 - `node scripts/agent-health-report.mjs`
-- `npm run deps:install` or `npm run deps:install:all-runtimes` — install third-party skill repos into global runtime skill dirs (`all-runtimes` includes Codex/OpenClaw/Cursor where applicable; see README)
-- `npm run deps:update` / `npm run deps:update:all-runtimes` — same with `--update`
-- `npm run deps:install:claude-plugins` — optional Claude Code marketplace plugins (e.g. full Superpowers bundle)
+- `npm run meta:deps:install` or `npm run meta:deps:install:all-runtimes` — install third-party skill repos into global runtime skill dirs (`all-runtimes` includes Codex/OpenClaw/Cursor where applicable; see README)
+- `npm run meta:deps:update` / `npm run meta:deps:update:all-runtimes` — same with `--update`
+- `npm run meta:deps:install:claude-plugins` — optional Claude Code marketplace plugins (e.g. full Superpowers bundle)
 - `npm run sync:global:meta-theory` — sync portable `meta-theory` + merge Meta_Kim hooks into user-level Claude settings
 - `npm run prompt:next-iteration` — maintainer helper for structured next-step prompts after a governed run
 

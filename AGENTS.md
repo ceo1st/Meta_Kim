@@ -305,8 +305,8 @@ Useful supporting commands:
 - `npm run test:mcp`
 - `npm run graphify:check` (optional; target projects and this repo’s `graphify-out/` workflow)
 - `node scripts/agent-health-report.mjs`
-- `npm run deps:install` / `npm run deps:install:all-runtimes` and `npm run deps:update` / `npm run deps:update:all-runtimes`
-- `npm run deps:install:claude-plugins`
+- `npm run meta:deps:install` / `npm run meta:deps:install:all-runtimes` and `npm run meta:deps:update` / `npm run meta:deps:update:all-runtimes`
+- `npm run meta:deps:install:claude-plugins`
 - `npm run sync:global:meta-theory`
 - `npm run prompt:next-iteration`
 
