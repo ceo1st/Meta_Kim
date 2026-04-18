@@ -19,9 +19,82 @@ import {
   resolveRuntimeAllowedRoots,
 } from "./meta-kim-sync-config.mjs";
 import { t } from "./meta-kim-i18n.mjs";
+import { CATEGORIES, openRecorder } from "./install-manifest.mjs";
 
 const cliArgs = process.argv.slice(2);
 const checkOnly = process.argv.includes("--check");
+
+// Recorder is lazily opened in main() when scope includes "project" so every
+// write point (writeGeneratedFile / writeGeneratedJson) can record through
+// this shared holder without plumbing a recorder arg through every build fn.
+// Failures are swallowed — a manifest glitch must never break sync itself.
+let manifestRecorder = null;
+function recordSafe(fn) {
+  if (!manifestRecorder) return;
+  try {
+    fn(manifestRecorder);
+  } catch {
+    /* recorder never breaks sync */
+  }
+}
+
+/**
+ * Map a sync write target to a project manifest category (D..H / G).
+ * Returns null when the path is outside the repo or not one of the known
+ * projection roots — those writes stay unrecorded rather than polluting
+ * the manifest with ambiguous entries.
+ *
+ * Category semantics (see install-manifest.mjs CATEGORY_LABELS):
+ *   D = Project runtime skills   (.claude/skills, .codex/skills, ...)
+ *   E = Project runtime hooks    (.claude/hooks/*.mjs)
+ *   F = Project runtime agents   (.claude/agents, .codex/agents, .cursor/agents)
+ *   G = Project settings + MCP   (.claude/settings.json, .mcp.json, .codex/*.toml)
+ */
+export function inferProjectCategory(filePath, rootDir = repoRoot) {
+  if (typeof filePath !== "string" || !filePath) return null;
+  const rel = path.relative(rootDir, filePath).replace(/\\/g, "/");
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
+  if (rel === ".claude/settings.json" || rel === ".mcp.json") {
+    return CATEGORIES.G;
+  }
+  if (rel.startsWith(".claude/hooks/")) return CATEGORIES.E;
+  if (
+    rel.startsWith(".claude/agents/") ||
+    rel.startsWith(".codex/agents/") ||
+    rel.startsWith(".cursor/agents/")
+  ) {
+    return CATEGORIES.F;
+  }
+  if (
+    rel.startsWith(".claude/skills/") ||
+    rel.startsWith(".codex/skills/") ||
+    rel.startsWith(".cursor/skills/") ||
+    rel.startsWith(".agents/skills/") ||
+    rel.startsWith("openclaw/skills/") ||
+    rel.startsWith("openclaw/workspaces/")
+  ) {
+    return CATEGORIES.D;
+  }
+  if (rel === "openclaw/openclaw.template.json" || rel.startsWith(".codex/")) {
+    return CATEGORIES.G;
+  }
+  return null;
+}
+
+export function inferProjectPurpose(category) {
+  switch (category) {
+    case CATEGORIES.D:
+      return "project-skill";
+    case CATEGORIES.E:
+      return "project-hook";
+    case CATEGORIES.F:
+      return "project-agent";
+    case CATEGORIES.G:
+      return "project-settings";
+    default:
+      return null;
+  }
+}
 
 /**
  * Safely read a canonical source file. Returns null if the file is missing
@@ -544,6 +617,16 @@ async function writeGeneratedFile(filePath, nextContent) {
 
   await ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, nextContent, "utf8");
+  const category = inferProjectCategory(filePath);
+  if (category) {
+    recordSafe((rec) =>
+      rec.recordFile(filePath, {
+        source: "sync-runtimes",
+        purpose: inferProjectPurpose(category),
+        category,
+      }),
+    );
+  }
   return { changed: true };
 }
 
@@ -840,6 +923,17 @@ Examples:
     if (dirs.claudeMcpProjectionPath) {
       assertHomeBound(dirs.claudeMcpProjectionPath, dirs.allowedRoots);
     }
+  }
+
+  // Open project install manifest recorder. Only record when writes actually
+  // hit the repo (not in --check mode, and only when scope includes project).
+  // Global-scope sync is recorded separately by sync-global-meta-theory.mjs.
+  if (!checkOnly && (scope === "project" || scope === "both")) {
+    manifestRecorder = openRecorder({
+      scope: "project",
+      repoRoot,
+      metaKimVersion: process.env.META_KIM_VERSION ?? null,
+    });
   }
 
   if (selectedTargets.includes("claude")) {
@@ -1321,6 +1415,20 @@ Examples:
   }
 
   console.log(t.syncScopeLine(scope, selectedTargets.join(", ")));
+
+  if (manifestRecorder) {
+    const result = await manifestRecorder.flush();
+    if (result.ok) {
+      console.log(
+        `✓ Install manifest: ${result.path} (${result.entries} entries)`,
+      );
+    }
+  }
 }
 
-await main();
+if (
+  import.meta.url === `file://${process.argv[1].replace(/\\/g, "/")}` ||
+  process.argv[1]?.endsWith("sync-runtimes.mjs")
+) {
+  await main();
+}
