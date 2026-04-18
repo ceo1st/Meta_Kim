@@ -8,6 +8,21 @@ When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the
 
 ### Added
 
+- **Install Manifest Phase 4 — manifest-driven uninstall**: `scripts/uninstall.mjs` now prefers the install manifest over the filesystem-scan heuristic, so teardown follows the exact set of entries Meta_Kim actually wrote (rather than a path-pattern guess).
+  - New `manifestEntryToFinding(entry)` adapter maps a schema-v1 manifest entry onto the scan-finding shape that `planActions` already consumes. Entries with `kind` of `pip-package` / `mcp-server` / `git-hook` return `null` — they need dedicated actions the pipeline does not model yet, so only `file` / `dir` / `settings-merge` entries reach `planActions`.
+  - New `findingsFromManifest({ scope, repoRoot })` reads the global and/or project manifest and returns adapted findings. Read failures are swallowed — a corrupt or missing manifest never blocks uninstall.
+  - `planActions()` now accepts `useManifest` (default `true`) and returns `{ actions, source }`. When `useManifest` is true and at least one actionable entry exists, manifest drives the plan; otherwise `collectFindings` is the fallback.
+  - New `--no-manifest` CLI flag forces the scan fallback (useful for verifying parity, or after a manifest goes stale).
+  - `CATEGORIES.D` and `CATEGORIES.H` plan builders now derive `recursive` from `f.kind === "dir"` so manifest file entries get accurate `remove file` output instead of the previous (harmless but misleading) `remove directory` description.
+  - MSG tables add `sourceManifest` / `sourceScan` strings in en / zh-CN / ja-JP / ko-KR; the dry-run header now states which source the current run used.
+  - Unit coverage: `tests/setup/uninstall-manifest.test.mjs` adds 14 tests for `manifestEntryToFinding` + `findingsFromManifest`, bringing the install-manifest test suite to 48 tests total.
+
+- **Install Manifest Phase 3 — pre-install preview (MVP)**: users now see what Meta_Kim has on disk *before* they confirm a fresh install, so they can catch "I didn't mean to overwrite those" moments.
+  - **`scripts/sync-runtimes.mjs`** gains `--json` (pair with `--check`). When both flags are passed, stdout emits `{ scope, targets, total, byCategory, byAction, staleFiles }` — a structured diff of every file sync-runtimes is about to create or update. The existing human-readable `--check` path is preserved unchanged when `--json` is absent, so CI contracts keep working.
+  - **`setup.mjs`** gains `showExistingFootprint(installScope)`, invoked inside `runInstall()` immediately after `showInstallOverview()` and before `askYesNo(confirmStartInstall)`. It reads the global and project manifests via dynamic import and prints per-scope entry counts broken down by category (A..I). When no manifest exists, it prints `First install on this machine` instead of crashing.
+  - Three new i18n keys added per language (en / zh-CN / ja-JP / ko-KR): `footprintTitle`, `footprintFirstInstall`, `footprintRefreshNote`.
+  - A later iteration can upgrade this from "previous footprint" to a real diff by spawning `sync-runtimes --check --json` and merging its output against the existing manifest; the JSON schema above is the forward-compatible hook for that.
+
 - **Install Manifest Phase 2 — sync recorder wiring**: `sync-global-meta-theory.mjs` and `sync-runtimes.mjs` now record every write to the install manifest, turning the manifest from a passive schema into the canonical source of truth for what Meta_Kim has put on disk.
   - **`scripts/sync-global-meta-theory.mjs`** opens `openRecorder({ scope: "global" })` at the start of `runSync()` and flushes at the end. Every canonical skill directory sync (per-runtime), the global hooks dir + each hook file inside it, and the `~/.claude/settings.json` merge are recorded as Category A / B / C entries. `copyCanonicalSkill` gained a `targetId` argument so each skill dir is tagged with the right `{targetId}-global-skill` purpose.
   - **`scripts/sync-runtimes.mjs`** opens `openRecorder({ scope: "project" })` in `main()` when `--scope` includes `project` and `--check` is not set. `writeGeneratedFile` routes every successful write through a new `inferProjectCategory()` helper that maps the path to Category D (skills), E (hooks), F (agents), or G (settings/MCP) across `.claude`, `.codex`, `.cursor`, `openclaw`, and `.agents`. Unknown paths stay unrecorded rather than polluting the manifest. A CLI guard was added around the top-level `await main()` so the module is safe to import from unit tests without triggering a real sync.
@@ -21,9 +36,9 @@ When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the
 
 ### Planned
 
-- **Install Manifest Phase 2 remainder** — `install-global-skills-all-runtimes.mjs` and `claude-settings-merge.mjs` still need to call `openRecorder()` / `record()` on their own write paths.
-- **Install Manifest Phase 3** — `setup.mjs` pre-flight diff of old manifest vs planned operations.
-- **Install Manifest Phase 4** — Manifest-driven uninstall (prefer `install-manifest.json` entries over filesystem scan) and version-aware upgrade path.
+- **Install Manifest Phase 2 remainder** — `install-global-skills-all-runtimes.mjs` and `claude-settings-merge.mjs` still need to call `openRecorder()` / `record()` on their own write paths so every install surface contributes to the manifest.
+- **Install Manifest Phase 3 follow-up** — replace the "previous footprint" preview with a real planned-vs-existing diff by spawning `sync-runtimes --check --json` from `setup.mjs` and merging its output against the on-disk manifest.
+- **Install Manifest Phase 4 follow-up** — model `pip-package`, `mcp-server`, and `git-hook` entry kinds as first-class uninstall actions (currently they are filtered out by the manifest-source adapter and only the filesystem scan can clean them up, via `--deep`). Also add an empty-directory sweep after file-granular manifest teardown so parent dirs like `.claude/skills/meta-theory/references/` do not get left behind when every child file is deleted individually. A version-aware upgrade path (detect schema or version drift and migrate) belongs here too.
 
 ### Fixed
 
