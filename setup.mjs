@@ -389,6 +389,16 @@ ${r ? `Raw error: ${r}` : ""}
     pythonNotFound: "Python 3.10+ not found — skipping graphify",
     pythonHint:
       "Install Python 3.10+ and run: pip install graphifyy && python -m graphify claude install",
+    pythonNotFoundOfferInstall:
+      "Python 3.10+ not found. Do you want to auto-download and install it?",
+    pythonInstalling: "Downloading and installing Python 3.10+...",
+    pythonInstallSuccess: "Python 3.10+ installed successfully",
+    pythonInstallFailed: (err) =>
+      `Python installation failed: ${err} — you can install manually at https://www.python.org/downloads/`,
+    pythonInstallNotSupported: (platform) =>
+      `Auto-install not supported on ${platform}. Please install Python 3.10+ manually from https://www.python.org/downloads/`,
+    pythonInstallWinget: "Installing Python via winget...",
+    pythonInstallScoop: "Installing Python via scoop...",
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "Installing graphify (code knowledge graph)...",
     graphifyInstalled: "graphify installed and Claude skill registered",
@@ -771,6 +781,15 @@ ${r ? `原始错误：${r}` : ""}
     pythonNotFound: "未检测到 Python 3.10+ — 跳过 graphify",
     pythonHint:
       "安装 Python 3.10+ 后运行：pip install graphifyy && python -m graphify claude install",
+    pythonNotFoundOfferInstall: "未检测到 Python 3.10+，是否要自动下载安装？",
+    pythonInstalling: "正在下载安装 Python 3.10+...",
+    pythonInstallSuccess: "Python 3.10+ 安装成功",
+    pythonInstallFailed: (err) =>
+      `Python 安装失败：${err} — 可手动从 https://www.python.org/downloads/ 下载安装`,
+    pythonInstallNotSupported: (platform) =>
+      `${platform} 平台暂不支持自动安装，请从 https://www.python.org/downloads/ 手动下载 Python 3.10+`,
+    pythonInstallWinget: "正在通过 winget 安装 Python...",
+    pythonInstallScoop: "正在通过 scoop 安装 Python...",
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "正在安装 graphify（代码知识图谱）...",
     graphifyInstalled: "graphify 已安装，Claude 技能已注册",
@@ -1157,6 +1176,16 @@ ${r ? `生エラー：${r}` : ""}
     pythonNotFound: "Python 3.10+ が見つかりません — graphify をスキップ",
     pythonHint:
       "Python 3.10+ をインストール後：pip install graphifyy && python -m graphify claude install",
+    pythonNotFoundOfferInstall:
+      "Python 3.10+ が見つかりません。自動ダウンロード・インストールしますか？",
+    pythonInstalling: "Python 3.10+ をダウンロード・インストール中...",
+    pythonInstallSuccess: "Python 3.10+ のインストールに成功しました",
+    pythonInstallFailed: (err) =>
+      `Python のインストールに失敗しました：${err} — https://www.python.org/downloads/ から手動でインストールしてください`,
+    pythonInstallNotSupported: (platform) =>
+      `${platform} では自動インストールがサポートされていません。https://www.python.org/downloads/ から手動でインストールしてください`,
+    pythonInstallWinget: "winget で Python をインストール中...",
+    pythonInstallScoop: "scoop で Python をインストール中...",
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "graphify をインストール中（コードナレッジグラフ）...",
     graphifyInstalled: "graphify インストール完了、Claude スキル登録済み",
@@ -1554,6 +1583,16 @@ ${r ? `원본 오류：${r}` : ""}
     pythonNotFound: "Python 3.10+ 없음 — graphify 건너뜀",
     pythonHint:
       "Python 3.10+ 설치 후: pip install graphifyy && python -m graphify claude install",
+    pythonNotFoundOfferInstall:
+      "Python 3.10+ 없음. 자동 다운로드 및 설치할까요?",
+    pythonInstalling: "Python 3.10+ 다운로드 및 설치 중...",
+    pythonInstallSuccess: "Python 3.10+ 설치 성공",
+    pythonInstallFailed: (err) =>
+      `Python 설치 실패: ${err} — https://www.python.org/downloads/ 에서 수동 설치 가능`,
+    pythonInstallNotSupported: (platform) =>
+      `${platform}은(는) 자동 설치를 지원하지 않습니다. https://www.python.org/downloads/ 에서 수동 설치하세요`,
+    pythonInstallWinget: "winget으로 Python 설치 중...",
+    pythonInstallScoop: "scoop으로 Python 설치 중...",
     graphifyCheck: (v) => `graphify ${v}`,
     graphifyInstalling: "graphify 설치 중 (코드 지식 그래프)...",
     graphifyInstalled: "graphify 설치 완료, Claude 스킬 등록됨",
@@ -2877,13 +2916,71 @@ const GRAPHIFY_PLATFORM_MAP = {
   cursor: "cursor",
 };
 
+/**
+ * Attempt to auto-download and install Python 3.10+.
+ * Returns the Python object on success, null on failure or user decline.
+ */
+async function downloadAndInstallPython() {
+  const p = platform();
+  if (silentMode) return null;
+
+  const answer = await askYesNo(t.pythonNotFoundOfferInstall, false);
+  if (!answer) {
+    info(t.pythonHint);
+    return null;
+  }
+
+  if (p === "win32") {
+    // Try winget first (most reliable on Windows 10/11)
+    const wingetCheck = spawnSync("winget", ["--version"], {
+      encoding: "utf8",
+    });
+    if (wingetCheck.status === 0) {
+      info(t.pythonInstallWinget);
+      const result = spawnSync(
+        "winget",
+        [
+          "install",
+          "--id",
+          "Python.Python.3.11",
+          "--silent",
+          "--accept-package-agreements",
+          "--accept-source-agreements",
+        ],
+        { encoding: "utf8", shell: true },
+      );
+      if (result.status === 0) {
+        ok(t.pythonInstallSuccess);
+        // Refresh PATH and re-detect
+        const newPython = detectPython310();
+        if (newPython) return newPython;
+      }
+    }
+    // winget not available or failed — show manual instructions
+    warn(t.pythonInstallNotSupported("Windows (winget unavailable)"));
+    info(t.pythonHint);
+    return null;
+  } else if (p === "darwin") {
+    warn(t.pythonInstallNotSupported("macOS"));
+    info(
+      `Run: brew install python@3.11  ${C.dim}(or python3.12 if preferred)${C.reset}`,
+    );
+    return null;
+  } else {
+    warn(t.pythonInstallNotSupported(p));
+    info(
+      `Run: sudo apt install python3.11  ${C.dim}(or your distro's package manager)${C.reset}`,
+    );
+    return null;
+  }
+}
+
 async function installPythonTools(activeTargets, inUpdateMode = false) {
   heading(t.stepPythonTools);
-  const python = checkPython310();
+  let python = checkPython310();
   if (!python) {
-    warn(t.pythonNotFound);
-    info(t.pythonHint);
-    return;
+    python = await downloadAndInstallPython();
+    if (!python) return;
   }
 
   // Check if graphify already installed via pip show (more reliable than --version)

@@ -880,11 +880,20 @@ Examples:
       }
     }
 
-    const templateConfig = JSON.parse(
-      await fs.readFile(canonicalOpenClawTemplatePath, "utf8"),
-    );
+    // Gracefully handle missing openclaw.template.json (can happen when running
+    // via npx with an older cached package version that doesn't include it)
+    let templateConfig = null;
+    try {
+      await fs.access(canonicalOpenClawTemplatePath);
+      templateConfig = JSON.parse(
+        await fs.readFile(canonicalOpenClawTemplatePath, "utf8"),
+      );
+    } catch {
+      // File missing from npm cache package — skip this projection step
+    }
 
     if (
+      templateConfig !== null &&
       (
         await writeGeneratedJson(
           dirs.openclawTemplateConfigPath,
