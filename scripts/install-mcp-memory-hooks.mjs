@@ -9,7 +9,7 @@
  *   2. Seed ~/.claude/hooks/config.json from config.template.json if not present
  *      (NEVER overwrite an existing config — user customizations are preserved)
  *   3. Register the SessionStart hook in ~/.claude/settings.json
- *   4. Warn if MCP server not responding on http://localhost:8888
+ *   4. Warn if MCP server not responding on http://localhost:8000
  *
  * Usage:
  *   node scripts/install-mcp-memory-hooks.mjs           # Install (idempotent)
@@ -67,16 +67,16 @@ const dim = (s) => `\x1b[2m${s}\x1b[0m`;
 const bold = (s) => `\x1b[1m${s}\x1b[0m`;
 
 function info(msg) {
-  console.log(`  ${dim("→")} ${msg}`);
+  console.log(`${dim("→")} ${msg}`);
 }
 function ok(msg) {
-  console.log(`  ${green("✓")} ${msg}`);
+  console.log(`${green("✓")} ${msg}`);
 }
 function warn(msg) {
-  console.log(`  ${yellow("⚠")} ${msg}`);
+  console.log(`${yellow("⚠")} ${msg}`);
 }
 function fail(msg) {
-  console.log(`  ${red("✗")} ${msg}`);
+  console.log(`${red("✗")} ${msg}`);
 }
 
 // ── Core helpers ────────────────────────────────────────
@@ -89,7 +89,7 @@ function run(cmd, args, opts = {}) {
   });
 }
 
-function checkServerHealth(url = "http://localhost:8888/api/health") {
+function checkServerHealth(url = "http://localhost:8000/api/health") {
   try {
     const result = run("curl", ["-s", "--max-time", "2", url]);
     if (result.status === 0 && result.stdout) {
@@ -287,9 +287,9 @@ function install() {
   info("Checking MCP Memory Service health...");
   const healthy = checkServerHealth();
   if (healthy) {
-    ok("MCP Memory Service is running on http://localhost:8888");
+    ok("MCP Memory Service is running on http://localhost:8000");
   } else {
-    warn("MCP Memory Service is NOT responding on http://localhost:8888");
+    warn("MCP Memory Service is NOT responding on http://localhost:8000");
     info("Start it with: python -m mcp_memory_service");
     info("Or:            uv run memory server -s hybrid");
   }
@@ -353,8 +353,8 @@ function check() {
 
   const healthy = checkServerHealth();
   healthy
-    ? ok("MCP Memory Service responding on :8888")
-    : warn("MCP Memory Service NOT responding on :8888");
+    ? ok("MCP Memory Service responding on :8000")
+    : warn("MCP Memory Service NOT responding on :8000");
 
   console.log("");
 }

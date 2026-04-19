@@ -633,7 +633,8 @@ Meta_Kim 的记忆不是单一的。它有三层，各有分工，共同保障 a
 - **激活方式**：`node setup.mjs` 安装并配置 MCP Memory Service（第三层）；安装后需手动启动服务器。
   - **Claude Code**：SessionStart Hook 在 `node setup.mjs` 时自动注册
   - **其他工具**（Codex、OpenClaw、Cursor）：参见 `mcp-memory-service/claude-hooks/` 手动安装
-- **启动服务器**：`npm start`（在 mcp-memory-service 目录下）或 `python -m mcp_memory_service`，然后访问 `http://localhost:8888`
+- **启动服务器**：`npm start`（在 mcp-memory-service 目录下）或 `python -m mcp_memory_service`，然后访问 `http://localhost:8000`
+- **端口覆盖**：服务器遵循 `MCP_HTTP_PORT`（默认 `8000`，与上游一致）；Meta_Kim 的 SessionStart hook 读取 `MCP_MEMORY_URL`，可指向任意可达端点。若你是从旧版 Meta_Kim（硬编码 `8888`）升级而来，请按 CHANGELOG 的 `Migration Notes` 中给出的一行方案修正 `~/.claude/hooks/config.json`。
 - **Hook**：Claude Code 自动注册；其他工具参见 mcp-memory-service 文档
 - **查询**：`npm run query:runs -- --owner <agent>`——按 agent 查找历史 run，或 `npm run index:runs -- <artifact>` 手动索引 run 产物
 

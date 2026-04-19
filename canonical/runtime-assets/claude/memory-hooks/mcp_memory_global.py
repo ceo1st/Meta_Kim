@@ -18,7 +18,7 @@ import urllib.error
 # Bypass proxy for localhost
 os.environ.setdefault("NO_PROXY", "localhost,127.0.0.1")
 
-MEMORY_SERVICE_URL = os.environ.get("MCP_MEMORY_URL", "http://localhost:8888")
+MEMORY_SERVICE_URL = os.environ.get("MCP_MEMORY_URL", "http://localhost:8000")
 MEMORY_LIMIT = int(os.environ.get("MCP_MEMORY_LIMIT", "10"))
 TIMEOUT = 3
 

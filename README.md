@@ -634,7 +634,8 @@ For multi-platform setups, run `node setup.mjs` — it loops through all selecte
 - **Activation**: `node setup.mjs` installs and configures the MCP Memory Service (Layer 3); the server must be started manually after installation.
   - For **Claude Code**: SessionStart hooks are auto-registered during `node setup.mjs`
   - For **other tools** (Codex, OpenClaw, Cursor): check `mcp-memory-service/claude-hooks/` for manual hook setup
-- **Start server**: `npm start` in the mcp-memory-service directory (or `python -m mcp_memory_service`), then access at `http://localhost:8888`
+- **Start server**: `npm start` in the mcp-memory-service directory (or `python -m mcp_memory_service`), then access at `http://localhost:8000`
+- **Port override**: the server honors `MCP_HTTP_PORT` (default `8000`, matching upstream); Meta_Kim reads `MCP_MEMORY_URL` in the SessionStart hook so point it at any reachable endpoint. If you are upgrading from an older Meta_Kim install that hard-coded `8888`, see the CHANGELOG's `Migration Notes` for the one-line `~/.claude/hooks/config.json` fix.
 - **Hooks**: auto-registered for Claude Code; for other tools see the mcp-memory-service documentation
 - **Query**: `npm run query:runs -- --owner <agent>` — find past runs by agent, or `npm run index:runs -- <artifact>` for manual indexing of validated run artifacts
 

@@ -2,7 +2,7 @@
   "memoryService": {
     "protocol": "http",
     "http": {
-      "endpoint": "http://127.0.0.1:8888",
+      "endpoint": "http://127.0.0.1:8000",
       "healthCheckTimeout": 3000
     },
     "defaultTags": ["claude-code", "auto-generated"],
