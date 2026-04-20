@@ -1,5 +1,7 @@
 # Changelog
 
+> 🇨🇳 [中文版](./CHANGELOG.zh-CN.md) | English version
+
 All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.

@@ -1,5 +1,7 @@
 # 更新日志
 
+> 🇺🇸 [English](./CHANGELOG.md) | 中文版
+
 所有 Meta_Kim 的重要变更都会记录在此。
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
