@@ -516,6 +516,20 @@ Possible causes:
     footprintFirstInstall:
       "First install on this machine — no previous footprint recorded.",
     footprintRefreshNote: "Running install will refresh these entries.",
+    footprintScopeGlobal: "Global",
+    footprintScopeProject: "Project",
+    footprintEntries: "entries",
+    footprintCategoryLabels: {
+      A: "Global runtime skills",
+      B: "Global runtime hooks",
+      C: "Global settings.json merges",
+      D: "Project runtime skills",
+      E: "Project runtime hooks",
+      F: "Project runtime agents",
+      G: "Project settings + MCP config",
+      H: "Project local state (.meta-kim/)",
+      I: "Shared dependencies (pip / git hooks)",
+    },
     installCancelled: "Installation cancelled",
     installComplete: "Installation complete!",
     // Warning messages
@@ -923,6 +937,20 @@ ${r ? `原始错误：${r}` : ""}
     footprintTitle: "安装足迹（上次安装记录）",
     footprintFirstInstall: "首次安装 — 无历史足迹可显示。",
     footprintRefreshNote: "本次安装将刷新上述条目。",
+    footprintScopeGlobal: "全局",
+    footprintScopeProject: "项目",
+    footprintEntries: "条",
+    footprintCategoryLabels: {
+      A: "全局运行时技能",
+      B: "全局运行时钩子",
+      C: "全局 settings.json 合并",
+      D: "项目运行时技能",
+      E: "项目运行时钩子",
+      F: "项目运行时智能体",
+      G: "项目 settings + MCP 配置",
+      H: "项目本地状态 (.meta-kim/)",
+      I: "共享依赖 (pip / git 钩子)",
+    },
     installCancelled: "安装已取消",
     installComplete: "安装完成！",
     // Warning messages
@@ -1361,6 +1389,20 @@ ${r ? `生エラー：${r}` : ""}
     footprintFirstInstall:
       "このマシンでの初回インストール — 前回の足跡はありません。",
     footprintRefreshNote: "インストール実行時に上記エントリは更新されます。",
+    footprintScopeGlobal: "グローバル",
+    footprintScopeProject: "プロジェクト",
+    footprintEntries: "件",
+    footprintCategoryLabels: {
+      A: "グローバルランタイムスキル",
+      B: "グローバルランタイムフック",
+      C: "グローバル settings.json マージ",
+      D: "プロジェクトランタイムスキル",
+      E: "プロジェクトランタイムフック",
+      F: "プロジェクトランタイムエージェント",
+      G: "プロジェクト settings + MCP 設定",
+      H: "プロジェクトローカル状態 (.meta-kim/)",
+      I: "共有依存関係 (pip / git フック)",
+    },
     installCancelled: "インストールがキャンセルされました",
     installComplete: "インストール完了！",
     // 警告メッセージ
@@ -1782,6 +1824,20 @@ ${r ? `원본 오류：${r}` : ""}
     footprintTitle: "설치 발자국 (이전 설치 기록)",
     footprintFirstInstall: "이 머신에서 첫 설치 — 이전 발자국이 없습니다.",
     footprintRefreshNote: "설치 실행 시 위 항목들이 갱신됩니다.",
+    footprintScopeGlobal: "전역",
+    footprintScopeProject: "프로젝트",
+    footprintEntries: "항목",
+    footprintCategoryLabels: {
+      A: "전역 런타임 스킬",
+      B: "전역 런타임 훅",
+      C: "전역 settings.json 병합",
+      D: "프로젝트 런타임 스킬",
+      E: "프로젝트 런타임 훅",
+      F: "프로젝트 런타임 에이전트",
+      G: "프로젝트 settings + MCP 설정",
+      H: "프로젝트 로컬 상태 (.meta-kim/)",
+      I: "공유 의존성 (pip / git 훅)",
+    },
     installCancelled: "설치가 취소되었습니다",
     installComplete: "설치 완료!",
     // 경고 메시지
@@ -2362,7 +2418,7 @@ ${C.dim}${t.installOverviewEstimated}${C.reset}${t.installOverviewTime}
  * to refresh. Pure read-only; safe to call even when no manifest exists.
  */
 async function showExistingFootprint(installScope) {
-  const { readManifest, manifestPathFor, listByCategory, CATEGORY_LABELS } =
+  const { readManifest, manifestPathFor, listByCategory } =
     await import("./scripts/install-manifest.mjs");
 
   const sources = [];
@@ -2370,7 +2426,7 @@ async function showExistingFootprint(installScope) {
     try {
       const m = readManifest(manifestPathFor("global"));
       if (m && m.entries?.length > 0)
-        sources.push({ label: "Global", manifest: m });
+        sources.push({ scope: "global", manifest: m });
     } catch {
       /* manifest read is best-effort */
     }
@@ -2379,7 +2435,7 @@ async function showExistingFootprint(installScope) {
     try {
       const m = readManifest(manifestPathFor("project", PROJECT_DIR));
       if (m && m.entries?.length > 0)
-        sources.push({ label: "Project", manifest: m });
+        sources.push({ scope: "project", manifest: m });
     } catch {
       /* manifest read is best-effort */
     }
@@ -2390,20 +2446,26 @@ async function showExistingFootprint(installScope) {
     console.log(`${C.dim}${t.footprintFirstInstall}${C.reset}\n`);
     return;
   }
+  console.log("");
 
-  for (const { label, manifest } of sources) {
+  for (let i = 0; i < sources.length; i++) {
+    if (i > 0) console.log("");
+    const { scope, manifest } = sources[i];
     const grouped = listByCategory(manifest);
+    const scopeLabel =
+      scope === "global" ? t.footprintScopeGlobal : t.footprintScopeProject;
     console.log(
-      `  ${C.cyan}${label}${C.reset}: ${manifest.entries.length} entries`,
+      `${C.cyan}${scopeLabel}${C.reset}: ${manifest.entries.length} ${t.footprintEntries}`,
     );
     for (const [cat, items] of Object.entries(grouped)) {
       if (items.length === 0) continue;
-      console.log(
-        `    ${cat}. ${CATEGORY_LABELS[cat]}: ${C.bold}${items.length}${C.reset}`,
-      );
+      const catLabel = t.footprintCategoryLabels?.[cat] ?? cat;
+      console.log(`${cat}. ${catLabel}: ${C.bold}${items.length}${C.reset}`);
     }
   }
-  console.log(`${C.dim}${t.footprintRefreshNote}${C.reset}\n`);
+  console.log("");
+  console.log(`${C.dim}${t.footprintRefreshNote}${C.reset}`);
+  console.log("");
 }
 
 /** Execute with progress indicator */
