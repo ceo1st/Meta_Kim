@@ -6,6 +6,32 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
 
+## [2.0.28] - 2026-05-15
+
+### 新增
+
+- **planning-with-files 强制集成 (Step 3.7)** — 在 `dev-governance.md` 新增 Step 3.7: Planning Files Supplement，要求在 Stage 3（Thinking）强制创建 `task_plan.md`、`findings.md`、`progress.md`，与协议产物并行（补充而非替代）。Conductor 为唯一写入者，后续每个阶段完成后更新。已验证 Claude Code、Codex、OpenClaw、Cursor 四平台兼容。
+- **Fetch Step 1.5 — 全局能力搜索** — Fetch 阶段现可搜索 `capability-search-index.tsv`（1056 条记录）进行跨仓库 agent/skill 发现，避免静默降级为通用 agent。
+- **Fetch Step 1.6 — Skill 协同发现** — Skills 现在与 agents 一同在 Fetch 阶段搜索，不再延迟到 Evolution 阶段。发现的 skills 通过 `recommendedSkills` 字段绑定到 `workerTaskPackets`。
+- **最小分解规则 (Step 3.6)** — 涉及 >1 文件或 >1 能力维度的任务必须产出 >=2 个 `workerTaskPackets`。单包分解在分解验收门被拒绝。
+- **Evolution 回写检查清单** — 6 项强制检查：模式已记录、治理缺口已关闭、agent 定义已更新、skill 关联已验证、canonical 已同步、run index 已更新。
+- **capabilityGapPacket (Fetch Step 5)** — 无匹配 agent 时，强制 3 步协议：产出 `capabilityGapPacket`、获取用户确认、记录缺口解决方案。静默降级为通用 agent 现为治理违规。
+- **capability-search-index.tsv** — 新增 grep 友好的 TSV 索引（1056 条，334KB），由 `discover-global-capabilities.mjs` 生成，支持快速跨仓库能力查询。
+- **Canonical hook 源文件** — `enforce-agent-dispatch.mjs`、`spine-state.mjs`、`stop-spine-cleanup.mjs` 现纳入 `canonical/runtime-assets/claude/hooks/` 源码管理。
+
+### 变更
+
+- **SKILL.md 跨平台规划** — 从 1 行提及升级为 5 条硬性规则，明确补充语义，Stage 3 强制执行，仅 `queryBypass: true` 时可跳过。
+- **SKILL.md 阶段表格** — Stages 3–8 增加明确的 `progress.md`/`findings.md`/`task_plan.md` 更新提示（遵循 Step 3.7）。
+- **enforce-agent-dispatch.mjs hook** — `isPlanningFile()` 现同时检查 Bash `command` 字符串和 `extractFilePath()`，允许在 Thinking 阶段通过 Bash 创建规划文件。
+- **discover-global-capabilities.mjs** — 重构为提取 markdown 标题作为搜索关键词；同时生成 `capability-search-index.tsv` 和 JSON 索引。
+- **AGENTS.md（Codex 入口）** — 在 Hidden Skeleton 章节新增规划文件强制段，提升 Codex/Cursor/OpenClaw 平台感知。
+
+### 修复
+
+- **Hook 阻止 Thinking 阶段创建规划文件** — `isPlanningFile()` 仅检查 `extractFilePath()`，对 Write/Edit 有效但对 Bash 工具无效。现同时检查 `toolInput.command` 字符串。
+- **dev-governance.md 缺失 planning-with-files 引用** — 之前零引用。Step 3.7 填补此缺口。
+
 ## [2.0.27] - 2026-05-14
 
 ### 变更

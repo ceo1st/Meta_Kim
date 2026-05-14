@@ -53,9 +53,17 @@ Track ambiguity on **Scope**, **Goal**, **Constraints**, and **Architecture type
 
 All Types share a **Universal Entry Chain**: `trigger → classify → capability-matched entry gate → Conductor orchestrates`.
 
-## Cross-Platform Planning (Mandatory at Stage 3)
+## Cross-Platform Planning (Mandatory at Stage 3 — Supplement, NOT Replacement)
 
-Create `task_plan.md`, `findings.md`, `progress.md` at Stage 3 for human visibility and agent coordination. The Conductor agent is the sole writer. When `planning-with-files` is not installed, create files manually.
+**HARD RULE**: At Stage 3 (Thinking), after protocol artifacts are produced (Steps 3–3.6), create `task_plan.md`, `findings.md`, `progress.md` in the project root. This is a **supplement** to protocol artifacts — it does NOT replace `runHeader`, `dispatchBoard`, `workerTaskPackets`, or any Step 3.x output.
+
+1. Invoke `/planning-with-files` via Skill tool when installed — let its templates drive file creation.
+2. When not installed, create files manually using planning-with-files templates (Goal from Stage 1 scope, Phases from decomposition, Findings from Fetch, Progress as session log).
+3. Update `progress.md` after every subsequent stage (Execution → Review → Meta-Review → Verification → Evolution).
+4. Conductor is the sole writer — no sub-agent writes these files.
+5. Skip ONLY when `queryBypass: true`. For all execution runs, this is MANDATORY.
+
+See `references/dev-governance.md` Step 3.7 for full specification.
 
 ## Gates
 
@@ -140,7 +148,10 @@ DEFAULT → state the core capability need explicitly
 **Step 3 — Score and invoke:**
 - Governance task (analyze/audit/review) → prefer meta-agent
 - Execution task (build/write/fix/test) → prefer execution agent from capability index
-- No match → Type B creation pipeline OR generalPurpose/default subagent with explicit gap record
+- No match → output `capabilityGapPacket` (mandatory), then:
+  1. IF gap is durable/recurring/project-specific → ASK user: "Capability gap detected: [description]. Trigger Type B creation pipeline? (yes/no)"
+  2. IF user approves → trigger Type B creation pipeline
+  3. IF user declines OR gap is one-off → generalPurpose/default subagent fallback + record gap in Evolution follow-up
 
 **Hardcoded agent names are FORBIDDEN.** Always go through 3-step discovery.
 
@@ -230,16 +241,60 @@ Every station must leave explicit deliverables:
 
 **8-stage spine** (see `references/dev-governance.md` for complete spec):
 
+**Spine activation (mandatory first action)**: Write a spine state file to `.meta-kim/state/default/spine/spine-state.json` using the Write tool. Use this exact schema (version 2):
+```json
+{
+  "active": true,
+  "version": 2,
+  "triggeredAt": "<ISO timestamp>",
+  "currentStage": "critical",
+  "stages": {
+    "critical": { "status": "in_progress" },
+    "fetch": { "status": "pending" },
+    "thinking": { "status": "pending" },
+    "execution": { "status": "pending" },
+    "review": { "status": "pending" },
+    "meta_review": { "status": "pending" },
+    "verification": { "status": "pending" },
+    "evolution": { "status": "pending" }
+  },
+  "taskClassification": null,
+  "triggerReason": "user_invocation",
+  "dispatchedAgents": [],
+  "dispatchChain": {},
+  "queryBypass": false
+}
+```
+
+**Dispatch chain enforcement (mandatory)**: The enforcement hook checks that each stage dispatches the required meta-agent. The Agent tool's `description` field **must contain the meta-agent name** (e.g., "meta-warden coordinate") for the hook to record it in `dispatchChain`.
+
+| Stage | Required meta-agent in dispatchChain | What to dispatch |
+|-------|--------------------------------------|-------------------|
+| critical | `meta-warden` | `Agent(description="meta-warden coordinate", ...)` |
+| fetch | (none required, but do Fetch-first) | Read capability index |
+| thinking | `meta-conductor` | `Agent(description="meta-conductor orchestrate", ...)` |
+| execution | at least 1 agent dispatch | `Agent(description="execution agent name", ...)` |
+| review | `meta-prism` | `Agent(description="meta-prism review", ...)` |
+| meta_review | `meta-warden` | `Agent(description="meta-warden meta-review", ...)` |
+| verification | `meta-warden` | `Agent(description="meta-warden verify", ...)` |
+| evolution | (none required) | Write back patterns |
+
+The hook will **deny Write/Edit/Bash** if the current stage's required meta-agent is not in `dispatchChain`. Advance stages by updating the spine state file.
+
+After each stage completes, update the spine state: set current stage to `completed`, advance `currentStage` to the next stage. The enforcement hook reads this file to gate execution tools.
+
+**For pure queries (no files modified, no agents needed)**: Set `queryBypass: true` in the spine state to bypass enforcement.
+
 | # | Stage | Action |
 |---|---|---|
-| 1 | Critical | Clarify scope, ask if ambiguous |
-| 2 | Fetch | **3-step capability discovery** (keyword → search → invoke) |
-| 3 | Thinking | Plan sub-tasks with owners/dependencies; explore ≥2 paths; create planning files; produce protocol artifacts (`runHeader`, `dispatchBoard`, `workerTaskPackets`) |
-| 4 | **Execution** | **Dispatch to agents via `Agent()` tool** — every sub-task has an owner; independent tasks run parallel |
-| 5 | Review | Inspect outputs via capability-matched reviewer |
-| 6 | Meta-Review | Check review standards |
-| 7 | Verification | Confirm fixes closed findings |
-| 8 | Evolution | Write patterns/gaps back to agent definitions |
+| 1 | Critical | Clarify scope, ask if ambiguous. Update spine state `currentStage: "critical"` |
+| 2 | Fetch | **3-step capability discovery** (keyword → search → invoke). Update spine state `currentStage: "fetch"` |
+| 3 | Thinking | Plan sub-tasks with owners/dependencies; explore ≥2 paths; **create planning files (task_plan.md, findings.md, progress.md) — MANDATORY supplement, see Step 3.7**; produce protocol artifacts (`runHeader`, `dispatchBoard`, `workerTaskPackets`). **Minimum Decomposition Rule**: when task involves >1 file or >1 capability dimension, `workerTaskPackets` MUST contain >=2 packets. A single-packet plan equals no decomposition — violates "Dispatch Before You Execute." Each packet must have non-empty `owner`, `dependsOn` (or explicit `"dependsOn": []`), `parallelGroup`, and `mergeOwner`. Update spine state `currentStage: "thinking"` |
+| 4 | **Execution** | **Dispatch to agents via `Agent()` tool** — every sub-task has an owner; independent tasks run parallel. Update spine state `currentStage: "execution"`. **Update progress.md with agent outputs.** **Enforcement hook blocks execution tools until at least one Agent dispatch is recorded.** |
+| 5 | Review | Inspect outputs via capability-matched reviewer. Update spine state `currentStage: "review"`. **Update progress.md with review findings; update findings.md with issues.** |
+| 6 | Meta-Review | Check review standards. Update spine state `currentStage: "meta_review"`. **Update task_plan.md phase statuses.** |
+| 7 | Verification | Confirm fixes closed findings. Update spine state `currentStage: "verification"`. **Update progress.md with verification results.** |
+| 8 | Evolution | Write patterns/gaps back to agent definitions. Set spine state `active: false` when done. **Mark all phases complete in task_plan.md; log evolution writebacks in findings.md.** |
 
 Stage 2 is the gate — do not skip to Stage 3/4. Stage 4 requires protocol artifacts from Stage 3.
 
@@ -279,6 +334,24 @@ Stage 2 is the gate — do not skip to Stage 3/4. Stage 4 requires protocol arti
 | Pattern spans multiple agents | Extract as skill template |
 | **Governance bypass** | **Edit meta-theory SKILL.md** — add FORBIDDEN PATH + Gate 3 override rule |
 | Protocol artifact skipped | Return to Stage 3 to produce artifacts |
+| **Global agent needs project-specific enhancement** | **Copy from global to `canonical/agents/`, enhance locally** — `meta:sync` naturally gives project-local priority over global |
+
+### Evolution Writeback Checklist (mandatory before marking Evolution complete)
+
+Before marking Evolution complete, verify each item. If the answer is YES, perform the corresponding action:
+
+| # | Question | Action if YES |
+|---|----------|---------------|
+| 1 | Did any agent reveal boundary or gap issues? | Edit `canonical/agents/*.md` |
+| 2 | Was a reusable pattern discovered? | Create/update `canonical/skills/` |
+| 3 | Was a capability coverage gap found? | Update `config/capability-index/` |
+| 4 | Did a gate or protocol need refinement? | Update `config/contracts/` |
+| 5 | Was a Skip-Level / Boundary / Process violation detected? | Record structured Scar |
+| 6 | Were canonical files modified? | Run `npm run meta:sync` |
+
+Every Evolution stage must output either:
+- `writebackDecision = "writeback"` with concrete targets from the checklist above, or
+- `writebackDecision = "none"` with a `decisionReason` that explicitly addresses each checklist item (even if only to state "no gap found for item N").
 
 ## Design Principles
 
