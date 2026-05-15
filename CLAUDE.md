@@ -10,6 +10,27 @@ If you only remember three things:
 - `canonical/agents/`, `canonical/skills/meta-theory/`, `config/contracts/`, and `config/capability-index/` are the long-term source of truth.
 - After editing canonical files, resync and validate before trusting the result.
 
+## Meta-Theory Dispatch is Non-Negotiable
+
+When the `meta-theory` skill is activated (by `/meta-theory`, skill auto-detection, or any trigger), the 8-stage spine dispatch protocol is **mandatory, not advisory**.
+
+**Hard rules:**
+
+1. The main thread is the dispatcher, never the executor. Analysis, review, and code changes belong to dispatched agents.
+2. The PreToolUse hook (`enforce-agent-dispatch.mjs`) will **block** execution tools (Write/Edit/Bash) if spine state is active and no agents have been dispatched. This is enforced at the system level — you cannot bypass it.
+3. When in doubt, dispatch. The cost of an unnecessary dispatch is far lower than the cost of a governance bypass.
+4. If the hook blocks you, do not work around it. Follow the dispatch protocol instead.
+
+**What "dispatch" means in practice:**
+
+- For Type A (Analysis): dispatch `meta-prism` for quality audit, `meta-warden` for synthesis
+- For Type B (Agent Creation): dispatch `meta-genesis` for SOUL design, `meta-artisan` for loadout
+- For Type C (Development): dispatch capability-matched execution agents for all code work
+- For Type D (Review): dispatch `meta-prism` for quality audit, `meta-warden` for synthesis
+- For Type E (Rhythm): dispatch `meta-conductor` for card deck design, `meta-warden` for synthesis
+
+**This applies to all Meta_Kim runtimes** (Claude Code, Codex, OpenClaw, Cursor). Runtimes without hook support must follow the same protocol via their agent rules files (AGENTS.md, GEMINI.md, etc.).
+
 ## Third-party meta-skills (canonical install)
 
 Packs such as **findskill** are installed by **`node setup.mjs`** from **`KimYx0207/*`** repos declared in `setup.mjs`. These are **maintained and optimized for Meta_Kim** on top of public-ecosystem baselines.

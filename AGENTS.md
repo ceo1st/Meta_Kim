@@ -100,6 +100,17 @@ The other seven meta agents are backstage specialists, not the public menu.
 
 ### Codex Meta-Theory Enforcement
 
+**DISPATCH IS MANDATORY — NON-NEGOTIABLE GATE**
+
+When `/meta-theory` is activated, the Codex main thread is the dispatcher ONLY. All execution (analysis, code, review, design) belongs to dispatched `spawn_agent` calls.
+
+**Hard rules:**
+
+1. The main thread does scope, delegation, review, and synthesis ONLY. Never execute substantive analysis or code in the main thread.
+2. Before producing >3 sentences of execution-layer output, STOP — dispatch via `spawn_agent` instead.
+3. "Simple task" is not an excuse. The cost of unnecessary dispatch < cost of governance bypass.
+4. If `spawn_agent` is unavailable, record the blocked reason and follow the degraded path — do not silently continue as main-thread execution.
+
 When the user asks to run `meta theory`, `meta-theory`, `/meta-theory`, `run meta theory`, `execute meta theory`, `元理论`, or equivalent governance wording, do not treat it as a loose promise or ordinary chat style.
 
 Codex must first run the visible or internal Stage 1-3 protocol:

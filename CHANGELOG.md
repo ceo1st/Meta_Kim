@@ -6,6 +6,21 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.0.29] - 2026-05-15
+
+### Added
+
+- **Meta-theory dispatch auto-activation hook** — New `activate-meta-theory-spine.mjs` PreToolUse hook detects `Skill("meta-theory")` activation and auto-initializes spine state. When active, `enforce-agent-dispatch.mjs` blocks execution tools (Write/Edit/Bash) until agents are dispatched. Three-layer enforcement: hook (system-level) + rule files (all runtimes) + SKILL.md gate (protocol-level).
+- **DISPATCH IS MANDATORY gate in SKILL.md** — New top-level section in `canonical/skills/meta-theory/SKILL.md` with 5 hard rules: main thread is dispatcher only, >3 sentences of execution output triggers STOP, "simple task" is not an excuse, hook enforces at system level, when in doubt dispatch.
+- **CLAUDE.md dispatch hard rule** — New "Meta-Theory Dispatch is Non-Negotiable" section covering all 5 Types (A/B/C/D/E) with explicit dispatch targets per Type.
+- **AGENTS.md dispatch hard rule** — New "DISPATCH IS MANDATORY — NON-NEGOTIABLE GATE" section in Codex entry with 4 hard rules including degraded path handling when `spawn_agent` is unavailable.
+- **Codex command dispatch gate** — Updated `canonical/runtime-assets/codex/commands/meta-theory.md` with mandatory dispatch rule and blocked-reason recording.
+- **Cursor dispatch rule file** — New `.cursor/rules/meta-theory-dispatch.mdc` with alwaysApply=true, covering all 5 Types with platform-specific dispatch guidance.
+
+### Changed
+
+- **settings.json hook registration** — Added `Skill` to PreToolUse matcher, routing to `activate-meta-theory-spine.mjs` for automatic spine state initialization on meta-theory skill activation.
+
 ## [2.0.28] - 2026-05-15
 
 ### Added
