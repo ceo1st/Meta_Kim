@@ -6,6 +6,34 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
 
+## [2.0.34] - 2026-05-20
+
+### 新增
+
+- **meta-chrysalis 智能体** — 新增专家智能体，负责 Evolution writeback 编排，自动化从 spine evolution artifacts 到 canonical source updates 的流程，包含 Five Criteria 验证和递归防护。
+- **Evolution Writeback Gate** — 新增 `scripts/evolution-writeback-gate.mjs`，包含 Five Criteria 验证、PRIN-ST 合规检查、循环依赖检测和阈值游戏防护。
+- **Evolution 信号检测** — 新增 `scripts/detect-evolution-signals.mjs`，从提交历史和运行时行为中自动发现可复用模式和 agent 漂移。
+- **Meta-Kim 聚合** — 新增 `scripts/meta-kim-aggregate.mjs`，用于跨运行时情报收集和模式综合。
+- **Hook i18n 支持** — 新增 `canonical/runtime-assets/shared/hooks/hook-i18n.mjs`，支持 4 种语言（en、zh-CN、ja-JP、ko-KR）的用户消息。
+- **Skip reminder hook** — 新增 `canonical/runtime-assets/shared/hooks/skip-reminder.mjs` 和 `claude/hooks/skip-reminder.mjs`，实现跨运行时的统一 hook 跳过通知。
+- **用户交互模板** — 新增 `canonical/templates/user-interaction/` 目录，包含 decision、batch-decision 和 notice 模板，用于运行时无关的用户交互模式。
+- **postinstall 检查** — 新增 `scripts/postinstall-check.mjs`，在 npm install 后提供 i18n 能力索引发现提示。
+- **单元测试** — 新增 `tests/unit/skip-reminder.test.mjs`，包含 17 个测试用例。
+
+### 变更
+
+- **meta-theory Clarity Gate** — 从 Critical 阶段确认重新设计为 Fetch 后统一确认，包含 4+ 问题、每问题 3-4 选项，在保持质量的同时减少中断。
+- **全部 9 个 meta 智能体** — 更新 SOUL.md 文件，明确 evolution writeback 边界和职责范围。
+- **Workflow contract** — 增强 `config/contracts/workflow-contract.json`，添加 evolutionWritebackPacket 和 capabilityGapPacket schema。
+- **能力索引** — 扩展 `config/capability-index/meta-kim-capabilities.json`，添加 evolution 相关能力。
+- **Runtime sync** — 增强 `scripts/sync-runtimes.mjs`，添加 --reverse 模式用于 runtime-to-canonical evolution 反馈和改进的 hook 依赖管理。
+
+### 修复
+
+- **i18n 合规** — 修复 hooks 中的硬编码英文字符串，改用翻译函数。
+- **PRIN-ST 违规** — 用 SKIP_DECISION 常量和配置驱动值替换 magic strings。
+- **关键词检测** — 用正则词边界改进 SIMPLE_KEYWORDS，减少误报。
+
 ## [2.0.32] - 2026-05-19
 
 ### 新增

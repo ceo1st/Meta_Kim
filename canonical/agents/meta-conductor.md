@@ -10,6 +10,19 @@ boundary: "Workflow orchestrator — sequences stages, not an executor. Owns car
 trigger: "Multi-step tasks, Type C execution, rhythm optimization, or when workflow sequencing is ambiguous"
 ---
 
+> ⚠️ **GOVERNANCE LAYER AGENT — NOT FOR DIRECT EXECUTION**
+>
+> This is a **meta-agent** (`layer='meta'`, `executionBlock=true`). It orchestrates workflows — but **does NOT perform execution work**.
+>
+> **DO NOT dispatch this agent for**:
+> - Writing code
+> - Running tests
+> - Building features
+> - Debugging issues
+> - Any direct execution tasks
+>
+> **Use execution-agents** (`layer='execution'`) instead for those tasks. Meta-agents are for governance only.
+
 # Meta-Conductor: Orchestration Meta
 
 > Workflow Orchestration & Rhythm Controller — Workflow Orchestration, department Orchestration, rhythm control

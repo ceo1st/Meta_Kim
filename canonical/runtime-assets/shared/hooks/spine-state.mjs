@@ -152,6 +152,10 @@ export function createInitialState({ taskClassification, triggerReason }) {
     dispatchChain: {},
     queryBypass: false,
     executionStarted: false,
+    // Simple mode: allows hook skipping for lightweight tasks
+    simpleMode: false,
+    // Audit trail for skipped hooks
+    skippedHooks: [],
   };
 }
 
@@ -335,4 +339,50 @@ export function isReadOnlyTool(toolName) {
     "ReadMcpResourceTool",
   ];
   return readOnlyTools.includes(toolName);
+}
+
+/**
+ * Enable or disable simple mode in spine state
+ * Simple mode allows selective hook skipping for lightweight tasks
+ */
+export function setSimpleMode(state, enabled) {
+  return { ...state, simpleMode: !!enabled };
+}
+
+/**
+ * Record a skipped hook to the audit trail
+ * @param {object} state - Current spine state
+ * @param {string} hookName - Name of the hook being skipped
+ * @param {string} reason - Why the hook was skipped
+ * @returns {object} - Updated state with skip record added
+ */
+export function recordSkippedHook(state, hookName, reason) {
+  const record = {
+    hook: hookName,
+    reason,
+    timestamp: new Date().toISOString(),
+  };
+
+  return {
+    ...state,
+    skippedHooks: [...(state.skippedHooks || []), record],
+  };
+}
+
+/**
+ * Get the current governance flow from task classification
+ * Maps task classification to governance flow for hook skip decisions
+ */
+export function getGovernanceFlow(state) {
+  const tc = state?.taskClassification;
+
+  // Direct mapping from common classifications to governance flows
+  const flowMap = {
+    query: "query",
+    simple_exec: "simple_exec",
+    complex_dev: "complex_dev",
+    meta_theory_auto: "complex_dev", // meta-theory is always complex
+  };
+
+  return flowMap[tc] || "simple_exec"; // Default to simple_exec
 }

@@ -300,6 +300,7 @@ ${r ? `Raw error: ${r}` : ""}
     cmdCheck: "Check environment",
     cmdDoctor: "Diagnose Meta_Kim health",
     cmdVerify: "Full verification",
+    cmdDiscover: "Scan global capabilities (agents/skills)",
     // Post-install notes
     postInstallNotesHeading: "Post-install notes:",
     postInstallNotesIntro:
@@ -765,6 +766,7 @@ ${r ? `原始错误：${r}` : ""}
     cmdCheck: "检查环境",
     cmdDoctor: "诊断 Meta_Kim 健康状态",
     cmdVerify: "完整验证",
+    cmdDiscover: "扫描全局能力（agents/skills）",
     // 安装后注意事项
     postInstallNotesHeading: "安装后注意事项：",
     postInstallNotesIntro: "安装完成后，各层能力的使用方式如下：",
@@ -1217,6 +1219,7 @@ ${r ? `生エラー：${r}` : ""}
     cmdCheck: "環境をチェック",
     cmdDoctor: "Meta_Kim の健全性を診断",
     cmdVerify: "フル検証",
+    cmdDiscover: "グローバル機能をスキャン（agents/skills）",
     // インストール後の注意事項
     postInstallNotesHeading: "インストール後の注意事項：",
     postInstallNotesIntro: "インストール完了後、各層の使い方は以下の通りです：",
@@ -1697,6 +1700,7 @@ ${r ? `원본 오류：${r}` : ""}
     cmdCheck: "환경 확인",
     cmdDoctor: "Meta_Kim 상태 진단",
     cmdVerify: "전체 검증",
+    cmdDiscover: "전역 기능 스캔（agents/skills）",
     // 설치 후 주의사항
     postInstallNotesHeading: "설치 후 주의사항:",
     postInstallNotesIntro: "설치 완료 후 각 층의 사용 방식은 다음과 같습니다:",
@@ -4605,6 +4609,9 @@ function showNextSteps(runtimes) {
     );
     console.log(
       `${C.dim}node setup.mjs --check           # ${t.cmdCheck}${C.reset}`,
+    );
+    console.log(
+      `${C.dim}npm run discover:global          # ${t.cmdDiscover}${C.reset}`,
     );
     console.log(
       `${C.dim}npm run meta:doctor:governance    # ${t.cmdDoctor}${C.reset}`,

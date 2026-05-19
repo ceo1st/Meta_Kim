@@ -367,6 +367,35 @@
       "requiresInterruptionJustification": true,
       "deferRequiresDeadline": true
     },
+    "userInteractionPolicy": {
+      "description": "Policy for when to use AskUserQuestion (decision popup) vs notice (informational output)",
+      "decisionTriggerEnum": [
+        "multiple_viable_solutions",
+        "product_direction_required",
+        "security_or_rollback_risk"
+      ],
+      "defaultWhen": [
+        "multiple_options_with_tradeoffs",
+        "business_clarification_needed",
+        "risk_acknowledgment_required"
+      ],
+      "optionQualityStandard": {
+        "requiredDimensions": [
+          "what_changes",
+          "problem_solved",
+          "advantages",
+          "disadvantages"
+        ],
+        "description": "Every option must specify: what changes, what problem it solves, advantages, and disadvantages"
+      },
+      "batchDecisionMode": {
+        "enabled": true,
+        "dependencyDetection": "auto",
+        "linearFormat": "sequential_questions",
+        "parallelFormat": "batch_list",
+        "description": "When multiple independent questions exist, collect and present them in one interaction"
+      }
+    },
     "controlIntervention": {
       "decisionTypeEnum": [
         "skip",

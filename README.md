@@ -75,7 +75,7 @@ After global install (`node setup.mjs` or `npx`), what works where:
 | Any other project with Claude Code | Hooks (safety, format, memory save) + `/meta-theory` skill | Say "run meta theory" or type `/meta-theory` |
 | Codex | AGENTS.md rules + 8 custom agents + `/meta-theory` command | Type "run meta theory" or `/meta-theory` |
 | OpenClaw | Workspace agents + Plugin SDK hooks (28 events) | Requires `auth.json` configured |
-| Cursor | Agent projections + skill mirrors + hooks | Lightweight; mainly read + review |
+| Cursor | Agent projections + skill mirrors + hooks + MCP | Lightweight; mainly read + review |
 
 ---
 
@@ -515,7 +515,7 @@ But there is an important caveat: the four runtimes are not equal. Claude Code c
 | --- | --- | --- | --- | --- |
 | **Agents** | Native agents/subagents, mature at both project and user scope | Strong custom agents/subagents | Workspace-style agents, supports agent-to-agent | Lightweight agent projection |
 | **Skills / references** | Native skills, references, and a mature global ecosystem | `.codex/skills/` works well | Workspace skills and installable skills | Lighter skill/reference support |
-| **Hooks / automation** | Project hooks + settings.json + plugin ecosystem | No repo-level native hook file surface | Workspace boot/hook-style capabilities | Weakest native governance hooks |
+| **Hooks / automation** | Project hooks + settings.json + plugin ecosystem | Trusted `.codex/hooks.json` project/user hooks | Workspace boot/hook-style capabilities | `.cursor/hooks.json` lowerCamel lifecycle hooks |
 | **MCP / configuration** | Full native MCP and config surface | Can connect via runtime adapters and MCP | Clear workspace config | Can use MCP, but the surface is lighter |
 | **Governance loop capacity** | **Highest** | High, but below Claude Code | High, but different in form | Lightest |
 
@@ -629,13 +629,13 @@ Each layer has different activation requirements:
 
 | Capability | Claude Code | Codex | OpenClaw | Cursor |
 |-----------|------------|-------|----------|--------|
-| PreToolUse hook (auto-prompt before Glob/Grep) | ✅ settings.json | ❌ | ❌ | ❌ |
+| PreToolUse hook (auto-prompt before Glob/Grep) | ✅ settings.json | ✅ trusted `.codex/hooks.json` | ❌ | ✅ `.cursor/hooks.json` `preToolUse` |
 | Slash command `/graphify` | ✅ | ✅ | ✅ | ✅ |
 | git hook auto-rebuild (post-commit/checkout) | ✅ | ✅ | ✅ | ✅ |
 | AGENTS.md resident rules | N/A | ✅ | ✅ | ✅ |
 | Multi-platform install via setup.mjs | ✅ claude | ✅ codex | ✅ claw | ✅ cursor |
 
-**Key insight**: Claude Code is the only platform with a **PreToolUse hook** that auto-prompts before searches. Other platforms (Codex, OpenClaw, Cursor) use **AGENTS.md** rules injected at startup — graph awareness is still present but triggers at session start rather than per-search. Both mechanisms are automatic once installed.
+**Key insight**: Claude Code, Codex, and Cursor all have native hook configuration, but their schemas differ. OpenClaw uses its own internal/plugin hook model.
 
 For multi-platform setups, run `node setup.mjs` — it loops through all selected platforms and runs `graphify <platform> install` for each one idempotently.
 
@@ -655,7 +655,7 @@ For multi-platform setups, run `node setup.mjs` — it loops through all selecte
   - For **Cursor**: `~/.cursor/hooks.json` receives `beforeSubmitPrompt` and `stop` bridges to the shared memory hook.
 - **Start server**: `memory server --http` (with `MCP_ALLOW_ANONYMOUS_ACCESS=true` on macOS/Linux, or `$env:MCP_ALLOW_ANONYMOUS_ACCESS="true"` in Windows PowerShell), then access at `http://localhost:8000`.
 - **Port**: the server and Meta_Kim hooks use `http://localhost:8000`.
-- **Hooks**: auto-registered for Claude Code, Codex, OpenClaw, and Cursor; each runtime uses its native hook format while sharing the same MCP Memory HTTP endpoint.
+- **Hooks**: auto-registered for Claude Code, Codex, Cursor, and OpenClaw; each runtime uses its native hook format while sharing the same MCP Memory HTTP endpoint.
 - **MCP registration vs writes**: `.mcp.json` registers the MCP Memory server (`memory server`) for client access. Automatic session writes are separate lifecycle hooks: Claude Code uses `stop-memory-save.mjs`, Codex/Cursor use `meta-kim-memory-save.mjs`, and OpenClaw uses its managed `mcp-memory-service` hook.
 - **Query**: `npm run meta:query:runs -- --owner <agent>` — find past runs by agent, or `npm run meta:index:runs -- <artifact>` for manual indexing of validated run artifacts
 - **Troubleshooting**:

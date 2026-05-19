@@ -75,7 +75,7 @@ npm run meta:validate
 | 任意其他项目 + Claude Code | Hooks（安全拦截、格式化、记忆保存）+ `/meta-theory` skill | 说"run meta theory"或输入 `/meta-theory` |
 | Codex | AGENTS.md 规则 + 8 个自定义 agent + `/meta-theory` 命令 | 输入"run meta theory"或 `/meta-theory` |
 | OpenClaw | Workspace agent + Plugin SDK hooks（28 个事件） | 需要配置 `auth.json` |
-| Cursor | Agent 投影 + skill 镜像 + hooks | 最轻量；适合阅读和轻量操作 |
+| Cursor | Agent 投影 + skill 镜像 + hooks + MCP | 最轻量；适合阅读和轻量操作 |
 
 ---
 
@@ -514,7 +514,7 @@ flowchart TB
 | --- | --- | --- | --- | --- |
 | **agent** | 原生 agents/subagents，项目级与用户级都成熟 | custom agents/subagents 很强 | workspace 型 agent，支持 agent-to-agent | agent 投影可用，较轻 |
 | **skill/references** | 原生 skill、references、全局技能生态完整 | `.codex/skills/` 兼容很好 | workspace skill + installable skill | skill/references 接入较轻 |
-| **hook/自动化** | 项目级 hooks + settings.json + 插件生态（12 events） | hooks.json 原生支持（5 events, v0.117.0+） | Plugin SDK hooks（28 hooks） | hooks.json 原生支持（4 events） |
+| **hook/自动化** | 项目级 hooks + settings.json + 插件生态 | 可信 `.codex/hooks.json` 项目/用户 hooks | Workspace boot / Plugin SDK hook 能力 | `.cursor/hooks.json` lowerCamel lifecycle hooks |
 | **MCP/配置** | 原生 MCP 与配置面完整 | 可接 runtime adapter 与 MCP | workspace config 明确 | 可接 MCP，但整体较轻 |
 | **治理闭环承载力** | **最高** | 高，但低于 Claude Code | 高，但形态不同 | 最轻 |
 
@@ -628,13 +628,13 @@ Meta_Kim 的记忆不是单一的。它有三层，各有分工，共同保障 a
 
 | 能力 | Claude Code | Codex | OpenClaw | Cursor |
 | --- | --- | --- | --- | --- |
-| PreToolUse hook（Glob/Grep 前自动提示） | ✅ settings.json | ❌ | ❌ | ❌ |
+| PreToolUse hook（Glob/Grep 前自动提示） | ✅ settings.json | ✅ trusted `.codex/hooks.json` | ❌ | ✅ `.cursor/hooks.json` `preToolUse` |
 | 斜杠命令 `/graphify` | ✅ | ✅ | ✅ | ✅ |
 | git hook 自动重建（post-commit/checkout） | ✅ | ✅ | ✅ | ✅ |
 | AGENTS.md 常驻规则 | 不适用 | ✅ | ✅ | ✅ |
 | setup.mjs 多平台安装 | ✅ claude | ✅ codex | ✅ claw | ✅ cursor |
 
-**核心洞察**：Claude Code 是唯一一个拥有 **PreToolUse hook** 的平台——在搜索前自动提示。其他平台（Codex、OpenClaw、Cursor）使用 **AGENTS.md** 规则，这些规则在会话启动时注入，图谱感知仍然存在，但触发时机是会话开始而非每次搜索。两种机制安装后都是自动化的。
+**核心洞察**：Claude Code、Codex 和 Cursor 都有原生 hook 配置，但 schema 不同。OpenClaw 使用自己的 internal/plugin hook 模型。
 
 多平台安装请运行 `node setup.mjs`——它会遍历所有选中的平台，幂等执行 `graphify <platform> install`。
 
@@ -654,7 +654,7 @@ Meta_Kim 的记忆不是单一的。它有三层，各有分工，共同保障 a
   - **Cursor**：`~/.cursor/hooks.json` 自动写入 `beforeSubmitPrompt` 和 `stop` 桥接，复用共享记忆 hook。
 - **启动服务器**：`memory server --http`（macOS/Linux 需设置 `MCP_ALLOW_ANONYMOUS_ACCESS=true`；Windows PowerShell 使用 `$env:MCP_ALLOW_ANONYMOUS_ACCESS="true"`），然后访问 `http://localhost:8000`。
 - **端口**：服务器和 Meta_Kim hooks 统一使用 `http://localhost:8000`。
-- **Hook**：Claude Code、Codex、OpenClaw、Cursor 都会自动注册；各运行时使用自己的 hook 格式，但共享同一个 MCP Memory HTTP 端点。
+- **Hook**：Claude Code、Codex、Cursor、OpenClaw 都会自动注册；各运行时使用自己的 hook 格式，但共享同一个 MCP Memory HTTP 端点。
 - **MCP 注册与写入区别**：`.mcp.json` 只注册 MCP Memory server（`memory server`）供客户端访问；自动写入会话记忆由 lifecycle hooks 单独完成：Claude Code 使用 `stop-memory-save.mjs`，Codex/Cursor 使用 `meta-kim-memory-save.mjs`，OpenClaw 使用 managed `mcp-memory-service` hook。
 - **查询**：`npm run meta:query:runs -- --owner <agent>`——按 agent 查找历史 run，或 `npm run meta:index:runs -- <artifact>` 手动索引 run 产物
 - **故障排除**：

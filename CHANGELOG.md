@@ -6,6 +6,34 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.0.34] - 2026-05-20
+
+### Added
+
+- **meta-chrysalis agent** — New specialist for Evolution writeback orchestration, automating the flow from spine evolution artifacts to canonical source updates with Five Criteria validation and recursion prevention.
+- **Evolution Writeback Gate** — Added `scripts/evolution-writeback-gate.mjs` with Five Criteria validation, PRIN-ST compliance checks, circular dependency detection, and threshold gaming prevention.
+- **Evolution signal detection** — Added `scripts/detect-evolution-signals.mjs` for automatic discovery of reusable patterns and agent drift from commit history and runtime behavior.
+- **Meta-Kim aggregate** — Added `scripts/meta-kim-aggregate.mjs` for cross-runtime intelligence gathering and pattern synthesis.
+- **Hook i18n support** — Added `canonical/runtime-assets/shared/hooks/hook-i18n.mjs` with 4-language support (en, zh-CN, ja-JP, ko-KR) for user-facing hook messages.
+- **Skip reminder hook** — Added `canonical/runtime-assets/shared/hooks/skip-reminder.mjs` and `claude/hooks/skip-reminder.mjs` for consistent hook skip notifications across runtimes.
+- **User interaction templates** — Added `canonical/templates/user-interaction/` with decision, batch-decision, and notice templates for runtime-agnostic user interaction patterns.
+- **postinstall check** — Added `scripts/postinstall-check.mjs` for i18n capability index discovery prompts after npm install.
+- **Unit tests** — Added `tests/unit/skip-reminder.test.mjs` with 17 test cases for skip reminder functionality.
+
+### Changed
+
+- **meta-theory Clarity Gate** — Redesigned from Critical-stage confirmation to unified post-Thinking confirmation with 4+ questions, 3-4 options each, reducing interruptions while maintaining quality.
+- **All 9 meta agents** — Updated SOUL.md files with evolution writeback boundaries and clarified职责范围.
+- **Workflow contract** — Enhanced `config/contracts/workflow-contract.json` with evolutionWritebackPacket and capabilityGapPacket schemas.
+- **Capability index** — Expanded `config/capability-index/meta-kim-capabilities.json` with evolution-related capabilities.
+- **Runtime sync** — Enhanced `scripts/sync-runtimes.mjs` with --reverse mode for runtime-to-canonical evolution feedback and improved hook dependency management.
+
+### Fixed
+
+- **i18n compliance** — Fixed hardcoded English strings in hooks to use translation functions.
+- **PRIN-ST violations** — Replaced magic strings with SKIP_DECISION constants and configuration-driven values.
+- **Keyword detection** — Improved SIMPLE_KEYWORDS with regex word boundaries to reduce false positives.
+
 ## [2.0.32] - 2026-05-19
 
 ### Added

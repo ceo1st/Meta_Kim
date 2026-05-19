@@ -23,6 +23,35 @@ Need an agent for X → Search who declares "Own X" → Call the best match
 
 **⚠️ Iron Rule**: Do NOT write `call code-reviewer` or `call meta-prism` as hardcoded steps. Describe the **capability needed**; let the executor discover **who provides it** at runtime via the Search-Match-Invoke pattern.
 
+### Meta-Agent vs Execution-Agent Layer (CRITICAL)
+
+Meta_Kim distinguishes between two agent layers. **Confusing these layers is a governance violation.**
+
+| Layer | Purpose | Examples | When to Use |
+|-------|---------|----------|-------------|
+| **Meta-Agents** (`layer='meta'`) | Governance: coordination, orchestration, review, synthesis | `meta-warden`, `meta-prism`, `meta-conductor`, `meta-genesis`, `meta-artisan`, `meta-sentinel`, `meta-librarian`, `meta-scout`, `meta-chrysalis` | **Governance work only**: planning, reviewing, coordinating, synthesizing. NEVER for writing code, running tests, or building features. |
+| **Execution-Agents** (`layer='execution'`) | Work: performs actual tasks (coding, testing, debugging, etc.) | `code-reviewer`, `architect`, `test-automator`, `frontend-developer`, `python-pro`, etc. | **Execution work**: writing code, running tests, debugging issues, building features. |
+
+**⛔ FORBIDDEN PATTERNS**:
+- ❌ Dispatching `meta-prism` to write code → Use `frontend-developer` or language-specific agent instead
+- ❌ Dispatching `meta-conductor` to implement features → Use execution agents; `meta-conductor` only orchestrates workflow
+- ❌ Dispatching `meta-warden` to do analysis → `meta-warden` coordinates and synthesizes; use specialist for analysis
+
+**How to identify layers**:
+- Meta-agents: `id` starts with `meta-` in `config/capability-index/meta-kim-capabilities.json`, OR agent's SOUL.md has `⚠️ GOVERNANCE LAYER AGENT` warning box
+- Execution-agents: All other agents in `~/.claude/agents/`, `.codex/agents/`, or global inventory
+
+**Fetch-first discipline**:
+1. Search `config/capability-index/meta-kim-capabilities.json` → check `layer` field
+2. Search runtime mirrors → check `layer` field  
+3. Search `.meta-kim/state/{profile}/capability-index/global-capabilities.json` → check `layer` field
+4. If no `layer` field, assume `execution` for non-`meta-` prefixed agents, `meta` for `meta-` prefixed
+
+**Detection & enforcement**:
+- The `enforce-agent-dispatch.mjs` hook will warn if a meta-agent is dispatched during execution stage for execution work
+- Capability index schema (`config/contracts/capability-index.schema.json`) defines the `layer` and `executionBlock` fields
+- Each meta-agent SOUL.md has a prominent warning box at the top
+
 ### Agent Ownership Rule
 
 Every **executable** task must have an explicit **agent owner**.
@@ -136,6 +165,43 @@ The 8-stage spine is the **human-readable orchestration surface**. Underneath it
 ### User Language Rule
 
 Stage names remain canonical English protocol labels (`Critical`, `Fetch`, `Thinking`, `Review`, etc.). All user-facing text around those labels follows the user's latest language or explicit language preference. Do not hardcode Chinese, English, or any single language into option labels, clarifying questions, confirmation cards, or summaries. Record the language decision in `intentGatePacket.userLanguage`, `intentGatePacket.languageSource`, `cardDecision.userLanguage`, and `deliveryShell.languageSource`.
+
+### User Interaction Policy
+
+**Decision vs Notice Bifurcation**:
+
+- **Notice (no popup)**: Informational updates, stage transitions, progress reports. Output directly to conversation, no response required. See `canonical/templates/user-interaction/notice-template.md`
+- **Decision (popup)**: Use the runtime's native confirmation mechanism when multiple viable options exist. Each option must include 4 dimensions. See `canonical/templates/user-interaction/decision-template.md`
+
+**Decision Triggers** (from `config/contracts/workflow-contract.json` → `userInteractionPolicy`):
+
+1. `multiple_viable_solutions`: ≥2 solutions with clear trade-offs
+2. `product_direction_required`: Business clarification needed
+3. `security_or_rollback_risk`: Explicit acknowledgment required
+
+**Option Quality Standard** (4-dimension rule):
+
+| Dimension | Required |
+|-----------|----------|
+| `what_changes` | ✅ Specific scope of modification |
+| `problem_solved` | ✅ Corresponding requirement or pain point |
+| `advantages` | ✅ Why choose this approach |
+| `disadvantages` | ✅ Costs or risks |
+
+**Batch Decision Mode**:
+
+When multiple independent questions exist, use `canonical/templates/user-interaction/batch-decision-template.md`. Detect dependencies:
+
+- **Linear**: Later questions depend on earlier choices → sequential format
+- **Parallel**: Independent decisions → batch list format
+
+**Templates Reference**:
+
+| Template | Path | When to Use |
+|----------|------|-------------|
+| Notice | `canonical/templates/user-interaction/notice-template.md` | Stage transitions, progress updates |
+| Decision | `canonical/templates/user-interaction/decision-template.md` | Multiple viable options with trade-offs |
+| Batch Decision | `canonical/templates/user-interaction/batch-decision-template.md` | Multiple independent questions |
 
 ### Card Governance Model
 

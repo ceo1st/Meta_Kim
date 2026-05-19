@@ -45,28 +45,77 @@ Distinguish early: **Meta Architecture** (agent governance, collaboration relati
 
 **Important note: Architecture Type Distinction** — never collapse meta governance questions with repo technical stack questions; clarify which kind of "architecture" the user means.
 
-## Clarity Gate (MANDATORY USER CONFIRMATION)
+## Clarity Gate (UNIFIED CONFIRMATION AFTER THINKING)
 
-**HARD RULE**: For ALL meta-theory invocations, you MUST use the native confirmation mechanism at the Critical stage to confirm:
+**RULE**: After Fetch and Thinking complete, BEFORE Execution, invoke a SINGLE comprehensive confirmation with 4+ questions, each with 3-4 options.
 
-1. **Task Type Confirmation**: Show the inferred Type (A/B/C/D/E) and ask user to confirm
-2. **Scope Confirmation**: Show the analyzed scope and ask if correct
-3. **Approach Confirmation**: Show the proposed approach and ask for approval
+**Timing**: At the transition from Thinking → Execution, after:
+- Critical stage (task classification)
+- Fetch stage (capability discovery and research)
+- Thinking stage (planning, option exploration, decomposition)
 
-**Implementation** (DO NOT SKIP):
+**Confirmation format** — minimum 4 questions, each with 3-4 options:
+
 ```
-When meta-theory is activated:
-  → IMMEDIATELY invoke the platform's native question tool with:
-    - Question: "确认任务类型和处理方式"
-    - Options: [Type A/B/C/D/E with descriptions]
-    - Wait for user response before any other action
+After Thinking completes, BEFORE any Execution:
+  → Invoke native question tool with 4-6 questions:
+
+1. Task Type Confirmation (Type A/B/C/D/E)
+   - Option A: Meta-theory analysis, agent audits, Five Criteria review
+   - Option B: Agent creation/split, capability gap filling
+   - Option C: Development, feature implementation, debugging
+   - Option D: Review proposals/articles, external claims
+   - Option E: Rhythm/card-deck orchestration
+
+2. Scope Confirmation
+   - Option 1: Minimal scope — only explicitly mentioned files/modules
+   - Option 2: Balanced scope — includes direct dependencies
+   - Option 3: Comprehensive scope — includes all related components
+   - Option 4: Custom scope — user specifies exact boundaries
+
+3. Approach/Method Confirmation
+   - Option 1: Direct implementation — code first, review later
+   - Option 2: Iterative approach — small increments with reviews
+   - Option 3: Research-first — analyze then implement
+   - Option 4: Delegate to specialist — dispatch to execution agent
+
+4. Risk/Rollback Plan Confirmation
+   - Option 1: Low risk — easy rollback, no side effects
+   - Option 2: Medium risk — needs testing before deployment
+   - Option 3: High risk — needs staging environment and validation
+   - Option 4: Unknown risk — needs spike/research first
+
+5. [OPTIONAL] Tech Stack/Tool Selection (if multiple viable options)
+   - Option 1: Use existing stack/tools
+   - Option 2: Introduce new tool/library
+   - Option 3: Refactor existing approach
+   - Option 4: Hybrid/gradual migration
+
+6. [OPTIONAL] Priority/Trade-off (if time/resource constraints)
+   - Option 1: Quality first — take time, do it right
+   - Option 2: Speed first — accept technical debt
+   - Option 3: Balance — MVP approach, iterate later
+   - Option 4: Defer — postpone to next iteration
+
+Wait for user response before proceeding to Execution.
 ```
 
-Track ambiguity on **Scope**, **Goal**, **Constraints**, and **Architecture type**:
-- **≥2 dimensions ambiguous** → ask before dispatching
-- **Exactly 1 ambiguous** → state your assumption explicitly, then proceed
+**Option quality requirements**:
+- Each question must have 3-4 distinct options
+- Each option must specify:
+  - What changes (specific scope)
+  - What problem it solves (requirement/pain point)
+  - Advantages (why choose this)
+  - Disadvantages (costs/risks)
+- Options must be meaningfully different (not cosmetic variations)
 
-**This is non-negotiable**: Even if the task seems clear, you MUST ask for confirmation using the native confirmation mechanism.
+**Proceed WITHOUT confirmation ONLY when**:
+- Task is purely read-only/analysis (no modifications)
+- User explicitly said "just do it" / "auto-proceed" / "不需要确认"
+- `queryBypass: true` in spine state
+- Task is trivial (single file, <10 lines change, low risk)
+
+**DO NOT** ask for confirmation at each individual stage (Critical/Fetch/Thinking/Review). Ask ONCE after Thinking, before Execution.
 
 ## User Language and Native Choice Surfaces
 
@@ -180,40 +229,59 @@ If you are about to produce **>3 sentences** of execution-layer analysis, review
 
 **Parallelism**: independent sub-tasks get parallel `Agent` calls.
 
-## User Confirmation (MANDATORY ASKUserQuestion AT EVERY STAGE)
+## User Interaction Policy
 
-**HARD RULE**: Use the native confirmation mechanism at these mandatory checkpoints:
+### Decision vs Notice Bifurcation
 
-### 1. After Critical (Task Classification)
-- Show inferred Type (A/B/C/D/E)
-- Show scope analysis
-- **MUST invoke the native confirmation before proceeding**
+**Notice (no popup)**: Inform the user of current progress and next steps. Output directly to conversation, no response required.
+**Decision (popup)**: Use the runtime's native confirmation mechanism when multiple viable options exist with distinct trade-offs. Each option must specify 4 dimensions.
 
-### 2. After Thinking (Execution Plan)
-- Show dispatch board
-- Show planned agents
-- Show files to modify
-- **MUST invoke the native confirmation before Execution**
+### When to Use Native Confirmation (Decision Triggers)
 
-### 3. After Review (Review Results)
-- Show quality findings
-- Show action items
-- **MUST invoke the native confirmation to confirm next steps**
+Use the runtime's native confirmation mechanism when **ANY** of the following conditions are met:
 
-### 4. Before Verification
-- Show verification checklist
-- **MUST invoke the native confirmation to confirm closure**
+1. **Multiple viable solutions** exist with clear trade-offs (not just cosmetic differences)
+2. **Product/Business direction** must be clarified (cannot be inferred technically)
+3. **Security or rollback risk** exists requiring explicit user acknowledgment
 
+When **NONE** of the above conditions are met, use **Notice** format instead.
+
+### Option Quality Standard (4-Dimension Rule)
+
+Every option presented must include:
+
+| Dimension | Description | Example |
+|-----------|-------------|---------|
+| **What changes** | Specific scope of modification | `Modify .claude/settings.json` |
+| **What problem it solves** | Corresponding requirement or pain point | `Skip non-critical stage confirmations, reduce interruptions` |
+| **Advantages** | Why choose this approach | `Better UX, only decide at key nodes` |
+| **Disadvantages** | Costs or risks | `May miss edge case confirmations` |
+
+### Batch Decision Mode
+
+**Collect all questions** → Detect dependencies → Decide format:
+
+| Dependency Type | Question Format | Example |
+|-----------------|-|---------|
+| **Linear** (later depends on earlier) | Sequential questions | Tech stack → Framework → Tool |
+| **Parallel** (independent) | Batch list, one-time selection | UI style, Deploy method, Test strategy |
+
+**Detection rule**: If Question B's options change based on Question A's answer → Linear. Else → Parallel.
+
+### Stage Progression Notice (No Popup Required)
+
+At each stage transition, output a notice (not a popup):
+
+```markdown
+## 📋 Stage: {Name}
+
+**Inferred:**
+- Type: {A/B/C/D/E}
+- Scope: {description}
+- Next: {next stage name}
+
+**No confirmation required** unless multiple viable approaches exist.
 ```
-Execution Plan:
-- Type: [A/B/C/D/E]
-- Agents to dispatch: [list]
-- Files to modify: [list]
-- Waiting for your confirmation.
-```
-Execute only after the user confirms in their current language (for example "go", "do it", "按这个执行", or equivalent). The accepted confirmation words are examples, not a hardcoded language list.
-
-**THIS IS NON-NEGOTIABLE**: Skip-level confirmation bypass is FORBIDDEN. If native confirmation fails to trigger, pause and report the issue.
 
 ## Fetch-first Pattern (Search → Match → Invoke)
 
