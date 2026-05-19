@@ -657,6 +657,10 @@ Meta_Kim 的记忆不是单一的。它有三层，各有分工，共同保障 a
 - **Hook**：Claude Code、Codex、OpenClaw、Cursor 都会自动注册；各运行时使用自己的 hook 格式，但共享同一个 MCP Memory HTTP 端点。
 - **MCP 注册与写入区别**：`.mcp.json` 只注册 MCP Memory server（`memory server`）供客户端访问；自动写入会话记忆由 lifecycle hooks 单独完成：Claude Code 使用 `stop-memory-save.mjs`，Codex/Cursor 使用 `meta-kim-memory-save.mjs`，OpenClaw 使用 managed `mcp-memory-service` hook。
 - **查询**：`npm run meta:query:runs -- --owner <agent>`——按 agent 查找历史 run，或 `npm run meta:index:runs -- <artifact>` 手动索引 run 产物
+- **故障排除**：
+  - **Windows 上 Python hook 失败**：如果 SessionStart hook 返回退出码 49 或无输出，可能是 Python 命令指向 Windows Store 占位符。运行 `node scripts/install-mcp-memory-hooks.mjs` 可自动检测并修复。安装程序现在会跳过 WindowsApps 占位符，优先使用 `LOCALAPPDATA\Programs\Python*` 下的真实 Python。使用 `--force` 参数可强制重新注册。
+  - **检查安装状态**：运行 `node scripts/install-mcp-memory-hooks.mjs --check` 验证 hook 状态和 Python 路径有效性。
+  - **手动验证**：用 `python --version` 或检测到的路径（如 `"C:/Users/你的用户名/AppData/Local/Programs/Python/Python311/python.exe" --version`）测试 Python 命令。
 
 ### 三层协同
 

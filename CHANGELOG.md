@@ -16,6 +16,7 @@ When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the
   - `utils.mjs`: shared hook utilities
 - **Codex Skill hook support** — Updated `scripts/sync-runtimes.mjs` to configure Skill hook for Codex runtime, enabling spine auto-trigger across platforms.
 - **SHARED_HOOK_FILES alias** — Added `SHARED_HOOK_FILES` export in `scripts/runtime-sync-check.mjs` with alias `CLAUDE_HOOK_FILES` for backwards compatibility.
+- **MCP Memory hook auto-fix** — Hook installer now detects and auto-fixes invalid Python paths in existing hook registrations. See `scripts/install-mcp-memory-hooks.mjs --force` for manual update.
 
 ### Changed
 

@@ -16,6 +16,7 @@
   - `utils.mjs`: 共享 hooks 工具函数
 - **Codex Skill hook 支持** — 更新 `scripts/sync-runtimes.mjs`，为 Codex 运行时配置 Skill hook，实现跨平台 spine 自动触发。
 - **SHARED_HOOK_FILES 别名** — 在 `scripts/runtime-sync-check.mjs` 新增 `SHARED_HOOK_FILES` 导出，`CLAUDE_HOOK_FILES` 作为向后兼容别名。
+- **MCP Memory hook 自动修复** — Hook 安装脚本现在会自动检测并修复无效的 Python 路径。使用 `scripts/install-mcp-memory-hooks.mjs --force` 可强制更新。
 
 ### 变更
 

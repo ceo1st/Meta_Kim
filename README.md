@@ -658,6 +658,10 @@ For multi-platform setups, run `node setup.mjs` — it loops through all selecte
 - **Hooks**: auto-registered for Claude Code, Codex, OpenClaw, and Cursor; each runtime uses its native hook format while sharing the same MCP Memory HTTP endpoint.
 - **MCP registration vs writes**: `.mcp.json` registers the MCP Memory server (`memory server`) for client access. Automatic session writes are separate lifecycle hooks: Claude Code uses `stop-memory-save.mjs`, Codex/Cursor use `meta-kim-memory-save.mjs`, and OpenClaw uses its managed `mcp-memory-service` hook.
 - **Query**: `npm run meta:query:runs -- --owner <agent>` — find past runs by agent, or `npm run meta:index:runs -- <artifact>` for manual indexing of validated run artifacts
+- **Troubleshooting**:
+  - **Python hook fails on Windows**: If the SessionStart hook fails with exit code 49 or shows no output, the Python command may point to the Windows Store shim. Run `node scripts/install-mcp-memory-hooks.mjs` to auto-detect and fix. The installer now skips WindowsApps shims and prefers explicit Python executables from `LOCALAPPDATA\Programs\Python*`. Use `--force` flag to re-register even if current path appears valid.
+  - **Check installation**: Run `node scripts/install-mcp-memory-hooks.mjs --check` to verify hook status and Python path validity.
+  - **Manual verification**: Test your Python command with `python --version` or the detected path with `"C:/Users/YOUR_USER/AppData/Local/Programs/Python/Python311/python.exe" --version`.
 
 ### How the three layers work together
 
