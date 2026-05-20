@@ -796,7 +796,7 @@
         "project_only",
         "cross_project_readonly"
       ],
-      "description": "Mandatory execution shell for non-query flows: who owns the task, which business-readable role is being dispatched, which capabilities are allowed/blocked, what memory policy the child gets, and which owners close review / verification. Runtime-assigned nicknames may be recorded as runtimeInstanceAlias only; they must never replace roleDisplayName."
+      "description": "Mandatory execution shell for non-query flows: who owns the task, which short business role is being dispatched, which capabilities are allowed/blocked, what memory policy the child gets, and which owners close review / verification. Runtime-assigned nicknames may be recorded as runtimeInstanceAlias only; they must never replace roleDisplayName."
     },
     "orchestrationTaskBoardPacket": {
       "requiredFields": [
@@ -896,9 +896,10 @@
       "namingPolicy": {
         "roleDisplayNameRequired": true,
         "businessSemanticNamesOnly": true,
+        "shortRoleNamesRequired": true,
         "runtimeNicknamesAreAliasesOnly": true,
         "forbiddenPrimaryNamePattern": "^[A-Z][a-z]+$",
-        "description": "User-visible agent names must describe business responsibility, e.g. frontend-home-page, database-schema, ux-flow-review. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
+        "description": "User-visible agent names must be short business role names: use role or role-scope forms such as 前端, 后端-登录, 测试-安装, frontend, backend-login. Avoid long task descriptions such as frontend-page-implementation. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
       },
       "description": "Capability-first role blueprint. It separates businessRoleId, roleDisplayName, selected owner agent, assigned responsibility slice, owner responsibility delta, and per-run role instances so the same agent can run multiple named shards in parallel without confusing users. ownerResolution uses reuse_existing_owner, upgrade_existing_owner, or create_owner_first."
     },
@@ -1043,7 +1044,7 @@
         "collisionPolicy",
         "verifySteps"
       ],
-      "description": "派发给worker agent的执行任务包。三大编排核心字段：dependsOn（前置依赖，见dependencyContract）/ parallelGroup（并行分组）/ mergeOwner（合并负责人）。roleDisplayName 是用户可见业务角色名；runtimeInstanceAlias 只记录宿主临时昵称，不能替代业务名。verifySteps 提供原子级完成标准，用于 Verification 阶段的逐条检查。",
+      "description": "派发给worker agent的执行任务包。三大编排核心字段：dependsOn（前置依赖，见dependencyContract）/ parallelGroup（并行分组）/ mergeOwner（合并负责人）。roleDisplayName 是用户可见的短业务岗位名；runtimeInstanceAlias 只记录宿主临时昵称，不能替代业务名。verifySteps 提供原子级完成标准，用于 Verification 阶段的逐条检查。",
       "dependsOnField": {
         "type": "array",
         "items": {
@@ -1114,7 +1115,7 @@
           "sequentialize"
         ],
         "sameOwnerParallelGroupRequiresUnifiedMergeOwner": true,
-        "description": "同一个 ownerAgent 可以并行启动多个实例，但每个实例必须有业务可读 roleDisplayName、唯一 roleInstanceId、明确 shardKey / shardScope、workspaceIsolation、artifactNamespace、collisionPolicy 和统一 mergeOwner。同一 ownerAgent 的并行实例如果共享 parallelGroup，必须指向同一个 mergeOwner；没有这些字段或合并规则的重复 ownerAgent 是伪并行。"
+        "description": "同一个 ownerAgent 可以并行启动多个实例，但每个实例必须有短业务岗位 roleDisplayName、唯一 roleInstanceId、明确 shardKey / shardScope、workspaceIsolation、artifactNamespace、collisionPolicy 和统一 mergeOwner。同一 ownerAgent 的并行实例如果共享 parallelGroup，必须指向同一个 mergeOwner；没有这些字段或合并规则的重复 ownerAgent 是伪并行。"
       },
       "verifyStepsField": {
         "type": "array",

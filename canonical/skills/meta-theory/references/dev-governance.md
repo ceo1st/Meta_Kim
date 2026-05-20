@@ -544,7 +544,7 @@ Each lane becomes a capability slot with:
   "toolsOrMcp": [],
   "parallelPolicy": "single | shardable | same-agent-multi-instance | exclusive",
   "dependsOn": [],
-  "mergeOwner": "business-readable role name",
+  "mergeOwner": "short business role name",
   "gapAction": "reuse_existing_owner | upgrade_existing_owner | create_owner_first",
   "validation": []
 }
@@ -792,10 +792,10 @@ Break Stage 1's task into independent sub-tasks:
     {
       "id": 1,
       "description": "what specifically to do",
-      "owner": "business-readable role display name",
+      "owner": "short business role display name",
       "ownerAgent": "agent type from Stage 2",
       "businessRoleId": "frontend",
-      "roleDisplayName": "frontend-home-page",
+      "roleDisplayName": "frontend",
       "roleInstanceId": "frontend#home-page",
       "runtimeInstanceAlias": "optional host nickname only",
       "ownerMode": "reuse_existing_owner | upgrade_existing_owner | create_owner_first",
@@ -807,7 +807,7 @@ Break Stage 1's task into independent sub-tasks:
       "shardKey": "route | component-area | file-scope | test-suite | data-domain",
       "shardScope": ["specific files, routes, modules, or test suite"],
       "workspaceIsolation": "same_workspace_readonly_overlap | isolated_worktree | file_lock_required",
-      "artifactNamespace": "frontend-home-page",
+      "artifactNamespace": "frontend",
       "collisionPolicy": "no_overlap | merge_by_owner | lock_required",
       "fileScope": ["file-or-module-a", "file-or-module-b"],
       "constraints": ["boundary1", "dependency1"],
@@ -819,7 +819,7 @@ Break Stage 1's task into independent sub-tasks:
 
 `recommendedSkills` comes from Fetch Step 1.6 — skills discovered via search index + agent's own `recommended_skills` YAML field (cached by previous Evolution runs). During Execution, include these skill references in the agent's dispatch prompt so the agent invokes them during work.
 
-**Business-readable naming rule**: The user-facing `owner` / `roleDisplayName` must explain the work, not the platform nickname. Use names such as `ux-flow-review`, `frontend-dashboard-table`, `database-migration`, `browser-qa-mobile`. Random personal aliases assigned by the host runtime are stored only in `runtimeInstanceAlias`; they must not appear as the primary role name in the task board or final summary.
+**Short business role naming rule**: The user-facing `owner` / `roleDisplayName` must explain the role briefly, not the platform nickname or a long task sentence. Use role or role-scope forms such as `前端`, `后端-登录`, `测试-安装`, `frontend`, `backend-login`, `db-schema`. Prefer `前端` over `前端页面实现`, and prefer `frontend` over `frontend-page-implementation`. Random personal aliases assigned by the host runtime are stored only in `runtimeInstanceAlias`; they must not appear as the primary role name in the task board or final summary.
 
 **Same-agent multi-instance rule**: The same `ownerAgent` can appear in multiple packets when the work is shardable. This is valid only when each packet has a distinct `roleInstanceId`, `shardKey`, non-overlapping or locked `shardScope`, explicit `workspaceIsolation`, a unique `artifactNamespace`, an explicit `collisionPolicy`, and one unified `mergeOwner` for the parallel group. Without those fields, repeated ownerAgent entries are treated as fake parallelism and fail the decomposition gate.
 
@@ -952,7 +952,7 @@ Thinking must lock down the execution protocol before any `Agent` tool invocatio
     "roles": [
       {
         "businessRoleId": "frontend",
-        "roleDisplayName": "frontend-home-page",
+        "roleDisplayName": "frontend",
         "ownerAgent": "frontend-developer",
         "capabilityNeed": "frontend implementation",
         "assignedResponsibilitySlice": "Implement the home route UI from the UX and UI handoff",
@@ -969,15 +969,20 @@ Thinking must lock down the execution protocol before any `Agent` tool invocatio
     "roleCoverageGate": "pass | fail",
     "missingRoles": [],
     "duplicateRolePolicy": "allow_instances_when_sharded",
-    "namingPolicy": "business-readable names required; runtime nicknames are aliases only"
+    "namingPolicy": {
+      "roleDisplayNameRequired": true,
+      "businessSemanticNamesOnly": true,
+      "shortRoleNamesRequired": true,
+      "runtimeNicknamesAreAliasesOnly": true
+    }
   },
   "workerTaskPackets": [
     {
       "packetId": "task-001",
-      "owner": "frontend-home-page",
+      "owner": "frontend",
       "ownerAgent": "frontend-developer",
       "businessRoleId": "frontend",
-      "roleDisplayName": "frontend-home-page",
+      "roleDisplayName": "frontend",
       "roleInstanceId": "frontend#home-page",
       "runtimeInstanceAlias": "optional host nickname only",
       "ownerMode": "reuse_existing_owner",
@@ -987,7 +992,7 @@ Thinking must lock down the execution protocol before any `Agent` tool invocatio
       "shardKey": "route",
       "shardScope": ["home"],
       "workspaceIsolation": "same_workspace_readonly_overlap",
-      "artifactNamespace": "frontend-home-page",
+      "artifactNamespace": "frontend",
       "collisionPolicy": "no_overlap",
       "deliverableLink": "how this packet connects back to the primary deliverable",
       "recommendedSkills": ["skill-id-1", "skill-id-2"]
@@ -1013,7 +1018,7 @@ Before proceeding to Step 4, the plan must pass this gate:
 | **Multi-file / multi-capability** | Task spans >1 file OR >1 capability dimension | MUST produce >= 2 `workerTaskPackets` |
 | **Single-Packet Anti-Pattern** | Only 1 packet produced for a multi-file / multi-capability task | REJECT — re-decompose or justify why a single packet is genuinely sufficient (single-file, single-capability, pure logic change) |
 | **Business-flow coverage** | `businessFlowBlueprintPacket` covers expected lanes or documents omitted lanes with reasons | REJECT — add missing lanes or omission reasons |
-| **Business-readable role names** | `roleDisplayName` describes the responsibility; runtime nicknames are aliases only | REJECT — replace personal/random names with business role names |
+| **Short business role names** | `roleDisplayName` uses a role or role-scope form (`前端`, `后端-登录`, `frontend`, `backend-login`); runtime nicknames are aliases only | REJECT — replace personal/random names or long task descriptions with short business role names |
 | **Role responsibility assignment** | Every `agentBlueprintPacket.roles[]` entry declares `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, and `ownerResolution` | REJECT — fill the role iteration fields before worker packets |
 | **Role coverage gap** | Failed `roleCoverageGate`, non-empty `missingRoles`, or `ownerResolution = upgrade_existing_owner | create_owner_first` has `capabilityGapPacket` and approved `executionAgentCard` | REJECT — create or upgrade the owner first |
 | **Same-agent multi-instance** | Repeated `ownerAgent` entries have unique `roleInstanceId`, shard scope, artifact namespace, isolation/collision policy, and one merge owner | REJECT — add shard/merge rules or make the work sequential |

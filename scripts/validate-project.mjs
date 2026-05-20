@@ -1235,10 +1235,11 @@ async function validateWorkflowContract() {
   }
   assert(
     agentBlueprintProtocol.namingPolicy?.businessSemanticNamesOnly === true &&
+      agentBlueprintProtocol.namingPolicy?.shortRoleNamesRequired === true &&
       agentBlueprintProtocol.namingPolicy?.runtimeNicknamesAreAliasesOnly ===
         true &&
       agentBlueprintProtocol.namingPolicy?.roleDisplayNameRequired === true,
-    "workflow-contract.json agentBlueprintPacket.namingPolicy must be the contract object with business-readable name rules.",
+    "workflow-contract.json agentBlueprintPacket.namingPolicy must be the contract object with short business role name rules.",
   );
   for (const resolution of [
     "reuse_existing_owner",

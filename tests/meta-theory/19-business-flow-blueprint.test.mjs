@@ -15,11 +15,11 @@ import {
 const execFileAsync = promisify(execFile);
 
 const businessRoleExamples = [
-  "frontend-home-page",
-  "database-schema",
-  "ux-flow-review",
-  "browser-qa-mobile",
-  "security-auth-review",
+  "前端",
+  "后端-登录",
+  "测试-安装",
+  "frontend",
+  "backend-login",
 ];
 
 function lane(laneId, owner = "meta-conductor") {
@@ -96,12 +96,14 @@ describe("business-flow blueprint orchestration", async () => {
     assert.ok(contract.protocols?.agentBlueprintPacket);
   });
 
-  test("user-visible agent names must be business-readable, not runtime nicknames", () => {
+  test("user-visible agent names must be short business role names, not runtime nicknames", () => {
     const namingPolicy = contract.protocols?.agentBlueprintPacket?.namingPolicy;
     assert.equal(namingPolicy?.businessSemanticNamesOnly, true);
+    assert.equal(namingPolicy?.shortRoleNamesRequired, true);
     assert.equal(namingPolicy?.runtimeNicknamesAreAliasesOnly, true);
     assert.match(combined, /runtimeInstanceAlias/i);
     assert.match(combined, /random personal aliases/i);
+    assert.match(combined, /short business role/i);
     for (const example of businessRoleExamples) {
       assert.match(combined, new RegExp(example, "i"), `missing ${example}`);
     }

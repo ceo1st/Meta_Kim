@@ -332,11 +332,12 @@ Capability index layers: (1) repo canonical (2) runtime mirrors (3) local global
 Output this as `businessFlowBlueprintPacket` with `requiredLanes`, `optionalLanes`, `omittedLanes` with reasons, `laneDependencies`, and `coverageJudgment`. Each lane object must include Fetch evidence from a global capability scan: `capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, and `coverageStatus` (`covered | partial | missing | omitted_with_reason`). A lane can be intentionally omitted only with a plain-language reason, e.g. "static page, no persisted user data".
 
 **Business-readable agent naming (hard rule)**:
-- User-visible role names must describe the business responsibility: `frontend-home-page`, `database-schema`, `ux-flow-review`, `browser-qa-mobile`, `security-auth-review`.
+- User-visible role names must be short business role names: `前端`, `后端-登录`, `测试-安装`, `frontend`, `backend-login`.
+- Use `role` or `role-scope` form. Prefer `前端` over `前端页面实现`, and prefer `frontend` over `frontend-page-implementation`.
 - Do not expose host-generated personal nicknames as the primary role name. Names like `Huygens`, `Mill`, or other random person-style aliases are allowed only in `runtimeInstanceAlias`.
 - Separate the layers:
   - `businessRoleId`: stable responsibility family, e.g. `frontend`, `database`, `browser-qa`.
-  - `roleDisplayName`: user-facing business name, e.g. `frontend-home-page`.
+  - `roleDisplayName`: user-facing short business name, e.g. `前端` or `frontend`.
   - `ownerAgent`: matched execution agent type from Fetch, e.g. `frontend-developer`.
   - `roleInstanceId`: per-run instance id, e.g. `frontend#home-page`.
   - `runtimeInstanceAlias`: optional platform nickname, never the primary name.
@@ -524,9 +525,9 @@ After each stage completes, update the spine state: set current stage to `comple
 
 Stage 2 is the gate — do not skip to Stage 3/4. Stage 4 requires protocol artifacts from Stage 3.
 
-**Protocol-first Dispatch**: produce `runHeader`, `businessFlowBlueprintPacket`, `agentBlueprintPacket`, `dispatchBoard`, and `workerTaskPackets` (with `dependsOn`, `parallelGroup`, `mergeOwner`, business-readable role names, and instance/shard fields) before Stage 4 begins. Stage 4 may not start until all protocol artifacts are ready.
+**Protocol-first Dispatch**: produce `runHeader`, `businessFlowBlueprintPacket`, `agentBlueprintPacket`, `dispatchBoard`, and `workerTaskPackets` (with `dependsOn`, `parallelGroup`, `mergeOwner`, short business role names, and instance/shard fields) before Stage 4 begins. Stage 4 may not start until all protocol artifacts are ready.
 
-**Agent blueprint gate**: Before spawning agents, validate that every visible role has a business-readable `roleDisplayName`; every selected agent came from Fetch-first capability matching; every role declares `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, and `ownerResolution`; all repeated `ownerAgent` entries have distinct `roleInstanceId`, non-overlapping or explicitly locked `shardScope`, explicit `workspaceIsolation`, unique `artifactNamespace`, `collisionPolicy`, and a unified `mergeOwner`; and every omitted business lane has a human-readable reason. FAIL means return to Thinking and, when coverage is missing or owner creation/upgrade is needed, produce `capabilityGapPacket` plus `executionAgentCard` before Execution.
+**Agent blueprint gate**: Before spawning agents, validate that every visible role has a short business `roleDisplayName`; every selected agent came from Fetch-first capability matching; every role declares `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, and `ownerResolution`; all repeated `ownerAgent` entries have distinct `roleInstanceId`, non-overlapping or explicitly locked `shardScope`, explicit `workspaceIsolation`, unique `artifactNamespace`, `collisionPolicy`, and a unified `mergeOwner`; and every omitted business lane has a human-readable reason. FAIL means return to Thinking and, when coverage is missing or owner creation/upgrade is needed, produce `capabilityGapPacket` plus `executionAgentCard` before Execution.
 
 **Option Exploration (MANDATORY)**: at Stage 3, enumerate ≥2 solution paths with Pros/Cons or a Decision Record (rejected alternatives must be documented). This is not optional — every non-trivial task requires explicit option comparison.
 

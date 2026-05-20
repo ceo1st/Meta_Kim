@@ -229,8 +229,8 @@
     "reviewOwner": "meta-prism",
     "verificationOwner": "meta-warden",
     "businessRoleId": "auth-refresh",
-    "roleDisplayName": "auth-refresh-implementation",
-    "roleInstanceId": "auth-refresh-implementation#1"
+    "roleDisplayName": "auth-refresh",
+    "roleInstanceId": "auth-refresh#1"
   },
   "orchestrationTaskBoardPacket": {
     "dispatchBoardId": "dispatch-001",
@@ -239,12 +239,12 @@
       {
         "taskId": "task-001",
         "taskKind": "execution",
-        "owner": "auth-refresh-implementation",
+        "owner": "auth-refresh",
         "sequence": 1,
         "dependsOn": [],
         "deliverable": "auth-refresh-hardening:token-refresh",
         "businessRoleId": "auth-refresh",
-        "roleDisplayName": "auth-refresh-implementation"
+        "roleDisplayName": "auth-refresh"
       }
     ],
     "synthesisOwner": "meta-warden"
@@ -259,7 +259,7 @@
   "workerTaskPackets": [
     {
       "taskPacketId": "task-001",
-      "owner": "auth-refresh-implementation",
+      "owner": "auth-refresh",
       "ownerMode": "existing-owner",
       "todayTask": "update refresh token path and document verification hooks",
       "output": "code diff + verification notes",
@@ -284,22 +284,22 @@
       ],
       "ownerAgent": "auth-specialist",
       "businessRoleId": "auth-refresh",
-      "roleDisplayName": "auth-refresh-implementation",
-      "roleInstanceId": "auth-refresh-implementation#1",
+      "roleDisplayName": "auth-refresh",
+      "roleInstanceId": "auth-refresh#1",
       "runtimeInstanceAlias": "",
       "shardKey": "file-scope",
       "shardScope": [
         "auth-refresh-hardening:token-refresh"
       ],
       "workspaceIsolation": "same_workspace_readonly_overlap",
-      "artifactNamespace": "auth-refresh-implementation",
+      "artifactNamespace": "auth-refresh",
       "collisionPolicy": "no_overlap"
     }
   ],
   "workerResultPackets": [
     {
       "taskPacketId": "task-001",
-      "owner": "auth-refresh-implementation",
+      "owner": "auth-refresh",
       "status": "completed",
       "producedArtifacts": [
         "src/auth/refresh.ts",
@@ -615,7 +615,7 @@
     "roles": [
       {
         "businessRoleId": "auth-refresh",
-        "roleDisplayName": "auth-refresh-implementation",
+        "roleDisplayName": "auth-refresh",
         "ownerAgent": "auth-specialist",
         "capabilityNeed": "auth refresh implementation",
         "ownerResolution": "reuse_existing_owner",
@@ -648,9 +648,10 @@
     "namingPolicy": {
       "roleDisplayNameRequired": true,
       "businessSemanticNamesOnly": true,
+      "shortRoleNamesRequired": true,
       "runtimeNicknamesAreAliasesOnly": true,
       "forbiddenPrimaryNamePattern": "^[A-Z][a-z]+$",
-      "description": "User-visible agent names must describe business responsibility, e.g. frontend-home-page, database-schema, ux-flow-review. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
+      "description": "User-visible agent names must be short business role names: use role or role-scope forms such as 前端, 后端-登录, 测试-安装, frontend, backend-login. Avoid long task descriptions such as frontend-page-implementation. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
     }
   }
 }

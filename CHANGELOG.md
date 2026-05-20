@@ -6,6 +6,18 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.0.37] - 2026-05-20
+
+### Changed
+
+- **Short agent display names** — Tightened Meta Theory role naming from long business descriptions to short role or role-scope names such as `前端`, `后端-登录`, `测试-安装`, `frontend`, and `backend-login`.
+- **Run artifact fixtures** — Shortened sample user-visible role names from long implementation labels to concise business roles.
+
+### Fixed
+
+- **Postinstall on Node ESM** — Fixed `scripts/postinstall-check.mjs` so npm install no longer fails with `ReferenceError: require is not defined in ES module scope`.
+- **Postinstall coverage** — Added a setup test that runs the postinstall checker under Node to catch ESM/CommonJS regressions.
+
 ## [2.0.36] - 2026-05-20
 
 ### Added
