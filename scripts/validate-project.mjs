@@ -29,6 +29,21 @@ import { validateSkillFrontmatter } from "./install-skill-sanitizer.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 const execFileAsync = promisify(execFile);
+function parseValidationContext(argv = process.argv.slice(2)) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--context" && argv[index + 1]) return argv[index + 1];
+    if (arg.startsWith("--context=")) return arg.slice("--context=".length);
+  }
+  return null;
+}
+
+const validationContext = parseValidationContext();
+const graphifyOptionalContexts = new Set(["setup", "install", "update"]);
+const skipGraphifyGate =
+  process.env.META_KIM_VALIDATE_SKIP_GRAPHIFY === "1" ||
+  graphifyOptionalContexts.has(validationContext) ||
+  process.argv.includes("--skip-graphify");
 const canonicalClaudeSettingsPath = path.join(
   canonicalRuntimeAssetsDir,
   "claude",
@@ -2964,8 +2979,14 @@ async function main() {
 
   // 12. Graphify governance gate
   step(current++, TOTAL, "Graphify governance gate");
-  await validateGraphifyGate();
-  pass("graphify CLI, report, graph, and health gates are valid.");
+  if (skipGraphifyGate) {
+    pass(
+      "graphify gate skipped for install/update validation; run npm run meta:graphify:rebuild before release validation.",
+    );
+  } else {
+    await validateGraphifyGate();
+    pass("graphify CLI, report, graph, and health gates are valid.");
+  }
 
   // 13. Documentation fact checks
   step(current++, TOTAL, "Documentation fact checks");

@@ -93,6 +93,11 @@ describe("graphify idempotent wiring (contract)", () => {
       /\["-m", "graphify", "[a-z]+", "install"\]/,
       "per-platform graphify install present",
     );
+    assert.match(
+      body,
+      /\["-m", "graphify", "update", "\."\]/,
+      "install should generate the local graph once after wiring graphify",
+    );
     // pip install failure must NOT return early (skill install still needs to run)
     const afterPip = body.split(/pip install.*graphifyy.*\]/s)[1] || "";
     assert.doesNotMatch(
@@ -100,6 +105,37 @@ describe("graphify idempotent wiring (contract)", () => {
       /^\s*return;/m,
       "no early return right after already-installed ok()",
     );
+  });
+
+  test("install and update validation skip local graphify gate but release validation keeps it", () => {
+    const setupSrc = readFileSync(path.join(root, "setup.mjs"), "utf8");
+    const validateSrc = readFileSync(
+      path.join(root, "scripts/validate-project.mjs"),
+      "utf8",
+    );
+
+    assert.match(
+      setupSrc,
+      /"scripts\/validate-project\.mjs"[\s\S]*\["--context", "install"\]/,
+    );
+    assert.match(validateSrc, /META_KIM_VALIDATE_SKIP_GRAPHIFY/);
+    assert.match(validateSrc, /"install"/);
+    assert.match(validateSrc, /"update"/);
+    assert.match(
+      validateSrc,
+      /graphify gate skipped for install\/update validation/,
+    );
+    assert.match(validateSrc, /await validateGraphifyGate\(\)/);
+  });
+
+  test("graphify-out remains a local generated artifact, not a package file", () => {
+    const pkg = JSON.parse(
+      readFileSync(path.join(root, "package.json"), "utf8"),
+    );
+    const gitignore = readFileSync(path.join(root, ".gitignore"), "utf8");
+
+    assert.doesNotMatch((pkg.files ?? []).join("\n"), /graphify-out/);
+    assert.match(gitignore, /^graphify-out\/$/m);
   });
 
   test("install-global-skills-all-runtimes.mjs calls wiring when pip skip", () => {
