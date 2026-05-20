@@ -325,9 +325,9 @@ Capability index layers: (1) repo canonical (2) runtime mirrors (3) local global
 - `findskill` is a runtime-local capability search entrypoint used during Fetch. It is not evidence that the discovered concrete skill should be bound into long-term agent identity.
 - Agent creation and agent iteration must follow the same rule: Genesis defines durable capability slots and boundaries; Artisan records provider compatibility and Fetch-time selection rules; the current run records the selected concrete skill/command/plugin capability.
 
-**Business-flow capability matrix (mandatory for executable deliverables)**: Fetch must expand a user request into a complete business-flow capability matrix before choosing agents. Do not only search for the first obvious role. For each deliverable type, list the lanes that may be needed, then capability-match every lane:
+**Business-flow capability matrix (mandatory for executable deliverables)**: Fetch must expand a user request into a complete business-flow capability matrix before choosing agents. Do not only search for the first obvious role. Infer lanes from the requested outcome, scope, constraints, and deliverable type, then capability-match every selected lane. Use the examples below as planning prompts:
 
-| Deliverable type | Default lanes to consider |
+| Deliverable type | Example dimensions to consider, not mandatory lanes |
 |---|---|
 | `web_app` / `dashboard` | product, UX, UI, frontend, backend/API, database/data, auth/security, motion, accessibility, tests, browser QA, performance, release, feedback, evolution |
 | `landing_page` | product offer, UX, UI, visual assets, frontend, motion, accessibility, SEO/analytics, browser QA, performance, release |
@@ -335,11 +335,12 @@ Capability index layers: (1) repo canonical (2) runtime mirrors (3) local global
 | `data_pipeline` | data source, schema, transform, storage, observability, quality tests, privacy/security, release |
 | `custom` | infer lanes from user outcome, then justify omissions |
 
-Output this as `businessFlowBlueprintPacket` with `requiredLanes`, `optionalLanes`, `omittedLanes` with reasons, `laneDependencies`, and `coverageJudgment`. Each lane object must include Fetch evidence from a global capability scan: `capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, and `coverageStatus` (`covered | partial | missing | omitted_with_reason`). A lane can be intentionally omitted only with a plain-language reason, e.g. "static page, no persisted user data".
+Output this as `businessFlowBlueprintPacket` with `requiredLanes`, `optionalLanes`, `omittedLanes` with reasons, `laneDependencies`, and `coverageJudgment`. Each required or optional lane object must include Fetch evidence from a global capability scan: `capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, and `coverageStatus` (`covered | partial | missing | omitted_with_reason`). A lane can be intentionally omitted only with a plain-language reason, e.g. "static page, no persisted user data". Do not fail a run only because it did not enumerate every example dimension.
 
 **Business-readable agent naming (hard rule)**:
-- User-visible role names must be short business role names: `前端`, `后端-登录`, `测试-安装`, `frontend`, `backend-login`.
-- Use `role` or `role-scope` form. Prefer `前端` over `前端页面实现`, and prefer `frontend` over `frontend-page-implementation`.
+- User-visible role names must be coarse business role-family names: `前端`, `后端`, `测试`, `frontend`, `backend`, `test`.
+- Do not put concrete work items into `roleDisplayName`. Prefer the role family over any role-plus-feature, role-plus-page, or role-plus-installation label.
+- Put concrete scope in `roleInstanceId`, `shardScope`, `assignedResponsibilitySlice`, or the worker task text instead of creating a new visible role name.
 - Do not expose host-generated personal nicknames as the primary role name. Names like `Huygens`, `Mill`, or other random person-style aliases are allowed only in `runtimeInstanceAlias`.
 - Separate the layers:
   - `businessRoleId`: stable responsibility family, e.g. `frontend`, `database`, `browser-qa`.

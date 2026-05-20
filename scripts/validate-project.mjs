@@ -1269,7 +1269,9 @@ async function validateWorkflowContract() {
       agentBlueprintProtocol.namingPolicy?.shortRoleNamesRequired === true &&
       agentBlueprintProtocol.namingPolicy?.runtimeNicknamesAreAliasesOnly ===
         true &&
-      agentBlueprintProtocol.namingPolicy?.roleDisplayNameRequired === true,
+      agentBlueprintProtocol.namingPolicy?.roleDisplayNameRequired === true &&
+      agentBlueprintProtocol.namingPolicy?.scopeDetailsBelongInInstanceFields ===
+        true,
     "workflow-contract.json agentBlueprintPacket.namingPolicy must be the contract object with short business role name rules.",
   );
   const longTermCapabilityPolicy =

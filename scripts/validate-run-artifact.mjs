@@ -177,6 +177,18 @@ function ensureNonEmptyValue(value, context) {
   ensureString(value, context);
 }
 
+function validateRoleDisplayName(name, context) {
+  const trimmed = String(name ?? "").trim();
+  ensure(
+    !/^[A-Z][a-z]+$/.test(trimmed),
+    `${context} must be business-readable, not a runtime nickname.`,
+  );
+  ensure(
+    !/[-_/\\:]/.test(trimmed),
+    `${context} must stay at role-family level; put work-item scope in roleInstanceId, shardScope, assignedResponsibilitySlice, or task text.`,
+  );
+}
+
 function valuesAsStrings(value) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item));
@@ -478,6 +490,10 @@ function validateDispatchEnvelope(contract, artifact) {
   ensureString(packet.ownerAgent, "dispatchEnvelopePacket.ownerAgent");
   ensureString(packet.businessRoleId, "dispatchEnvelopePacket.businessRoleId");
   ensureString(packet.roleDisplayName, "dispatchEnvelopePacket.roleDisplayName");
+  validateRoleDisplayName(
+    packet.roleDisplayName,
+    "dispatchEnvelopePacket.roleDisplayName",
+  );
   ensureString(packet.roleInstanceId, "dispatchEnvelopePacket.roleInstanceId");
   ensureString(packet.taskRef, "dispatchEnvelopePacket.taskRef");
   ensureStringArray(
@@ -606,6 +622,18 @@ function validateOrchestrationTaskBoard(contract, artifact) {
     ensureString(
       task.owner,
       `orchestrationTaskBoardPacket.tasks[${index}].owner`,
+    );
+    ensureString(
+      task.businessRoleId,
+      `orchestrationTaskBoardPacket.tasks[${index}].businessRoleId`,
+    );
+    ensureString(
+      task.roleDisplayName,
+      `orchestrationTaskBoardPacket.tasks[${index}].roleDisplayName`,
+    );
+    validateRoleDisplayName(
+      task.roleDisplayName,
+      `orchestrationTaskBoardPacket.tasks[${index}].roleDisplayName`,
     );
     ensure(
       Number.isInteger(task.sequence) && task.sequence >= 1,
@@ -748,35 +776,6 @@ function validateBusinessFlowBlueprint(contract, artifact) {
     }
   }
 
-  const webAppMinimumLanes = [
-    "product",
-    "ux",
-    "ui",
-    "frontend",
-    "backend",
-    "database",
-    "motion",
-    "accessibility",
-    "browser-qa",
-    "test",
-    "performance",
-    "release",
-  ];
-  if (flow.deliverableType === "web_app") {
-    for (const laneId of webAppMinimumLanes) {
-      ensure(
-        requiredLaneIds.has(laneId) || omittedLaneIds.has(laneId),
-        `web_app deliverable must cover lane "${laneId}" as required or omitted_with_reason.`,
-      );
-      if (flow.coverageJudgment === "complete") {
-        ensure(
-          !omittedLaneIds.has(laneId),
-          `businessFlowBlueprintPacket.coverageJudgment=complete cannot omit web_app lane "${laneId}".`,
-        );
-      }
-    }
-  }
-
   return { requiredLaneIds, optionalLaneIds, omittedLaneIds };
 }
 
@@ -809,9 +808,9 @@ function validateAgentBlueprint(contract, artifact) {
       policy.ownerResolutionEnum,
       `agentBlueprintPacket.roles[${index}].ownerResolution`,
     );
-    ensure(
-      !/^[A-Z][a-z]+$/.test(role.roleDisplayName.trim()),
-      `agentBlueprintPacket.roles[${index}].roleDisplayName must be business-readable, not a runtime nickname.`,
+    validateRoleDisplayName(
+      role.roleDisplayName,
+      `agentBlueprintPacket.roles[${index}].roleDisplayName`,
     );
     for (const laneId of valuesAsStrings(role.assignedResponsibilitySlice)) {
       coveredLaneIds.add(laneId);
@@ -1312,9 +1311,9 @@ function validateWorkerPackets(contract, artifact) {
       validWorkspaceIsolation.has(packet.workspaceIsolation),
       `workerTaskPackets[${index}].workspaceIsolation must be one of [${[...validWorkspaceIsolation].join(", ")}].`,
     );
-    ensure(
-      !/^[A-Z][a-z]+$/.test(packet.roleDisplayName.trim()),
-      `workerTaskPacket ${packet.taskPacketId} roleDisplayName must be business-readable, not a runtime nickname.`,
+    validateRoleDisplayName(
+      packet.roleDisplayName,
+      `workerTaskPacket ${packet.taskPacketId} roleDisplayName`,
     );
     const ownerPackets = packetsByOwnerAgent.get(packet.ownerAgent) ?? [];
     ownerPackets.push({ ...packet, index });

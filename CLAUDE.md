@@ -10,7 +10,7 @@ If you only keep five rules in mind:
 - `canonical/agents/`, `canonical/skills/meta-theory/`, `canonical/runtime-assets/`, `config/contracts/`, and `config/capability-index/` are the durable sources of truth.
 - `.claude/` is a runtime projection generated from canonical assets. Sync it instead of hand-forking it.
 - When `meta-theory` is active, the main Claude thread dispatches; it does not execute complex work directly.
-- User-visible worker names must be short business role names such as `前端`, `后端-登录`, `测试-安装`, `frontend`, or `backend-login`, not host-generated personal nicknames.
+- User-visible worker names must be coarse business role-family names such as `前端`, `后端`, `测试`, `frontend`, `backend`, or `test`, not scoped work items or host-generated personal nicknames.
 
 ## What This Repository Is
 
@@ -158,14 +158,14 @@ The blueprint does not need every lane for every task, but omissions should be d
 Keep three names separate:
 
 - `ownerAgent`: real governance or execution owner, for example `meta-conductor` or `frontend-developer`
-- `roleDisplayName`: short user-visible business role, for example `前端`, `后端-登录`, `测试-安装`, `frontend`, or `db-schema`
+- `roleDisplayName`: short user-visible business role family, for example `前端`, `后端`, `测试`, `frontend`, `backend`, or `test`
 - `runtimeInstanceAlias`: incidental runtime nickname, if Claude or another host assigns one
 
 Rules:
 
 - Do not expose random personal nicknames as the primary agent name.
 - Prefer short role names over long task sentences.
-- Use role-scope names when the same role has parallel shards, for example `前端-首页` and `前端-设置`.
+- Do not put concrete work items into `roleDisplayName`; when the same role has parallel shards, keep the same coarse role name and put shard scope in `roleInstanceId` / `shardScope`.
 - If one owner runs multiple parallel instances, record shard boundaries, dependencies, `parallelGroup`, `mergeOwner`, and collision rules.
 
 ## The Business Workflow Contract

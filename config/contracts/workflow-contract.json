@@ -860,7 +860,7 @@
         "missing",
         "omitted_with_reason"
       ],
-      "description": "Conductor-owned business-flow blueprint produced before worker tasks. It forces the system to consider product, UX, UI, frontend, backend, data, motion, test, QA, security, release, feedback, and evolution lanes where relevant. Every lane object in requiredLanes or optionalLanes must carry global capability scan evidence: capabilitySearchQuery, candidateOwners, candidateSkills, selectedOwner, selectionReason, and coverageStatus. Omitted lanes require explicit human-readable reasons."
+      "description": "Conductor-owned business-flow blueprint produced before worker tasks. It requires the system to infer task-specific business lanes from the requested outcome, scope, and deliverable type; planning dimensions may include product, UX, UI, frontend, backend, data, motion, test, QA, security, release, feedback, and evolution when relevant. Every lane object in requiredLanes or optionalLanes must carry global capability scan evidence: capabilitySearchQuery, candidateOwners, candidateSkills, selectedOwner, selectionReason, and coverageStatus. Omitted lanes require explicit human-readable reasons."
     },
     "agentBlueprintPacket": {
       "requiredFields": [
@@ -906,7 +906,9 @@
         "shortRoleNamesRequired": true,
         "runtimeNicknamesAreAliasesOnly": true,
         "forbiddenPrimaryNamePattern": "^[A-Z][a-z]+$",
-        "description": "User-visible agent names must be short business role names: use role or role-scope forms such as 前端, 后端-登录, 测试-安装, frontend, backend-login. Avoid long task descriptions such as frontend-page-implementation. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
+        "forbiddenScopedNamePattern": "[-_/\\\\:]",
+        "scopeDetailsBelongInInstanceFields": true,
+        "description": "User-visible agent names must be coarse business role-family names such as 前端, 后端, 测试, frontend, backend, test. Do not use scoped work-item names as roleDisplayName; put feature, page, installation, shard, or task detail in roleInstanceId, shardScope, assignedResponsibilitySlice, or task text. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
       },
       "longTermCapabilityPolicy": {
         "abstractCapabilitySlotsRequired": true,

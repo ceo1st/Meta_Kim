@@ -228,8 +228,8 @@
     "resultSchemaRef": "config/contracts/workflow-contract.json#/protocols/workerResultPacket",
     "reviewOwner": "meta-prism",
     "verificationOwner": "meta-warden",
-    "businessRoleId": "auth-refresh",
-    "roleDisplayName": "auth-refresh",
+    "businessRoleId": "backend",
+    "roleDisplayName": "backend",
     "roleInstanceId": "auth-refresh#1"
   },
   "orchestrationTaskBoardPacket": {
@@ -239,12 +239,12 @@
       {
         "taskId": "task-001",
         "taskKind": "execution",
-        "owner": "auth-refresh",
+        "owner": "backend",
         "sequence": 1,
         "dependsOn": [],
         "deliverable": "auth-refresh-hardening:token-refresh",
-        "businessRoleId": "auth-refresh",
-        "roleDisplayName": "auth-refresh"
+        "businessRoleId": "backend",
+        "roleDisplayName": "backend"
       }
     ],
     "synthesisOwner": "meta-warden"
@@ -259,7 +259,7 @@
   "workerTaskPackets": [
     {
       "taskPacketId": "task-001",
-      "owner": "auth-refresh",
+      "owner": "backend",
       "ownerMode": "existing-owner",
       "todayTask": "update refresh token path and document verification hooks",
       "output": "code diff + verification notes",
@@ -283,8 +283,8 @@
         }
       ],
       "ownerAgent": "auth-specialist",
-      "businessRoleId": "auth-refresh",
-      "roleDisplayName": "auth-refresh",
+      "businessRoleId": "backend",
+      "roleDisplayName": "backend",
       "roleInstanceId": "auth-refresh#1",
       "runtimeInstanceAlias": "",
       "shardKey": "file-scope",
@@ -297,7 +297,7 @@
     },
     {
       "taskPacketId": "task-002",
-      "owner": "auth-refresh",
+      "owner": "backend",
       "ownerMode": "existing-owner",
       "todayTask": "update refresh-token tests for env-only behavior",
       "output": "code diff + verification notes",
@@ -321,8 +321,8 @@
         }
       ],
       "ownerAgent": "auth-specialist",
-      "businessRoleId": "auth-refresh",
-      "roleDisplayName": "auth-refresh",
+      "businessRoleId": "backend",
+      "roleDisplayName": "backend",
       "roleInstanceId": "auth-refresh#2",
       "runtimeInstanceAlias": "",
       "shardKey": "file-scope",
@@ -337,7 +337,7 @@
   "workerResultPackets": [
     {
       "taskPacketId": "task-001",
-      "owner": "auth-refresh",
+      "owner": "backend",
       "status": "completed",
       "producedArtifacts": [
         "src/auth/refresh.ts",
@@ -348,7 +348,7 @@
     },
     {
       "taskPacketId": "task-002",
-      "owner": "auth-refresh",
+      "owner": "backend",
       "status": "completed",
       "producedArtifacts": [
         "tests/auth/refresh.test.ts"
@@ -662,8 +662,8 @@
   "agentBlueprintPacket": {
     "roles": [
       {
-        "businessRoleId": "auth-refresh",
-        "roleDisplayName": "auth-refresh",
+        "businessRoleId": "backend",
+        "roleDisplayName": "backend",
         "ownerAgent": "auth-specialist",
         "capabilityNeed": "auth refresh implementation",
         "ownerResolution": "reuse_existing_owner",
@@ -699,7 +699,9 @@
       "shortRoleNamesRequired": true,
       "runtimeNicknamesAreAliasesOnly": true,
       "forbiddenPrimaryNamePattern": "^[A-Z][a-z]+$",
-      "description": "User-visible agent names must be short business role names: use role or role-scope forms such as 前端, 后端-登录, 测试-安装, frontend, backend-login. Avoid long task descriptions such as frontend-page-implementation. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
+      "forbiddenScopedNamePattern": "[-_/\\\\:]",
+      "scopeDetailsBelongInInstanceFields": true,
+      "description": "User-visible agent names must be coarse business role-family names such as 前端, 后端, 测试, frontend, backend, test. Do not use scoped work-item names as roleDisplayName; put feature, page, installation, shard, or task detail in roleInstanceId, shardScope, assignedResponsibilitySlice, or task text. Host-generated personal nicknames such as Huygens or Mill may be recorded only as runtimeInstanceAlias."
     }
   }
 }

@@ -545,9 +545,9 @@ Review and Evolution must reject any agent creation or agent iteration that copi
 
 **Step 1.7 — Business-flow capability matrix** (run before final owner selection):
 
-For executable deliverables, infer the likely `deliverableType` and expand it into business lanes before dispatching. The system must not only route the most obvious technical role.
+For executable deliverables, infer the likely `deliverableType` and expand it into business lanes before dispatching. The system must not only route the most obvious technical role; selected lanes should be justified by the current outcome, scope, and constraints.
 
-| Deliverable type | Lanes to consider before omission |
+| Deliverable type | Example dimensions to consider before omission |
 |---|---|
 | `web_app` / `dashboard` | product, UX, UI, frontend, backend/API, database/data, auth/security, motion, accessibility, test automation, browser QA, performance, release, feedback, evolution |
 | `landing_page` | product offer, UX, UI, visual assets, frontend, motion, accessibility, SEO/analytics, browser QA, performance, release |
@@ -587,7 +587,7 @@ Each lane becomes a capability slot with:
 }
 ```
 
-The Fetch record must show which lanes were covered, which were omitted, and why. Each lane must preserve the global scan evidence (`capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, `coverageStatus`) so Review can tell whether the owner was selected capability-first. Omitted lanes without reasons fail the Review stage.
+The Fetch record must show which lanes were selected for this run, which lanes were explicitly omitted, and why. Each required or optional lane must preserve the global scan evidence (`capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, `coverageStatus`) so Review can tell whether the owner was selected capability-first. Omitted lanes without reasons fail the Review stage, but Review must not require every example dimension to appear in every run.
 
 **Step 2 — Capability index search** (if no perfect local match):
 ```
@@ -870,7 +870,7 @@ Break Stage 1's task into independent sub-tasks:
 
 `capabilitySearchResult` and `selectedSkill` come from Fetch Step 1.6. They are run-scoped and may be included in the dispatch prompt for this execution only. Do not copy `selectedSkill.skillId`, `selectedSkill.command`, or any plugin sub-capability into the agent's durable SOUL, identity, boundary, or permanent recommended skill list. Durable agent updates may mention only abstract capability slots and provider compatibility.
 
-**Short business role naming rule**: The user-facing `owner` / `roleDisplayName` must explain the role briefly, not the platform nickname or a long task sentence. Use role or role-scope forms such as `前端`, `后端-登录`, `测试-安装`, `frontend`, `backend-login`, `db-schema`. Prefer `前端` over `前端页面实现`, and prefer `frontend` over `frontend-page-implementation`. Random personal aliases assigned by the host runtime are stored only in `runtimeInstanceAlias`; they must not appear as the primary role name in the task board or final summary.
+**Short business role naming rule**: The user-facing `owner` / `roleDisplayName` must name the coarse role family, not the platform nickname, a long task sentence, or a concrete work item. Use names such as `前端`, `后端`, `测试`, `frontend`, `backend`, `test`, `database`, or `security`. Put feature, page, installation, shard, or work-item scope in `roleInstanceId`, `shardScope`, `assignedResponsibilitySlice`, or the worker task text. Random personal aliases assigned by the host runtime are stored only in `runtimeInstanceAlias`; they must not appear as the primary role name in the task board or final summary.
 
 **Same-agent multi-instance rule**: The same `ownerAgent` can appear in multiple packets when the work is shardable. This is valid only when each packet has a distinct `roleInstanceId`, `shardKey`, non-overlapping or locked `shardScope`, explicit `workspaceIsolation`, a unique `artifactNamespace`, an explicit `collisionPolicy`, and one unified `mergeOwner` for the parallel group. Without those fields, repeated ownerAgent entries are treated as fake parallelism and fail the decomposition gate.
 
@@ -1086,7 +1086,7 @@ Before proceeding to Step 4, the plan must pass this gate:
 | **Multi-file / multi-capability** | Task spans >1 file OR >1 capability dimension | MUST produce >= 2 `workerTaskPackets` |
 | **Single-Packet Anti-Pattern** | Only 1 packet produced for a multi-file / multi-capability task | REJECT — re-decompose or justify why a single packet is genuinely sufficient (single-file, single-capability, pure logic change) |
 | **Business-flow coverage** | `businessFlowBlueprintPacket` covers expected lanes or documents omitted lanes with reasons | REJECT — add missing lanes or omission reasons |
-| **Short business role names** | `roleDisplayName` uses a role or role-scope form (`前端`, `后端-登录`, `frontend`, `backend-login`); runtime nicknames are aliases only | REJECT — replace personal/random names or long task descriptions with short business role names |
+| **Short business role names** | `roleDisplayName` uses a coarse role-family form (`前端`, `后端`, `测试`, `frontend`, `backend`, `test`); runtime nicknames and scoped work items are aliases or instance scope only | REJECT — replace personal/random names, scoped work items, or long task descriptions with coarse business role names |
 | **Role responsibility assignment** | Every `agentBlueprintPacket.roles[]` entry declares `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, and `ownerResolution` | REJECT — fill the role iteration fields before worker packets |
 | **Role coverage gap** | Failed `roleCoverageGate`, non-empty `missingRoles`, or `ownerResolution = upgrade_existing_owner | create_owner_first` has `capabilityGapPacket` and approved `executionAgentCard` | REJECT — create or upgrade the owner first |
 | **Same-agent multi-instance** | Repeated `ownerAgent` entries have unique `roleInstanceId`, shard scope, artifact namespace, isolation/collision policy, and one merge owner | REJECT — add shard/merge rules or make the work sequential |

@@ -16,10 +16,11 @@ const execFileAsync = promisify(execFile);
 
 const businessRoleExamples = [
   "前端",
-  "后端-登录",
-  "测试-安装",
+  "后端",
+  "测试",
   "frontend",
-  "backend-login",
+  "backend",
+  "test",
 ];
 
 function lane(laneId, owner = "meta-conductor") {
@@ -146,6 +147,28 @@ describe("business-flow blueprint orchestration", async () => {
     for (const example of businessRoleExamples) {
       assert.match(combined, new RegExp(example, "i"), `missing ${example}`);
     }
+    for (const overScopedExample of ["后端-登录", "测试-安装", "backend-login"]) {
+      assert.doesNotMatch(
+        combined,
+        new RegExp(overScopedExample, "i"),
+        `over-scoped roleDisplayName example should be removed: ${overScopedExample}`,
+      );
+    }
+  });
+
+  test("run artifact validation rejects scoped work items as visible role names", async () => {
+    const { dir, file } = await writeTempArtifact((artifact) => {
+      artifact.agentBlueprintPacket.roles[0].roleDisplayName = "backend-login";
+      artifact.workerTaskPackets[0].roleDisplayName = "backend-login";
+    });
+    try {
+      await assert.rejects(
+        validateRunArtifact(file),
+        /roleDisplayName must stay at role-family level/,
+      );
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
   });
 
   test("workerTaskPacket separates role display name, owner agent, and runtime alias", () => {
@@ -179,7 +202,7 @@ describe("business-flow blueprint orchestration", async () => {
     assert.match(combined, /fake parallelism|伪并行/i);
   });
 
-  test("run artifact validation rejects incomplete web_app lane coverage", async () => {
+  test("run artifact validation accepts scoped web_app lane coverage without fixed lane enumeration", async () => {
     const { dir, file } = await writeTempArtifact((artifact) => {
       artifact.businessFlowBlueprintPacket.deliverableType = "web_app";
       artifact.businessFlowBlueprintPacket.requiredLanes = [
@@ -187,18 +210,23 @@ describe("business-flow blueprint orchestration", async () => {
         lane("frontend", "auth-specialist"),
       ];
       artifact.businessFlowBlueprintPacket.optionalLanes = [];
-      artifact.businessFlowBlueprintPacket.omittedLanes = [];
-      artifact.businessFlowBlueprintPacket.coverageJudgment = "complete";
+      artifact.businessFlowBlueprintPacket.omittedLanes = [
+        {
+          laneId: "backend",
+          reason: "static web surface; no server behavior changes requested",
+          coverageStatus: "omitted_with_reason",
+        },
+      ];
+      artifact.businessFlowBlueprintPacket.coverageJudgment = "intentionally_reduced";
       artifact.agentBlueprintPacket.roles[0].assignedResponsibilitySlice = [
         "product",
         "frontend",
       ];
     });
     try {
-      await assert.rejects(
-        validateRunArtifact(file),
-        /web_app deliverable must cover lane "ux"/,
-      );
+      const { stdout } = await validateRunArtifact(file);
+      const result = JSON.parse(stdout);
+      assert.equal(result.ok, true);
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }

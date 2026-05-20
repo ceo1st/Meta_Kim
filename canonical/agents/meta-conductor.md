@@ -82,8 +82,8 @@ trigger: "Multi-step tasks, Type C execution, rhythm optimization, or when workf
 3. **Build Stage Card Deck** — `buildCardDeck({ workflowFamily, goal, audience })`
 4. **Resolve Team** — `resolveAgentDependencies(teamId)`
 5. **Generate Dispatch Board** — `generateWorkflowConfig({ workflowFamily, department, goal })`
-6. **Generate Business Flow Blueprint** — infer deliverable type, list product / UX / UI / engineering / QA / release / feedback lanes, and record lane-level global scan evidence (`capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, `coverageStatus`)
-7. **Generate Agent Role Blueprint** — assign short business role names such as `前端`, `后端-登录`, `测试-安装`, `frontend`, `backend-login`; map them to capability-matched owner agents; and record `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, and `ownerResolution`
+6. **Generate Business Flow Blueprint** — infer deliverable type, derive task-specific business lanes from outcome and scope, use dimensions like product / UX / UI / engineering / QA / release / feedback only when relevant, and record lane-level global scan evidence (`capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, `coverageStatus`)
+7. **Generate Agent Role Blueprint** — assign coarse business role-family names such as `前端`, `后端`, `测试`, `frontend`, `backend`, `test`; map them to capability-matched owner agents; and record concrete work scope in `roleInstanceId`, `shardScope`, `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, and `ownerResolution`
 8. **Validate Run Contract** — `validateWorkflowConfig(config)` against single-run, delivery-chain, business-lane coverage, role-naming, and same-owner instance rules
 9. **Deal Cards / Dispatch Specialists** — `dealCards(deck, context)` in stage order with control cards layered on top
 10. **Build Department Package** — `buildDepartmentConfig({ teamId, goal, workflowFamily })` and return to Warden for gate decision
@@ -523,7 +523,7 @@ Conductor's rollback is governed by `controlState: rollback` in the run artifact
 1. **Business Flow Anatomy** — Infer deliverable type and required lanes before assigning worker packets
 2. **Task Anatomy** — Break tasks into independent steps, marking each step's input/output and dependencies
 3. **Parallelism Analysis** — Which steps have no data dependencies? Steps that can be parallelized must be parallelized; same-owner multi-instance is allowed only with shard and merge rules
-4. **Role Naming Check** — Are user-visible names short business role names (`前端`, `后端-登录`, `frontend`, `backend-login`) instead of random runtime nicknames or long task descriptions?
+4. **Role Naming Check** — Are user-visible names coarse business role-family names (`前端`, `后端`, `测试`, `frontend`, `backend`, `test`) instead of scoped work items, random runtime nicknames, or long task descriptions?
 5. **Card Deck Orchestration** — Assign one primary stage card from the 8-stage spine to each step, then layer Skip/Interrupt/Intentional Silence/Iteration as control cards
 6. **Rhythm Calibration** — Check against attention cost principles: are there too many consecutive high-cost cards? Is Intentional Silence needed? Do not invent a second business process
 7. **Rollback Path** — If each phase fails, which step to roll back to? A workflow without rollback paths is a ticking time bomb
@@ -739,7 +739,7 @@ runtime nickname         → runtimeInstanceAlias only
 Conversion rules:
 
 - Build or update `businessFlowBlueprintPacket` before worker packets. For every lane, fill `capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, and `coverageStatus` from the global capability scan; do not accept an unscanned lane as covered.
-- Convert the playbook role text into a user-visible short business role name. If the playbook or runtime supplies a random nickname, store it only in `runtimeInstanceAlias` and synthesize a role or role-scope name from responsibility, e.g. `前端`, `安全-登录`, `测试-移动端`, `frontend`, or `backend-login`.
+- Convert the playbook role text into a user-visible coarse role-family name. If the playbook or runtime supplies a random nickname, store it only in `runtimeInstanceAlias`; if it supplies a scoped work item, keep the scope in `roleInstanceId`, `shardScope`, or `assignedResponsibilitySlice` and use a coarse display name such as `前端`, `后端`, `测试`, `frontend`, `backend`, or `test`.
 - Fill `agentBlueprintPacket.roles[]` for each role with `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, and `ownerResolution` (`reuse_existing_owner`, `upgrade_existing_owner`, or `create_owner_first`).
 - If `roleCoverageGate` fails, `missingRoles` is non-empty, or any role resolves to `upgrade_existing_owner` / `create_owner_first`, emit `capabilityGapPacket` and require `executionAgentCard` before dispatch.
 - For same `ownerAgent` parallel instances, assign unique `roleInstanceId`, `shardKey`, `shardScope`, `workspaceIsolation`, `artifactNamespace`, `collisionPolicy`, and one unified `mergeOwner` for the parallel group. Shared files or decisions require `collisionPolicy: lock_required` or sequential execution.

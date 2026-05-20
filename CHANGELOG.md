@@ -29,8 +29,8 @@ When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the
 
 ### Changed
 
-- **Short agent display names** — Tightened Meta Theory role naming from long business descriptions to short role or role-scope names such as `前端`, `后端-登录`, `测试-安装`, `frontend`, and `backend-login`.
-- **Run artifact fixtures** — Shortened sample user-visible role names from long implementation labels to concise business roles.
+- **Role-family display names** — Standardized user-visible worker labels at the role-family level and moved run-specific scope into structured instance and shard metadata.
+- **Run artifact fixtures** — Aligned sample artifacts with the role-family naming policy.
 
 ### Fixed
 
@@ -41,7 +41,7 @@ When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the
 
 ### Added
 
-- **Business-flow blueprint gate** — Requires executable runs to plan product, UX, UI, frontend, backend, database, motion, QA, testing, release, feedback, and evolution lanes where relevant before dispatch.
+- **Business-flow blueprint gate** — Adds a pre-dispatch blueprint step that derives task-specific business lanes from the requested outcome and records coverage decisions.
 - **Business-readable agent roles** — Separates user-visible role names from runtime nicknames, and supports same-agent multi-instance sharding with explicit isolation, collision, and merge rules.
 - **Run artifact validation fixtures** — Added positive and negative fixtures for same-owner sharded execution and overlapping shard rejection.
 
