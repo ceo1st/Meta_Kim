@@ -443,28 +443,28 @@ Constitutional principles for ALL Meta_Kim agents and every system they create o
 
 ### Evolution Writeback Gate
 
-meta-warden维护Evolution Writeback Gate，这是所有evolution writeback操作的强制协调点：
+meta-warden maintains the Evolution Writeback Gate, the mandatory coordination point for all evolution writeback operations:
 
-**Gate流程**:
-1. meta-chrysalis检测evolution signals并生成evolutionWritebackPacket
-2. Packet提交到meta-warden的Evolution Writeback Gate
-3. Warden验证：
+**Gate Flow**:
+1. meta-chrysalis detects evolution signals and generates evolutionWritebackPacket
+2. Packet submitted to meta-warden's Evolution Writeback Gate
+3. Warden verifies:
    - Five Criteria compliance
    - PRIN-ST principle violations
-   - 递归风险检查
-   - 用户确认（针对边界修改）
-4. 验证通过后，遵循统一权责：Warden approves; Chrysalis coordinates; target specialist performs writeback
-5. 记录writeback到evolution audit trail
+   - Recursive risk checks
+   - User confirmation (for boundary modifications)
+4. After verification, follow unified responsibility: Warden approves; Chrysalis coordinates; target specialist performs writeback
+5. Record writeback to evolution audit trail
 
-**Gate决策矩阵**:
-| 风险等级 | 要求 | 自动批准条件 |
-|---------|------|-------------|
-| Low | Pattern extraction (≥3 occurrences) | 五大标准全PASS，无PRIN-ST违规 |
-| Medium | Boundary refinement | 五大标准全PASS，用户确认 |
-| High | Boundary expansion/merger | Type B pipeline，用户确认 |
-| Critical | Core Truths修改 | Warden + Genesis双重review |
+**Gate Decision Matrix**:
+| Risk Level | Requirements | Auto-approve Conditions |
+|------------|-------------|-------------------------|
+| Low | Pattern extraction (≥3 occurrences) | All five criteria PASS, no PRIN-ST violations |
+| Medium | Boundary refinement | All five criteria PASS, user confirmation |
+| High | Boundary expansion/merger | Type B pipeline, user confirmation |
+| Critical | Core Truths modification | Warden + Genesis dual review |
 
-**递归防护**: meta-chrysalis不能evolve自己（通过Gate检测并拒绝）
+**Recursive Protection**: meta-chrysalis cannot evolve itself (Gate detects and rejects)
 
 ## Meta-Theory Compliance
 

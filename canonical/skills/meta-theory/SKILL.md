@@ -63,7 +63,7 @@ Before any visible choice surface, set or infer `choiceSurfaceState`:
 | `choiceSurfaceState` | Allowed timing | Allowed content | Forbidden content |
 |---|---|---|---|
 | `not_allowed` | Default state before Critical classification | No choice surface | Any popup/card/question asking the user to choose an execution path |
-| `critical_clarification_allowed` | Critical only, and only when Fetch cannot proceed safely | Blocking clarification needed to understand intent, scope, write permission, safety, or language | Execution options, implementation plan choices, "which方案" confirmation, or popup capability tests |
+| `critical_clarification_allowed` | Critical only, and only when Fetch cannot proceed safely | Blocking clarification needed to understand intent, scope, write permission, safety, or language | Execution options, implementation plan choices, "which option" confirmation, or popup capability tests |
 | `execution_confirmation_allowed` | After Fetch content evidence and Thinking `preDecisionOptionFrame` exist, before Execution | Consolidated execution confirmation with evidence-backed candidate paths and recommended default | New discovery questions that should have happened in Critical/Fetch |
 | `completed` | After the user answered or an allowed skip was recorded | No repeat confirmation unless scope materially changed | Stage-by-stage confirmation spam |
 
@@ -71,7 +71,7 @@ Before any visible choice surface, set or infer `choiceSurfaceState`:
 
 **Human check**: no candidate paths means no execution confirmation; no Fetch evidence means Thinking is not complete; no Thinking result means no pre-Execution confirmation.
 
-Normal user-facing output must be a clean choice card, not a protocol dump. Do not show a `Preflight` block, `nativeChoiceSurface`, `conversation_fallback`, `Multi-Option Snapshot`, or other internal packet fields unless the user explicitly asks for debug, audit, protocol, or governance trace output. If a fallback matters to the user's expectation, say it in plain language, for example: "当前以聊天确认卡展示，不是弹窗。"
+Normal user-facing output must be a clean choice card, not a protocol dump. Do not show a `Preflight` block, `nativeChoiceSurface`, `conversation_fallback`, `Multi-Option Snapshot`, or other internal packet fields unless the user explicitly asks for debug, audit, protocol, or governance trace output. If a fallback matters to the user's expectation, say it in plain language, for example: "This is a chat confirmation card, not a popup."
 
 The choice card must be short and must show at least two viable options for the current decision. It must follow the runtime/tool selected output language first, then the user's explicit output-language choice, then the user's latest input language when no stronger language source exists. Keep only protocol identifiers such as `Critical`, `Fetch`, `Thinking`, and `Execution` in their canonical form when they are truly needed. Example labels such as `Option A` are placeholders; localize them in the actual response, for example `方案 A` when the selected or inferred language is Chinese.
 
@@ -80,7 +80,7 @@ Do not describe a Codex fallback card as a popup. In Codex, `conversation_fallba
 Normal public shape:
 
 ```text
-这是执行前确认卡，不会修改文件。
+This is an execution confirmation card. No files will be modified yet.
 
 1. [choice dimension]
 A. [plain-language path]. Result: [what the user gets]. Trade-off: [main cost or risk].
@@ -92,7 +92,7 @@ Default: [chosen or recommended path] because [evidence-based reason].
 If only one practical path exists, still show the rejected alternative so the user can see the decision boundary:
 
 ```text
-这是执行前确认卡，不会修改文件。
+This is an execution confirmation card. No files will be modified yet.
 
 1. [choice dimension]
 A. [practical path]. Result: [what the user gets]. Trade-off: [main cost or risk].
@@ -426,14 +426,14 @@ Do not use this Notice as a Decision surface. If the user must choose among mult
 
 **Step 1 — Keyword scan** (run FIRST):
 ```
-tdd/test/测试 → "TDD workflow, red-green-refactor, test coverage"
-review/audit/审计/quality → "code quality review, AI-slop detection"
-security/auth/权限/安全 → "security analysis, vulnerability detection"
-debug/报错/error/修复 → "debugging, error analysis, test failure investigation"
-architecture/design/架构 → "system architecture design, technical architecture review"
-frontend/ui/界面/react → "frontend development, UI implementation"
-backend/api/后端/server → "backend development, API design"
-database/db/sql/数据库 → "database design, SQL optimization"
+tdd/test → "TDD workflow, red-green-refactor, test coverage"
+review/audit/quality → "code quality review, AI-slop detection"
+security/auth → "security analysis, vulnerability detection"
+debug/error → "debugging, error analysis, test failure investigation"
+architecture/design → "system architecture design, technical architecture review"
+frontend/ui/react → "frontend development, UI implementation"
+backend/api/server → "backend development, API design"
+database/db/sql → "database design, SQL optimization"
 DEFAULT → state the core capability need explicitly
 ```
 
@@ -478,13 +478,13 @@ Capability index layers: (1) repo canonical (2) runtime mirrors (3) local global
 Output this as `businessFlowBlueprintPacket` with `requiredLanes`, `optionalLanes`, `omittedLanes` with reasons, `laneDependencies`, and `coverageJudgment`. Each required or optional lane object must include Fetch evidence from a global capability scan: `capabilitySearchQuery`, `candidateOwners`, `candidateSkills`, `selectedOwner`, `selectionReason`, and `coverageStatus` (`covered | partial | missing | omitted_with_reason`). A lane can be intentionally omitted only with a plain-language reason, e.g. "static page, no persisted user data". Do not fail a run only because it did not enumerate every example dimension.
 
 **Business-readable agent naming (hard rule)**:
-- User-visible role names must be coarse business role-family names: `前端`, `后端`, `测试`, `frontend`, `backend`, `test`.
+- User-visible role names must be coarse business role-family names: `frontend`, `backend`, `test`.
 - Do not put concrete work items into `roleDisplayName`. Prefer the role family over any role-plus-feature, role-plus-page, or role-plus-installation label.
 - Put concrete scope in `roleInstanceId`, `shardScope`, `assignedResponsibilitySlice`, or the worker task text instead of creating a new visible role name.
 - Do not expose host-generated personal nicknames as the primary role name. Names like `Huygens`, `Mill`, or other random person-style aliases are allowed only in `runtimeInstanceAlias`.
 - Separate the layers:
   - `businessRoleId`: stable responsibility family, e.g. `frontend`, `database`, `browser-qa`.
-  - `roleDisplayName`: user-facing short business name, e.g. `前端` or `frontend`.
+  - `roleDisplayName`: user-facing short business name, e.g. `frontend` or `backend`.
   - `ownerAgent`: matched execution agent type from Fetch, e.g. `frontend-developer`.
   - `roleInstanceId`: per-run instance id, e.g. `frontend#home-page`.
   - `runtimeInstanceAlias`: optional platform nickname, never the primary name.
