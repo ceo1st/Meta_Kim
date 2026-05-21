@@ -283,6 +283,75 @@ describe("MCP memory cross-runtime hooks", () => {
     }
   });
 
+  test("shared hook reports ready status only on session start", async () => {
+    let searchCount = 0;
+    const server = createServer((req, res) => {
+      req.resume();
+      req.on("end", () => {
+        res.setHeader("Content-Type", "application/json");
+        if (req.url === "/api/health") {
+          res.end(JSON.stringify({ status: "healthy" }));
+          return;
+        }
+        if (req.url === "/api/search") {
+          searchCount += 1;
+          res.end(
+            JSON.stringify({
+              memories: [{ content: "Historical project context should not appear." }],
+            }),
+          );
+          return;
+        }
+        res.end(JSON.stringify({ success: true }));
+      });
+    });
+    const port = await listen(server);
+
+    try {
+      const hookPath = path.join(
+        repoRoot,
+        "canonical",
+        "runtime-assets",
+        "shared",
+        "hooks",
+        "meta-kim-memory-save.mjs",
+      );
+      const result = await spawnNode(
+        [hookPath, "--event", "session-start"],
+        {
+          input: JSON.stringify({
+            runtime: "claude",
+            cwd: repoRoot,
+          }),
+          env: {
+            ...process.env,
+            MCP_MEMORY_URL: `http://127.0.0.1:${port}`,
+            META_KIM_DISABLE_HOOK_DEDUPE: "1",
+          },
+        },
+      );
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(searchCount, 0);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.hookSpecificOutput.hookEventName, "SessionStart");
+      assert.match(
+        output.hookSpecificOutput.additionalContext,
+        /Memory vector database is ready/,
+      );
+      assert.match(
+        output.hookSpecificOutput.additionalContext,
+        /no historical memory was injected/,
+      );
+      assert.doesNotMatch(
+        output.hookSpecificOutput.additionalContext,
+        /Historical project context/,
+      );
+    } finally {
+      await closeServer(server);
+    }
+  });
+
   test("shared hook emits runtime-specific context envelopes", async () => {
     const server = createServer((req, res) => {
       req.resume();

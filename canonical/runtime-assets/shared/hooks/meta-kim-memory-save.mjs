@@ -5,7 +5,7 @@
  * Claude Code has a richer transcript-aware Python hook. This shared hook is
  * intentionally generic for Codex, Cursor, and other runtimes that expose hook
  * JSON plus cwd. It supports:
- *   - session-start: save a start marker and inject relevant memory context
+ *   - session-start: save a start marker and report memory health
  *   - user-prompt: save the submitted prompt and inject relevant memory context
  *   - stop: save a compact session checkpoint
  *
@@ -104,9 +104,11 @@ function detectRuntime(payload) {
   if (typeof explicit === "string" && explicit) return explicit.toLowerCase();
 
   const script = process.argv[1] || "";
-  if (script.includes(`${path.sep}.codex${path.sep}`)) return "codex";
-  if (script.includes(`${path.sep}.cursor${path.sep}`)) return "cursor";
-  if (script.includes(`${path.sep}.openclaw${path.sep}`)) return "openclaw";
+  const normalizedScript = script.replace(/\\/gu, "/");
+  if (normalizedScript.includes("/.claude/")) return "claude";
+  if (normalizedScript.includes("/.codex/")) return "codex";
+  if (normalizedScript.includes("/.cursor/")) return "cursor";
+  if (normalizedScript.includes("/openclaw/")) return "openclaw";
   return "unknown-runtime";
 }
 
@@ -311,6 +313,15 @@ function memoryHealthWarning(endpoint) {
     "The hook tried a background start with `memory server --http` when the endpoint was local.",
     "To fix manually, start: `MCP_ALLOW_ANONYMOUS_ACCESS=true memory server --http`.",
     "Status note only; do not treat recalled memory as present.",
+  ].join("\n");
+}
+
+function memoryReadyStatus(endpoint) {
+  return [
+    "Meta_Kim memory status: MCP Memory Service is healthy.",
+    "Memory vector database is ready.",
+    `Endpoint: ${endpoint}`,
+    "Status note only; no historical memory was injected at session start.",
   ].join("\n");
 }
 
@@ -881,9 +892,13 @@ async function main() {
     return;
   }
 
-  const memories =
-    event === "stop" ? [] : await recallMemories(endpoint, query, project, cwd, event);
-  const context = formatMemoryContext(memories, runtime, event);
+  let context = "";
+  if (event === "session-start") {
+    context = memoryReadyStatus(endpoint);
+  } else if (event !== "stop") {
+    const memories = await recallMemories(endpoint, query, project, cwd, event);
+    context = formatMemoryContext(memories, runtime, event);
+  }
 
   const content = buildContent(payload, runtime, cwd, event);
   if (content.length >= 40) {
