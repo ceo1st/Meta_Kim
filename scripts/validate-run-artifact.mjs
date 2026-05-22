@@ -250,10 +250,12 @@ function validateRoleOwnerPolicy(contract, role, context) {
 
   if (role.ownerSource === "project_local") {
     ensure(
-      ["copy_to_project_for_modification", "already_project_local"].includes(
-        role.agentCopyPolicy,
-      ),
-      `${context}.agentCopyPolicy must be copy_to_project_for_modification or already_project_local for project-local agents.`,
+      [
+        "copy_to_project_for_modification",
+        "create_project_local_agent",
+        "already_project_local",
+      ].includes(role.agentCopyPolicy),
+      `${context}.agentCopyPolicy must be copy_to_project_for_modification, create_project_local_agent, or already_project_local for project-local agents.`,
     );
   }
 
@@ -265,6 +267,14 @@ function validateRoleOwnerPolicy(contract, role, context) {
     );
   }
 
+  if (role.agentCopyPolicy === "create_project_local_agent") {
+    ensure(
+      role.ownerSource === "project_local" &&
+        role.ownerResolution === "create_owner_first",
+      `${context}.agentCopyPolicy=create_project_local_agent requires ownerSource=project_local and ownerResolution=create_owner_first.`,
+    );
+  }
+
   if (
     role.ownerSource === "project_local" &&
     role.ownerResolution === "reuse_existing_owner"
@@ -272,6 +282,14 @@ function validateRoleOwnerPolicy(contract, role, context) {
     ensure(
       role.agentCopyPolicy === "already_project_local",
       `${context}.agentCopyPolicy must be already_project_local when reusing an existing project-local agent without modification.`,
+    );
+  }
+
+  if (role.ownerResolution === "create_owner_first") {
+    ensure(
+      role.ownerSource === "project_local" &&
+        role.agentCopyPolicy === "create_project_local_agent",
+      `${context}.ownerResolution=create_owner_first requires a project-local execution agent creation policy.`,
     );
   }
 
@@ -325,6 +343,7 @@ function validateMatchedSkills(policy, skills, context) {
 function validateGovernanceStageNodes(policy, nodes, context) {
   ensureObjectArray(nodes, context);
   ensure(nodes.length >= 1, `${context} must contain at least one governance stage node.`);
+  const stagesSeen = new Set();
   for (const [index, node] of nodes.entries()) {
     ensureFields(node, policy.governanceStageNodeRequiredFields, `${context}[${index}]`);
     ensureString(node.stage, `${context}[${index}].stage`);
@@ -332,6 +351,7 @@ function validateGovernanceStageNodes(policy, nodes, context) {
       policy.governanceStageCoveragePolicy.requiredStages.includes(node.stage),
       `${context}[${index}].stage must be one of the required governance stages.`,
     );
+    stagesSeen.add(node.stage);
     ensureGovernanceOwner(contractFromPolicy(policy), node.ownerAgent, `${context}[${index}].ownerAgent`);
     const stageAllowed = new Set(
       policy.governanceStageCoveragePolicy.stageAllowedAgents?.[node.stage] ?? [],
@@ -341,6 +361,12 @@ function validateGovernanceStageNodes(policy, nodes, context) {
       `${context}[${index}].ownerAgent is not allowed for stage ${node.stage}.`,
     );
     ensureString(node.responsibility, `${context}[${index}].responsibility`);
+  }
+  for (const stage of policy.governanceStageCoveragePolicy.requiredStages) {
+    ensure(
+      stagesSeen.has(stage),
+      `${context} must include a governance node for ${stage}.`,
+    );
   }
 }
 
@@ -1193,6 +1219,13 @@ function validateAgentBlueprint(contract, artifact) {
   }
 
   ensureObject(packet.governanceStageCoverage, "agentBlueprintPacket.governanceStageCoverage");
+  const factoryResolutionPolicy =
+    policy.governanceStageCoveragePolicy
+      .factoryResolutionAdditionalRequiredAgents ?? {};
+  const factoryResolutionApplies =
+    factoryResolutionPolicy.appliesWhenResolutionActionAnyOf?.includes(
+      artifact.capabilityGapPacket?.resolutionAction,
+    ) ?? false;
   for (const stage of policy.governanceStageCoveragePolicy.requiredStages) {
     const participants = packet.governanceStageCoverage[stage];
     ensureStringArray(participants, `agentBlueprintPacket.governanceStageCoverage.${stage}`);
@@ -1201,6 +1234,20 @@ function validateAgentBlueprint(contract, artifact) {
       ensure(
         stageAllowed.has(participant),
         `agentBlueprintPacket.governanceStageCoverage.${stage} contains agent outside the allowed stage set: ${participant}`,
+      );
+    }
+    const requiredAgents = new Set(
+      policy.governanceStageCoveragePolicy.stageRequiredAgents?.[stage] ?? [],
+    );
+    if (factoryResolutionApplies) {
+      for (const participant of factoryResolutionPolicy[stage] ?? []) {
+        requiredAgents.add(participant);
+      }
+    }
+    for (const requiredAgent of requiredAgents) {
+      ensure(
+        participants.includes(requiredAgent),
+        `agentBlueprintPacket.governanceStageCoverage.${stage} must include required governance agent ${requiredAgent}.`,
       );
     }
   }

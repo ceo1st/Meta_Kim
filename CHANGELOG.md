@@ -6,6 +6,24 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.0.43] - 2026-05-22
+
+### Added
+
+- **Project-local execution-agent creation policy** — Added `create_project_local_agent` for user-project runs where no global or existing project-local owner fits a recurring orchestration node.
+- **Required governance participation checks** — Added mandatory Critical, Fetch, Thinking, and Review participant coverage, including `meta-chrysalis` review participation when an execution agent is created or upgraded.
+- **Agent factory validation coverage** — Added run-artifact tests for direct global reuse, project-local upgrade, project-local creation, missing Chrysalis review, and missing Fetch governance participation.
+
+### Changed
+
+- **Open-source vs user-project boundary** — Clarified that the Meta_Kim repository itself keeps only the 9 governance meta agents, while downstream user projects may reuse, upgrade, or create execution agents under governance review.
+- **Factory dispatch shape** — New execution-agent creation now requires a `factory_then_dispatch` board instead of being treated as direct dispatch.
+
+### Fixed
+
+- **Paper-only agent factory gap** — The validator now rejects runs that claim owner creation without the matching project-local creation policy, capability gap packet, execution agent card, and required governance participants.
+- **Governance coverage drift** — Project validation now locks the required stage participant contract so future changes cannot silently drop the meta agents that must review orchestration nodes.
+
 ## [2.0.42] - 2026-05-22
 
 ### Added

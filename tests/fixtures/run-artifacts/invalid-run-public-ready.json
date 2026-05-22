@@ -669,13 +669,17 @@
         "meta-conductor"
       ],
       "Fetch": [
+        "meta-conductor",
         "meta-scout",
         "meta-artisan",
-        "meta-librarian"
+        "meta-librarian",
+        "meta-genesis"
       ],
       "Thinking": [
         "meta-conductor",
+        "meta-genesis",
         "meta-artisan",
+        "meta-sentinel",
         "meta-warden"
       ],
       "Review": [

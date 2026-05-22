@@ -6,6 +6,24 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
 
+## [2.0.43] - 2026-05-22
+
+### 新增
+
+- **项目本地执行 Agent 创建策略** — 新增 `create_project_local_agent`，用于用户项目中没有全局或现有项目本地 owner 能覆盖 recurring 编排节点的场景。
+- **治理参与强制校验** — 新增 Critical、Fetch、Thinking、Review 的必需参与者覆盖检查；当执行 Agent 被创建或升级时，Review 阶段必须包含 `meta-chrysalis`。
+- **Agent factory 验证覆盖** — 新增 run artifact 测试，覆盖全局直接复用、项目本地升级、项目本地创建、缺少 Chrysalis 审查、缺少 Fetch 治理参与等场景。
+
+### 变更
+
+- **开源仓库与用户项目边界** — 明确 Meta_Kim 仓库自身只保留 9 个治理元 Agent；下游用户项目可以在治理审查下复用、升级或创建执行 Agent。
+- **Factory 派发形态** — 新执行 Agent 创建现在必须使用 `factory_then_dispatch` 编排板，不能伪装成直接派发。
+
+### 修复
+
+- **纸面 Agent factory 缺口** — validator 现在会拒绝只声明 owner creation、但缺少项目本地创建策略、能力缺口包、执行 Agent 卡片或必需治理参与者的 run。
+- **治理覆盖漂移** — 项目校验现在锁定必需阶段参与者合同，避免后续改动静默删掉必须参与编排审查的元 Agent。
+
 ## [2.0.42] - 2026-05-22
 
 ### 新增

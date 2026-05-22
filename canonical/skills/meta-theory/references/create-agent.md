@@ -101,7 +101,7 @@ Rule: Conductor may participate before or after the factory, but **Conductor doe
 The public governance owner factory lane must produce these explicit artifacts:
 
 1. **Capability Gap Sheet** (`capabilityGapPacket`) — what is missing, which owners were checked, and what decision was made.
-2. **Owner Decision** (`agentBlueprintPacket.roles[]` + `matchedSkills`) — the governance owner contract and run-scoped capability evidence for Meta_Kim itself, or the direct global-reuse / project-local-copy decision for user projects. `agentCopyPolicy = copy_to_project_for_modification` is valid only with project-local upgrade intent. `executionAgentCard` is used only when an execution agent must be created or upgraded, not when a usable global agent is reused directly.
+2. **Owner Decision** (`agentBlueprintPacket.roles[]` + `matchedSkills`) — the governance owner contract and run-scoped capability evidence for Meta_Kim itself, or the direct global-reuse / project-local-copy decision for user projects. `agentCopyPolicy = copy_to_project_for_modification` is valid only with project-local upgrade intent; `agentCopyPolicy = create_project_local_agent` is valid only with approved project-local creation. `executionAgentCard` is used only when an execution agent must be created or upgraded, not when a usable global agent is reused directly.
 3. **Orchestration Task Board** (`orchestrationTaskBoardPacket`) — ordered execution tasks plus synthesis owner.
 4. **Evolution Record** (`evolutionWritebackPacket`) — retain / upgrade / retire outcomes after the run.
 

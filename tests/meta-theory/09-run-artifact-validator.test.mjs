@@ -75,6 +75,14 @@ describe("validate-run-artifact.mjs", () => {
     artifact.verificationPacket.revisionResponses[0].owner = ownerAgent;
   }
 
+  function addFactoryReviewParticipation(artifact) {
+    const reviewCoverage =
+      artifact.agentBlueprintPacket.governanceStageCoverage.Review;
+    if (!reviewCoverage.includes("meta-chrysalis")) {
+      reviewCoverage.push("meta-chrysalis");
+    }
+  }
+
   test("accepts a valid run artifact with full finding lineage", async () => {
     const result = await validateFixture(validFixture);
     assert.equal(result.ok, true);
@@ -514,6 +522,7 @@ describe("validate-run-artifact.mjs", () => {
   test("accepts project-local agent upgrade when global reuse is insufficient", async (t) => {
     const tempFixture = await writeTempFixture(t, (artifact) => {
       routePrimaryExecutionOwner(artifact, "frontend-developer");
+      addFactoryReviewParticipation(artifact);
       const role = artifact.agentBlueprintPacket.roles[0];
       role.ownerSource = "project_local";
       role.agentCopyPolicy = "copy_to_project_for_modification";
@@ -551,6 +560,143 @@ describe("validate-run-artifact.mjs", () => {
       { cwd: REPO_ROOT },
     );
     assert.equal(JSON.parse(stdout).ok, true);
+  });
+
+  test("accepts project-local agent creation when no global owner fits", async (t) => {
+    const tempFixture = await writeTempFixture(t, (artifact) => {
+      routePrimaryExecutionOwner(artifact, "topic-analyst");
+      addFactoryReviewParticipation(artifact);
+      artifact.taskClassification.upgradeReasons = [
+        ...artifact.taskClassification.upgradeReasons,
+        "owner_creation_required",
+      ];
+      artifact.orchestrationTaskBoardPacket.boardMode =
+        "factory_then_dispatch";
+      artifact.orchestrationTaskBoardPacket.tasks = [
+        {
+          taskId: "task-001",
+          taskKind: "factory_build",
+          owner: "meta-genesis",
+          sequence: 1,
+          dependsOn: [],
+          deliverable: "topic-analyst execution-agent card",
+          businessRoleId: "agent",
+          roleDisplayName: "agent",
+        },
+        {
+          taskId: "task-002",
+          taskKind: "execution",
+          owner: "topic-analyst",
+          sequence: 2,
+          dependsOn: ["task-001"],
+          deliverable: "ranked topic analysis",
+          businessRoleId: "analysis",
+          roleDisplayName: "analysis",
+        },
+      ];
+      const role = artifact.agentBlueprintPacket.roles[0];
+      role.ownerSource = "project_local";
+      role.agentCopyPolicy = "create_project_local_agent";
+      role.ownerResolution = "create_owner_first";
+      role.agentIterationPlan =
+        "Create a project-local topic analysis execution agent because global search found no reusable owner.";
+      artifact.capabilityGapPacket = {
+        gapId: "gap-project-local-topic-agent",
+        requestedCapability: "project-specific topic analysis",
+        currentAgentsChecked: [
+          "code-reviewer",
+          "frontend-developer",
+          "meta-scout",
+        ],
+        insufficiencyReason:
+          "Global and existing project-local owners do not cover recurring topic analysis.",
+        resolutionAction: "create_execution_agent",
+        executionAgentRegistryScope: "project_local",
+        requestedBy: "meta-conductor",
+        approvedBy: "meta-warden",
+      };
+      artifact.executionAgentCard = {
+        registryScope: "project_local",
+        agentId: "topic-analyst",
+        businessRoleId: "analysis",
+        roleDisplayName: "analysis",
+        purpose:
+          "Project-local execution owner for recurring topic analysis workflows.",
+        capabilities: ["topic analysis", "project taxonomy matching"],
+        nonCapabilities: ["governance arbitration", "code implementation"],
+        dependencies: ["meta-skill:research-analysis"],
+        inputs: ["project goals", "candidate topic list"],
+        outputs: ["ranked topic analysis"],
+      };
+    });
+    const { stdout } = await execFileAsync(
+      "node",
+      ["scripts/validate-run-artifact.mjs", tempFixture],
+      { cwd: REPO_ROOT },
+    );
+    assert.equal(JSON.parse(stdout).ok, true);
+  });
+
+  test("rejects execution-agent factory without Chrysalis review participation", async (t) => {
+    const tempFixture = await writeTempFixture(t, (artifact) => {
+      routePrimaryExecutionOwner(artifact, "topic-analyst");
+      artifact.taskClassification.upgradeReasons = [
+        ...artifact.taskClassification.upgradeReasons,
+        "owner_creation_required",
+      ];
+      const role = artifact.agentBlueprintPacket.roles[0];
+      role.ownerSource = "project_local";
+      role.agentCopyPolicy = "create_project_local_agent";
+      role.ownerResolution = "create_owner_first";
+      artifact.capabilityGapPacket = {
+        gapId: "gap-project-local-topic-agent",
+        requestedCapability: "project-specific topic analysis",
+        currentAgentsChecked: ["meta-scout"],
+        insufficiencyReason:
+          "No existing owner covers recurring topic analysis.",
+        resolutionAction: "create_execution_agent",
+        executionAgentRegistryScope: "project_local",
+        requestedBy: "meta-conductor",
+        approvedBy: "meta-warden",
+      };
+      artifact.executionAgentCard = {
+        registryScope: "project_local",
+        agentId: "topic-analyst",
+        businessRoleId: "analysis",
+        roleDisplayName: "analysis",
+        purpose: "Project-local execution owner.",
+        capabilities: ["topic analysis"],
+        nonCapabilities: ["governance arbitration"],
+        dependencies: ["meta-skill:research-analysis"],
+        inputs: ["project goals"],
+        outputs: ["ranked topic analysis"],
+      };
+    });
+    await assert.rejects(
+      execFileAsync(
+        "node",
+        ["scripts/validate-run-artifact.mjs", tempFixture],
+        { cwd: REPO_ROOT },
+      ),
+      /meta-chrysalis/,
+    );
+  });
+
+  test("rejects role blueprints missing required Fetch governance participation", async (t) => {
+    const tempFixture = await writeTempFixture(t, (artifact) => {
+      artifact.agentBlueprintPacket.governanceStageCoverage.Fetch =
+        artifact.agentBlueprintPacket.governanceStageCoverage.Fetch.filter(
+          (owner) => owner !== "meta-genesis",
+        );
+    });
+    await assert.rejects(
+      execFileAsync(
+        "node",
+        ["scripts/validate-run-artifact.mjs", tempFixture],
+        { cwd: REPO_ROOT },
+      ),
+      /meta-genesis/,
+    );
   });
 
   test("rejects project-local copy when no modification is planned", async (t) => {

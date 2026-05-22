@@ -1338,6 +1338,7 @@ async function validateWorkflowContract() {
     "meta_kim_governance_only",
     "use_global_directly",
     "copy_to_project_for_modification",
+    "create_project_local_agent",
     "already_project_local",
   ]) {
     assert(
@@ -1411,6 +1412,14 @@ async function validateWorkflowContract() {
         ),
       `workflow-contract.json governanceStageCoveragePolicy.stageAllowedAgents.${stage} must contain only allowed governance meta agents.`,
     );
+    assert(
+      Array.isArray(governanceStagePolicy.stageRequiredAgents?.[stage]) &&
+        governanceStagePolicy.stageRequiredAgents[stage].length >= 1 &&
+        governanceStagePolicy.stageRequiredAgents[stage].every((agent) =>
+          governanceStagePolicy.stageAllowedAgents[stage].includes(agent),
+        ),
+      `workflow-contract.json governanceStageCoveragePolicy.stageRequiredAgents.${stage} must contain required agents that are allowed for the stage.`,
+    );
   }
   for (const agentId of [
     "meta-warden",
@@ -1431,6 +1440,16 @@ async function validateWorkflowContract() {
   assert(
     governanceStagePolicy.skillSelectionScope === "run_scoped",
     "workflow-contract.json governanceStageCoveragePolicy.skillSelectionScope must be run_scoped.",
+  );
+  assert(
+    governanceStagePolicy.factoryResolutionAdditionalRequiredAgents
+      ?.appliesWhenResolutionActionAnyOf?.includes("create_execution_agent") &&
+      governanceStagePolicy.factoryResolutionAdditionalRequiredAgents
+        ?.appliesWhenResolutionActionAnyOf?.includes("upgrade_execution_agent") &&
+      governanceStagePolicy.factoryResolutionAdditionalRequiredAgents?.Review?.includes(
+        "meta-chrysalis",
+      ),
+    "workflow-contract.json governanceStageCoveragePolicy must require Chrysalis review participation for execution-agent creation or upgrade.",
   );
 
   const sameOwnerPolicy =
