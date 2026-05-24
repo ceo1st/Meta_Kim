@@ -6,6 +6,30 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
 
+## [2.2.0] - 2026-05-25
+
+### 新增
+
+- **设计时治理门框架** — 全面蓝图（`docs/design-time-gate-redesign.md`）引入 5 大核心抽象（DeliverableTypeProfile / PolicyRegistry / GateDispatcher / SeverityRule / IntentVerbLexicon），将治理规则从钩子代码迁移到声明式契约。落地用户 4 决策：Q1（陌生交付类型必须先 clarify intent，不允许自动放行）、Q2（4 级 severity 模型：required-strict / required-warn / not_applicable_with_reason / off）、Q3（v1.0 多语言意图识别 zh / en / ja / ko 对齐 README）、Q4（workType 推断 + 第一次写文件前确认）。
+- **deliverable-type-profiles 契约** — 新单一真源文件 `config/contracts/deliverable-type-profiles.json`，含 5 个标准 profile（`code_implementation` / `documentation` / `governance_contract` / `config_change` / `audit_readonly`），每 profile 含 4 级 severity 规则集，多语言意图动词词库（4 意图 x 4 语言 = 16 个词表），推断策略配置。
+- **PoC 抽象库** — 4 个纯函数 ES 模块位于 `canonical/runtime-assets/shared/lib/`：
+  - `deliverable-type-profile.mjs` — 加载、解析、推断交付类型，含置信度档位。
+  - `policy-registry.mjs` — bootstrap 时加载 + freeze 锁定（Zod 风格 registry 模式）。
+  - `gate-dispatcher.mjs` — 纯函数 4 级 severity 派发（OpenAPI 3.1 discriminator 模式）。
+  - `intent-verb-lexicon.mjs` — 多语言意图识别（i18next 风格 namespace lookup）。
+- **PoC 单元测试套件** — `tests/poc-design-gate/` 下 4 个测试文件共 48 个 test case，覆盖 4 条用户决策 + 异常路径。使用 Node.js 内置 `node --test`（零新增依赖）。含 `RESULTS.md` 汇总报告。
+
+### 变更
+
+- **sync-coverage-check 白名单** — `scripts/sync-coverage-check.mjs` 显式将 `shared/lib/` PoC 抽象模块加入白名单。v2.2.0 故意不投影到 runtime mirror；v2.3.0 起通过 feature flag opt-in 接入钩子（R3/R4 改造路径）。
+- **版本元数据** — package 版本号升至 `2.2.0`。
+
+### 架构说明
+
+- v2.2.0 仅引入设计层。生产钩子（`spine-state.mjs` / `enforce-agent-dispatch.mjs`）未改动，现有行为完全保留。
+- 设计文档清单 18 处硬编码位置，含 file:line 引用 + 改造路径 R1-R8 + v2.2.0 至 v3.x 分阶段迁移计划。
+- 5 条铁律（不硬编码 / 意图优先 / 设计前置 / 不让步 / 优秀案例）全部映射到设计文档第 10 节具体落地证据。
+
 ## [2.1.5] - 2026-05-24
 
 ### 新增

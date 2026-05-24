@@ -6,6 +6,30 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.2.0] - 2026-05-25
+
+### Added
+
+- **Design-time governance gate framework** — Comprehensive blueprint (`docs/design-time-gate-redesign.md`) introducing 5 core abstractions (DeliverableTypeProfile, PolicyRegistry, GateDispatcher, SeverityRule, IntentVerbLexicon) that move governance rules from hook code to declarative contracts. Implements user-locked decisions: Q1 (unknown deliverable types must clarify intent, never auto-allow), Q2 (4-tier severity model: required-strict / required-warn / not_applicable_with_reason / off), Q3 (v1.0 multilingual intent detection in zh / en / ja / ko aligned with README), Q4 (workType inference + first-write confirmation).
+- **deliverable-type-profiles contract** — New single-source-of-truth file `config/contracts/deliverable-type-profiles.json` with 5 standard profiles (`code_implementation`, `documentation`, `governance_contract`, `config_change`, `audit_readonly`), per-profile rule sets with 4-level severity, multilingual intent verb lexicon (16 word lists across 4 intents x 4 languages), and inference strategy configuration.
+- **PoC abstraction library** — Four pure-function ES modules under `canonical/runtime-assets/shared/lib/`:
+  - `deliverable-type-profile.mjs` — load, resolve, and infer deliverable types with confidence bands.
+  - `policy-registry.mjs` — bootstrap-time loader with freeze semantics (Zod-style registry pattern).
+  - `gate-dispatcher.mjs` — pure-function 4-level severity dispatch (OpenAPI 3.1 discriminator pattern).
+  - `intent-verb-lexicon.mjs` — multilingual intent detection (i18next-style namespace lookup).
+- **PoC unit test suite** — 48 tests across 4 files under `tests/poc-design-gate/`, covering all four user decisions plus error paths. Uses Node.js built-in `node --test` (zero new dependencies). Includes `RESULTS.md` summary.
+
+### Changed
+
+- **sync-coverage-check allow list** — `scripts/sync-coverage-check.mjs` now explicitly allow-lists the `shared/lib/` PoC abstraction modules. They are deliberately not projected to runtime mirrors in v2.2.0; they will be wired into hooks in v2.3.0 via feature-flagged opt-in (paths R3/R4 in the design document).
+- **Version metadata** — Bumped the package version to `2.2.0`.
+
+### Architecture Notes
+
+- v2.2.0 introduces the design layer only. Production hooks (`spine-state.mjs`, `enforce-agent-dispatch.mjs`) are untouched; existing behavior is preserved end-to-end.
+- 18 hardcoding sites are inventoried in the design document with file:line citations and a migration plan (R1-R8 paths, phased v2.2.0 to v3.x).
+- All five ironclad rules (no hardcoding / intent-first / design-not-validation / no-compromise / best-practice cases) are mapped to specific design artifacts in section 10 of the design document.
+
 ## [2.1.5] - 2026-05-24
 
 ### Added
