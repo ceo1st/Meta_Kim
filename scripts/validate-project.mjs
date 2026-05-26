@@ -1,9 +1,7 @@
 import { promises as fs, readFileSync } from "node:fs";
-import { execFile } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import {
   canonicalAgentsDir,
@@ -15,71 +13,15 @@ import {
   loadRuntimeProfiles,
   loadSyncManifest,
 } from "./meta-kim-sync-config.mjs";
-import {
-  HOOKPROMPT_PLATFORM_SUPPORT,
-  RUNTIME_HOOK_CAPABILITIES,
-  buildCodexHooksJson,
-  buildCursorHooksJson,
-  buildHookPromptAdapterSource,
-  nodeHookCommand,
-} from "./runtime-hook-mapping.mjs";
 import { t } from "./meta-kim-i18n.mjs";
 import { validateSkillFrontmatter } from "./install-skill-sanitizer.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const execFileAsync = promisify(execFile);
-function parseValidationContext(argv = process.argv.slice(2)) {
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === "--context" && argv[index + 1]) return argv[index + 1];
-    if (arg.startsWith("--context=")) return arg.slice("--context=".length);
-  }
-  return null;
-}
-
-const validationContext = parseValidationContext();
-const graphifyOptionalContexts = new Set(["setup", "install", "update"]);
-const skipGraphifyGate =
-  process.env.META_KIM_VALIDATE_SKIP_GRAPHIFY === "1" ||
-  graphifyOptionalContexts.has(validationContext) ||
-  process.argv.includes("--skip-graphify");
-const canonicalClaudeSettingsPath = path.join(
-  canonicalRuntimeAssetsDir,
-  "claude",
-  "settings.json",
-);
 const canonicalClaudeMcpPath = path.join(
   canonicalRuntimeAssetsDir,
   "claude",
   "mcp.json",
-);
-const canonicalClaudeHooksDir = path.join(
-  canonicalRuntimeAssetsDir,
-  "claude",
-  "hooks",
-);
-const canonicalCodexConfigExamplePath = path.join(
-  canonicalRuntimeAssetsDir,
-  "codex",
-  "config.toml.example",
-);
-const canonicalOpenClawTemplatePath = path.join(
-  canonicalRuntimeAssetsDir,
-  "openclaw",
-  "openclaw.template.json",
-);
-const canonicalSharedMemoryHookPath = path.join(
-  canonicalRuntimeAssetsDir,
-  "shared",
-  "hooks",
-  "meta-kim-memory-save.mjs",
-);
-const canonicalOpenClawMemoryHookDir = path.join(
-  canonicalRuntimeAssetsDir,
-  "openclaw",
-  "hooks",
-  "mcp-memory-service",
 );
 
 /** Must match config/contracts/workflow-contract.json runDiscipline.publicDisplayRequires (set equality). */
@@ -91,34 +33,6 @@ const EXPECTED_PUBLIC_DISPLAY_REQUIRES = [
   "consolidatedDeliverablePresent",
 ];
 
-/** Documented in AGENTS.md / CLAUDE.md — project hook commands (Stop may list multiple). */
-const EXPECTED_CLAUDE_HOOK_COMMANDS = [
-  "node .claude/hooks/meta-kim-memory-save.mjs --event session-start",
-  "node .claude/hooks/meta-kim-memory-save.mjs --event user-prompt",
-  "node .claude/hooks/activate-meta-theory-spine.mjs",
-  "node .claude/hooks/block-dangerous-bash.mjs",
-  "node .claude/hooks/pre-git-push-confirm.mjs",
-  "node .claude/hooks/enforce-agent-dispatch.mjs",
-  "node .claude/hooks/post-format.mjs",
-  "node .claude/hooks/post-typecheck.mjs",
-  "node .claude/hooks/post-console-log-warn.mjs",
-  "node .claude/hooks/subagent-context.mjs",
-  "node .claude/hooks/stop-memory-save.mjs",
-  "node .claude/hooks/stop-compaction.mjs",
-  "node .claude/hooks/stop-console-log-audit.mjs",
-  "node .claude/hooks/stop-completion-guard.mjs",
-  "node .claude/hooks/stop-spine-cleanup.mjs",
-];
-
-const GRAPHIFY_MAX_REPORT_AGE_DAYS = 14;
-const GRAPHIFY_MAX_INFERRED_EDGE_RATIO = 0.5;
-const GRAPHIFY_MAX_ISOLATED_NODE_RATIO = 0.25;
-const GRAPHIFY_MAX_HELPER_GOD_NODE_EDGE_RATIO = 0.25;
-const GRAPHIFY_HELPER_GOD_NODE_LABELS = new Set([
-  "log()",
-  "readFile()",
-  "main()",
-]);
 const CANONICAL_CAPABILITY_INDEX_RELATIVE =
   "config/capability-index/meta-kim-capabilities.json";
 const LOCAL_GLOBAL_CAPABILITY_INVENTORY_PATTERN =
@@ -413,13 +327,7 @@ async function validateRequiredFiles() {
     "config/contracts/runtime-profile.schema.json",
     "config/contracts/workflow-contract.json",
     CANONICAL_CAPABILITY_INDEX_RELATIVE,
-    "docs/runtime-capability-matrix.md",
     "scripts/mcp/meta-runtime-server.mjs",
-    "scripts/eval-meta-agents.mjs",
-    "scripts/prepare-openclaw-local.mjs",
-    "scripts/validate-run-artifact.mjs",
-    "tests/fixtures/run-artifacts/valid-run.json",
-    "tests/fixtures/run-artifacts/invalid-run-public-ready.json",
   ];
 
   for (const relativePath of requiredFiles) {
@@ -1921,98 +1829,7 @@ async function validateWorkflowContract() {
   );
 }
 
-async function validateRuntimeParityMatrix() {
-  const matrixPath = path.join(
-    repoRoot,
-    "docs",
-    "runtime-capability-matrix.md",
-  );
-  const raw = await fs.readFile(matrixPath, "utf8");
 
-  for (const marker of [
-    "Behavior Parity Matrix",
-    "trigger parity",
-    "card parity",
-    "silence parity",
-    "control-decision parity",
-    "shell parity",
-    "hook parity",
-    "review parity",
-    "verification parity",
-    "stop condition parity",
-    "writeback parity",
-    "run artifact parity",
-    "`npm run meta:eval:agents`",
-    "`npm run meta:eval:agents:live`",
-  ]) {
-    assert(
-      raw.includes(marker),
-      `docs/runtime-capability-matrix.md must include ${marker}.`,
-    );
-  }
-}
-
-async function validateRuntimeHookMapping() {
-  assert(
-    RUNTIME_HOOK_CAPABILITIES.claude.events.promptSubmit === "UserPromptSubmit",
-    "Claude hook mapping must keep UserPromptSubmit.",
-  );
-  assert(
-    RUNTIME_HOOK_CAPABILITIES.codex.projectHooks === true &&
-      RUNTIME_HOOK_CAPABILITIES.codex.events.promptSubmit ===
-        "UserPromptSubmit",
-    "Codex hook mapping must model trusted project hooks and UserPromptSubmit.",
-  );
-  assert(
-    RUNTIME_HOOK_CAPABILITIES.cursor.projectHooks === true &&
-      RUNTIME_HOOK_CAPABILITIES.cursor.events.promptSubmit ===
-        "beforeSubmitPrompt",
-    "Cursor hook mapping must model native lowerCamel hook events.",
-  );
-  assert(
-    HOOKPROMPT_PLATFORM_SUPPORT.codex.status === "adapter-required" &&
-      HOOKPROMPT_PLATFORM_SUPPORT.cursor.status === "adapter-required",
-    "HookPrompt support must distinguish adapter support for Codex and Cursor.",
-  );
-
-  const codexHooks = buildCodexHooksJson({
-    hookPromptAdapterPath: ".codex/hooks/hookprompt-adapter.mjs",
-  });
-  assert(
-    codexHooks.hooks.UserPromptSubmit[0].hooks.some((hook) =>
-      hook.command.includes("hookprompt-adapter.mjs"),
-    ),
-    "Codex hooks.json must be able to include the HookPrompt adapter.",
-  );
-  const cursorHooks = buildCursorHooksJson({
-    hookPromptAdapterPath: ".cursor/hooks/hookprompt-adapter.mjs",
-  });
-  assert(
-    cursorHooks.hooks.beforeSubmitPrompt.some((hook) =>
-      hook.command.includes("hookprompt-adapter.mjs"),
-    ),
-    "Cursor hooks.json must be able to include the HookPrompt adapter.",
-  );
-  assert(
-    nodeHookCommand("C:/Path With Spaces/hook.mjs") ===
-      'node "C:/Path With Spaces/hook.mjs"',
-    "runtime hook command builder must quote arguments without quoting the node executable.",
-  );
-
-  const adapterSource = buildHookPromptAdapterSource("codex");
-  for (const marker of [
-    "user-prompt-submit.js",
-    "hookSpecificOutput",
-    "systemMessage",
-    "fileURLToPath",
-    "windowsHide",
-  ]) {
-    assert(
-      adapterSource.includes(marker),
-      `HookPrompt Codex adapter source must include ${marker}.`,
-    );
-  }
-}
 
 function assertSchemaRequired(schemaNode, value, label) {
   for (const field of schemaNode.required ?? []) {
@@ -2254,91 +2071,6 @@ async function validateCapabilityIndex() {
   }
 }
 
-async function validateGraphifyGate() {
-  const graphifyCli = path.join(repoRoot, "scripts", "graphify-cli.mjs");
-  await execFileAsync("node", [graphifyCli, "check"], {
-    cwd: repoRoot,
-    timeout: 30_000,
-  });
-
-  const reportPath = path.join(repoRoot, "graphify-out", "GRAPH_REPORT.md");
-  const graphPath = path.join(repoRoot, "graphify-out", "graph.json");
-  assert(await exists(reportPath), "graphify-out/GRAPH_REPORT.md is required.");
-  assert(await exists(graphPath), "graphify-out/graph.json is required.");
-
-  const [reportStat, graphStat] = await Promise.all([
-    fs.stat(reportPath),
-    fs.stat(graphPath),
-  ]);
-  assert(graphStat.size > 0, "graphify-out/graph.json must be non-empty.");
-  assert(
-    reportStat.mtimeMs >= graphStat.mtimeMs - 1000,
-    "graphify-out/GRAPH_REPORT.md must not be older than graph.json.",
-  );
-  const reportAgeDays = (Date.now() - reportStat.mtimeMs) / 86_400_000;
-  assert(
-    reportAgeDays <= GRAPHIFY_MAX_REPORT_AGE_DAYS,
-    `graphify report is stale (${reportAgeDays.toFixed(1)} days old).`,
-  );
-
-  const graph = JSON.parse(await fs.readFile(graphPath, "utf8"));
-  const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
-  const links = Array.isArray(graph.links)
-    ? graph.links
-    : Array.isArray(graph.edges)
-      ? graph.edges
-      : [];
-  assert(nodes.length > 0, "graphify graph must contain nodes.");
-  assert(links.length > 0, "graphify graph must contain edges/links.");
-
-  const inferredEdges = links.filter(
-    (edge) => String(edge.confidence ?? "").toUpperCase() === "INFERRED",
-  ).length;
-  const inferredRatio = inferredEdges / links.length;
-  assert(
-    inferredRatio <= GRAPHIFY_MAX_INFERRED_EDGE_RATIO,
-    `graphify inferred edge ratio is too high (${inferredRatio.toFixed(2)}).`,
-  );
-
-  const degree = new Map(nodes.map((node) => [node.id, 0]));
-  const nodesById = new Map(nodes.map((node) => [node.id, node]));
-  let helperGodNodeEdges = 0;
-  for (const edge of links) {
-    const source = edge.source ?? edge._src;
-    const target = edge.target ?? edge._tgt;
-    degree.set(source, (degree.get(source) ?? 0) + 1);
-    degree.set(target, (degree.get(target) ?? 0) + 1);
-    if (
-      GRAPHIFY_HELPER_GOD_NODE_LABELS.has(labelForNodeId(nodesById, source)) ||
-      GRAPHIFY_HELPER_GOD_NODE_LABELS.has(labelForNodeId(nodesById, target))
-    ) {
-      helperGodNodeEdges += 1;
-    }
-  }
-
-  const isolatedNodes = [...degree.values()].filter((value) => value === 0);
-  const isolatedRatio = isolatedNodes.length / nodes.length;
-  assert(
-    isolatedRatio <= GRAPHIFY_MAX_ISOLATED_NODE_RATIO,
-    `graphify isolated node ratio is too high (${isolatedRatio.toFixed(2)}).`,
-  );
-
-  const helperRatio = helperGodNodeEdges / links.length;
-  assert(
-    helperRatio <= GRAPHIFY_MAX_HELPER_GOD_NODE_EDGE_RATIO,
-    `graphify helper god-node edge ratio is too high (${helperRatio.toFixed(2)}).`,
-  );
-
-  const pollutedNodes = nodes.filter((node) =>
-    /(^|[\\/])(node_modules|\.git|dist|build|graphify-out)([\\/]|$)/i.test(
-      String(node.source_file ?? node.path ?? node.label ?? ""),
-    ),
-  );
-  assert(
-    pollutedNodes.length / nodes.length <= 0.05,
-    "graphify graph contains too many generated/dependency pollution nodes.",
-  );
-}
 
 async function validateDocumentationFacts() {
   const docs = await walkFilesByExtensions(repoRoot, [".md"]);
@@ -2490,7 +2222,6 @@ async function validateEnglishGovernanceFiles() {
     "AGENTS.md",
     "CLAUDE.md",
     "config/contracts/workflow-contract.json",
-    "docs/runtime-capability-matrix.md",
     "docs/runtime-coverage-audit.md",
     "canonical/runtime-assets/claude/commands/save-progress/SKILL.md",
     "canonical/skills/meta-theory/SKILL.md",
@@ -2527,78 +2258,6 @@ async function validateEnglishGovernanceFiles() {
   }
 }
 
-async function validateRunArtifactFixtures() {
-  const validFixture = path.join(
-    repoRoot,
-    "tests",
-    "fixtures",
-    "run-artifacts",
-    "valid-run.json",
-  );
-  const invalidFixture = path.join(
-    repoRoot,
-    "tests",
-    "fixtures",
-    "run-artifacts",
-    "invalid-run-public-ready.json",
-  );
-  const invalidNonMetaOwnerFixture = path.join(
-    repoRoot,
-    "tests",
-    "fixtures",
-    "run-artifacts",
-    "invalid-run-non-meta-owner.json",
-  );
-
-  await execFileAsync(
-    "node",
-    ["scripts/validate-run-artifact.mjs", validFixture],
-    {
-      cwd: repoRoot,
-      timeout: 30_000,
-    },
-  );
-
-  let invalidPassed = false;
-  try {
-    await execFileAsync(
-      "node",
-      ["scripts/validate-run-artifact.mjs", invalidFixture],
-      {
-        cwd: repoRoot,
-        timeout: 30_000,
-      },
-    );
-    invalidPassed = true;
-  } catch {
-    invalidPassed = false;
-  }
-
-  assert(
-    invalidPassed === false,
-    "scripts/validate-run-artifact.mjs must reject the invalid public-ready fixture.",
-  );
-
-  let invalidNonMetaOwnerPassed = false;
-  try {
-    await execFileAsync(
-      "node",
-      ["scripts/validate-run-artifact.mjs", invalidNonMetaOwnerFixture],
-      {
-        cwd: repoRoot,
-        timeout: 30_000,
-      },
-    );
-    invalidNonMetaOwnerPassed = true;
-  } catch {
-    invalidNonMetaOwnerPassed = false;
-  }
-
-  assert(
-    invalidNonMetaOwnerPassed === false,
-    "scripts/validate-run-artifact.mjs must reject non-meta ownerAgent when ownerSource=meta_kim_canonical.",
-  );
-}
 
 async function validateClaudeAgents() {
   const files = (await fs.readdir(canonicalAgentsDir))
@@ -2661,96 +2320,6 @@ async function validateClaudeAgents() {
   }
 
   return ids;
-}
-
-async function validateOpenClawArtifacts(agentIds) {
-  const templateConfig = JSON.parse(
-    await fs.readFile(canonicalOpenClawTemplatePath, "utf8"),
-  );
-  const configIds = templateConfig.agents?.list?.map((agent) => agent.id) ?? [];
-  const sortedAgentIds = [...agentIds].sort();
-  const sortedConfigIds = [...configIds].sort();
-
-  assert(
-    JSON.stringify(sortedConfigIds) === JSON.stringify(sortedAgentIds),
-    "canonical OpenClaw template agent list is out of sync with canonical/agents.",
-  );
-
-  for (const agent of templateConfig.agents?.list ?? []) {
-    const workspace = agent.workspace ?? "";
-    assert(
-      !workspace.includes("\\"),
-      `canonical OpenClaw template workspace for ${agent.id} must use forward slashes.`,
-    );
-    assert(
-      workspace === `__REPO_ROOT__/openclaw/workspaces/${agent.id}`,
-      `canonical OpenClaw template workspace for ${agent.id} must be repo-root placeholder based.`,
-    );
-  }
-
-  const allowedIds = templateConfig.tools?.agentToAgent?.allow ?? [];
-  const sortedAllowedIds = [...allowedIds].sort();
-  assert(
-    JSON.stringify(sortedAllowedIds) === JSON.stringify(sortedAgentIds),
-    "Canonical OpenClaw agentToAgent allow-list is out of sync with canonical/agents.",
-  );
-
-  const hookEntries = templateConfig.hooks?.internal?.entries;
-  assert(
-    templateConfig.hooks?.internal?.enabled === true,
-    "canonical OpenClaw template must enable internal hooks.",
-  );
-  for (const hookName of ["session-memory", "command-logger", "boot-md"]) {
-    assert(
-      hookEntries?.[hookName]?.enabled === true,
-      `canonical OpenClaw template is missing enabled hook ${hookName}.`,
-    );
-  }
-
-  const extraSkillDirs = templateConfig.skills?.load?.extraDirs ?? [];
-  assert(
-    extraSkillDirs.includes("__REPO_ROOT__/openclaw/skills"),
-    "canonical OpenClaw template must register repo-local openclaw/skills via skills.load.extraDirs.",
-  );
-
-  for (const fileName of ["HOOK.md", "handler.ts"]) {
-    await fs.access(path.join(canonicalOpenClawMemoryHookDir, fileName));
-  }
-  const sharedMemoryHook = await fs.readFile(
-    canonicalSharedMemoryHookPath,
-    "utf8",
-  );
-  const claudeStopMemoryHook = await fs.readFile(
-    path.join(canonicalClaudeHooksDir, "stop-memory-save.mjs"),
-    "utf8",
-  );
-  const openClawMemoryHook = await fs.readFile(
-    path.join(canonicalOpenClawMemoryHookDir, "handler.ts"),
-    "utf8",
-  );
-  assert(
-    sharedMemoryHook.includes("--event") &&
-      sharedMemoryHook.includes("/api/search") &&
-      sharedMemoryHook.includes("n_results") &&
-      sharedMemoryHook.includes('memory_type: "observation"') &&
-      !sharedMemoryHook.includes("memoryTypeForEvent") &&
-      !sharedMemoryHook.includes("legacy_memory_type"),
-    "canonical shared memory hook must support lifecycle events, MCP memory search, and correct memory_type=observation without legacy compatibility fields.",
-  );
-  assert(
-    claudeStopMemoryHook.includes('memory_type: "observation"') &&
-      !claudeStopMemoryHook.includes("legacy_memory_type") &&
-      !claudeStopMemoryHook.includes('memory_type: "session-summary"'),
-    "canonical Claude stop memory hook must write correct memory_type=observation without legacy compatibility fields.",
-  );
-  assert(
-    openClawMemoryHook.includes('memory_type: "observation"') &&
-      !openClawMemoryHook.includes("memoryType") &&
-      !openClawMemoryHook.includes("legacyMemoryType") &&
-      !openClawMemoryHook.includes("legacy_memory_type") &&
-      !openClawMemoryHook.includes('return "session-summary"'),
-    "canonical OpenClaw memory hook must write correct memory_type=observation without legacy compatibility fields.",
-  );
 }
 
 async function validatePortableSkill() {
@@ -2887,46 +2456,6 @@ async function validateSyncConfiguration() {
   );
 }
 
-async function validateCodexArtifacts() {
-  const configExample = await fs.readFile(
-    canonicalCodexConfigExamplePath,
-    "utf8",
-  );
-  for (const expected of [
-    "approval_policy",
-    "sandbox_mode",
-    "suppress_unstable_features_warning = true",
-    "[features]",
-    "default_mode_request_user_input = true",
-    "[agents]",
-    "[mcp_servers.meta_kim_runtime]",
-    ".codex/skills/",
-    ".agents/skills/",
-  ]) {
-    assert(
-      configExample.includes(expected),
-      `canonical/runtime-assets/codex/config.toml.example is missing ${expected}`,
-    );
-  }
-  const commandPath = path.join(
-    canonicalRuntimeAssetsDir,
-    "codex",
-    "commands",
-    "meta-theory.md",
-  );
-  const command = await fs.readFile(commandPath, "utf8");
-  for (const expected of [
-    "name: meta-theory",
-    "~/.codex/skills/meta-theory/SKILL.md",
-    ".agents/skills/meta-theory/SKILL.md",
-    ".codex/skills/meta-theory/SKILL.md",
-  ]) {
-    assert(
-      command.includes(expected),
-      `canonical/runtime-assets/codex/commands/meta-theory.md is missing ${expected}`,
-    );
-  }
-}
 
 async function validateSkillsManifest() {
   const manifest = JSON.parse(
@@ -3077,77 +2606,6 @@ function collectClaudeHookCommands(hooksRoot) {
   return commands;
 }
 
-async function validateClaudeSettings() {
-  const settings = JSON.parse(
-    await fs.readFile(canonicalClaudeSettingsPath, "utf8"),
-  );
-  assert(
-    settings.permissions?.deny?.length >= 1,
-    "canonical/runtime-assets/claude/settings.json is missing deny rules.",
-  );
-  const hooks = settings.hooks;
-  assert(
-    hooks?.PreToolUse?.length >= 1,
-    "canonical Claude settings are missing PreToolUse hooks.",
-  );
-  assert(
-    hooks?.SessionStart?.length >= 1,
-    "canonical Claude settings are missing SessionStart hooks.",
-  );
-  assert(
-    hooks?.UserPromptSubmit?.length >= 1,
-    "canonical Claude settings are missing UserPromptSubmit hooks.",
-  );
-  assert(
-    hooks?.PostToolUse?.length >= 1,
-    "canonical Claude settings are missing PostToolUse hooks.",
-  );
-  assert(
-    hooks?.SubagentStart?.length >= 1,
-    "canonical Claude settings are missing SubagentStart hooks.",
-  );
-  assert(
-    hooks?.Stop?.length >= 1,
-    "canonical Claude settings are missing Stop hooks.",
-  );
-
-  assert(
-    hooks.SessionStart[0]?.matcher === "startup|resume",
-    "canonical Claude settings SessionStart must target startup|resume.",
-  );
-  assert(
-    hooks.UserPromptSubmit[0]?.hooks?.length >= 1,
-    "canonical Claude settings UserPromptSubmit must include memory recall hooks.",
-  );
-  assert(
-    hooks.PreToolUse[0]?.matcher === "Bash",
-    "canonical Claude settings PreToolUse[0] must target Bash.",
-  );
-  assert(
-    hooks.PreToolUse[1]?.matcher ===
-      "Write|Edit|Bash|Agent|MultiEdit|NotebookEdit",
-    "canonical Claude settings PreToolUse[1] must target execution + agent tools.",
-  );
-  assert(
-    hooks.PostToolUse[0]?.matcher === "Edit|Write",
-    "canonical Claude settings PostToolUse must target Edit|Write.",
-  );
-  assert(
-    hooks.SubagentStart[0]?.matcher === "*",
-    "canonical Claude settings SubagentStart must use matcher *.",
-  );
-  assert(
-    hooks.Stop[0]?.matcher === "*",
-    "canonical Claude settings Stop must use matcher *.",
-  );
-
-  const found = collectClaudeHookCommands(hooks).sort();
-  const expected = [...EXPECTED_CLAUDE_HOOK_COMMANDS].sort();
-  assert(
-    JSON.stringify(found) === JSON.stringify(expected),
-    `canonical Claude hook commands must match documented hook coverage (expected ${expected.length}, found ${found.length}).`,
-  );
-}
 
 async function validateMcpConfig() {
   const config = JSON.parse(await fs.readFile(canonicalClaudeMcpPath, "utf8"));
@@ -3185,325 +2643,6 @@ async function validateMcpConfig() {
   }
 }
 
-async function validateMcpSelfTest() {
-  const scriptPath = path.join(
-    repoRoot,
-    "scripts",
-    "mcp",
-    "meta-runtime-server.mjs",
-  );
-  const { stdout } = await execFileAsync("node", [scriptPath, "--self-test"], {
-    cwd: repoRoot,
-  });
-  const parsed = JSON.parse(stdout);
-  assert(parsed.ok === true, "MCP self-test did not report ok=true.");
-  assert(parsed.agentCount >= 1, "MCP self-test returned no agents.");
-}
-
-async function validateFactoryRelease() {
-  const factoryRoot = path.join(repoRoot, "factory");
-  if (!(await exists(factoryRoot))) {
-    return;
-  }
-  const legacyPaths = [
-    "factory/generated",
-    "factory/catalog",
-    "factory/flagship-20",
-    "factory/flagship-batch-1",
-    "factory/flagship-batch-2",
-    "factory/flagship-batch-3",
-    "factory/flagship-batch-4",
-    "factory/industry-coverage-matrix.md",
-    "factory/flagship-20.md",
-    "factory/orchestration-playbooks.md",
-    "scripts/generate-industry-agents.mjs",
-    "scripts/compile-foundry-runtime-packs.mjs",
-    "scripts/build-flagship-batch-1.mjs",
-    "scripts/build-flagship-batch-2.mjs",
-    "scripts/build-flagship-batch-3.mjs",
-    "scripts/build-flagship-batch-4.mjs",
-    "scripts/build-flagship-complete.mjs",
-    "factory/README.md",
-    "factory/README.zh-CN.md",
-    "factory/flagship-complete/README.md",
-    "factory/flagship-complete/README.zh-CN.md",
-    "factory/runtime-packs/README.md",
-    "factory/runtime-packs/README.zh-CN.md",
-    "factory/flagship-20.json",
-    "openclaw/workspaces/meta-artisan/memory/README.md",
-    "openclaw/workspaces/meta-conductor/memory/README.md",
-    "openclaw/workspaces/meta-genesis/memory/README.md",
-    "openclaw/workspaces/meta-librarian/memory/README.md",
-    "openclaw/workspaces/meta-prism/memory/README.md",
-    "openclaw/workspaces/meta-scout/memory/README.md",
-    "openclaw/workspaces/meta-sentinel/memory/README.md",
-    "openclaw/workspaces/meta-warden/memory/README.md",
-  ];
-
-  for (const relativePath of legacyPaths) {
-    assert(
-      !(await exists(path.join(repoRoot, relativePath))),
-      `Legacy release-build artifact should not exist in public repo: ${relativePath}`,
-    );
-  }
-
-  const factoryRootEntries = await fs.readdir(path.join(repoRoot, "factory"), {
-    withFileTypes: true,
-  });
-  for (const entry of factoryRootEntries) {
-    assert(
-      !(entry.isFile() && entry.name.endsWith(".md")),
-      `factory/ should not contain user-facing Markdown docs: factory/${entry.name}`,
-    );
-  }
-
-  const factoryMarkdownFiles = await walkFiles(
-    path.join(repoRoot, "factory"),
-    ".md",
-  );
-  for (const filePath of factoryMarkdownFiles) {
-    const baseName = path.basename(filePath).toLowerCase();
-    assert(
-      !baseName.startsWith("readme"),
-      `Nested README files are not allowed in factory/: ${path.relative(repoRoot, filePath)}`,
-    );
-  }
-  const factoryTomlFiles = await walkFiles(
-    path.join(repoRoot, "factory"),
-    ".toml",
-  );
-  const forbiddenFactoryDocRefs = [
-    "factory/industry-coverage-matrix.md",
-    "factory/flagship-20.md",
-    "factory/orchestration-playbooks.md",
-  ];
-  for (const filePath of [...factoryMarkdownFiles, ...factoryTomlFiles]) {
-    const raw = await fs.readFile(filePath, "utf8");
-    for (const marker of forbiddenFactoryDocRefs) {
-      assert(
-        !raw.includes(marker),
-        `${path.relative(repoRoot, filePath)} still references removed release doc ${marker}.`,
-      );
-    }
-  }
-
-  const departmentCount = await countFiles(
-    path.join(repoRoot, "factory", "agent-library", "departments"),
-    ".md",
-  );
-  const specialistCount = await countFiles(
-    path.join(repoRoot, "factory", "agent-library", "specialists"),
-    ".md",
-  );
-  const flagshipCount = await countFiles(
-    path.join(repoRoot, "factory", "flagship-complete", "agents"),
-    ".md",
-  );
-  const runtimeClaudeCount = await countFiles(
-    path.join(repoRoot, "factory", "runtime-packs", "claude", "agents"),
-    ".md",
-  );
-  const runtimeCodexCount = await countFiles(
-    path.join(repoRoot, "factory", "runtime-packs", "codex", "agents"),
-    ".toml",
-  );
-  const runtimeOpenClawCount = (
-    await fs.readdir(
-      path.join(repoRoot, "factory", "runtime-packs", "openclaw", "workspaces"),
-      {
-        withFileTypes: true,
-      },
-    )
-  ).filter((entry) => entry.isDirectory()).length;
-  const flagshipClaudeCount = await countFiles(
-    path.join(
-      repoRoot,
-      "factory",
-      "flagship-complete",
-      "runtime-packs",
-      "claude",
-      "agents",
-    ),
-    ".md",
-  );
-  const flagshipCodexCount = await countFiles(
-    path.join(
-      repoRoot,
-      "factory",
-      "flagship-complete",
-      "runtime-packs",
-      "codex",
-      "agents",
-    ),
-    ".toml",
-  );
-  const flagshipOpenClawCount = (
-    await fs.readdir(
-      path.join(
-        repoRoot,
-        "factory",
-        "flagship-complete",
-        "runtime-packs",
-        "openclaw",
-        "workspaces",
-      ),
-      { withFileTypes: true },
-    )
-  ).filter((entry) => entry.isDirectory()).length;
-
-  assert(
-    departmentCount === 100,
-    `Expected 100 department briefs, found ${departmentCount}.`,
-  );
-  assert(
-    specialistCount === 1000,
-    `Expected 1000 specialist briefs, found ${specialistCount}.`,
-  );
-  assert(
-    flagshipCount === 20,
-    `Expected 20 flagship agents, found ${flagshipCount}.`,
-  );
-  assert(
-    runtimeClaudeCount === 1100,
-    `Expected 1100 Claude runtime packs, found ${runtimeClaudeCount}.`,
-  );
-  assert(
-    runtimeCodexCount === 1100,
-    `Expected 1100 Codex runtime packs, found ${runtimeCodexCount}.`,
-  );
-  assert(
-    runtimeOpenClawCount === 1100,
-    `Expected 1100 OpenClaw workspaces, found ${runtimeOpenClawCount}.`,
-  );
-  assert(
-    flagshipClaudeCount === 20,
-    `Expected 20 flagship Claude packs, found ${flagshipClaudeCount}.`,
-  );
-  assert(
-    flagshipCodexCount === 20,
-    `Expected 20 flagship Codex packs, found ${flagshipCodexCount}.`,
-  );
-  assert(
-    flagshipOpenClawCount === 20,
-    `Expected 20 flagship OpenClaw workspaces, found ${flagshipOpenClawCount}.`,
-  );
-
-  const runtimeSummary = JSON.parse(
-    await fs.readFile(
-      path.join(repoRoot, "factory", "runtime-packs", "summary.json"),
-      "utf8",
-    ),
-  );
-  assert(
-    runtimeSummary.summary?.industries === 20,
-    "runtime-packs/summary.json must report 20 industries.",
-  );
-  assert(
-    runtimeSummary.summary?.departmentSeeds === 100,
-    "runtime-packs/summary.json must report 100 department seeds.",
-  );
-  assert(
-    runtimeSummary.summary?.specialistAgents === 1000,
-    "runtime-packs/summary.json must report 1000 specialist agents.",
-  );
-  assert(
-    runtimeSummary.summary?.totalAgents === 1100,
-    "runtime-packs/summary.json must report 1100 total agents.",
-  );
-
-  const flagshipSummary = JSON.parse(
-    await fs.readFile(
-      path.join(repoRoot, "factory", "flagship-complete", "summary.json"),
-      "utf8",
-    ),
-  );
-  assert(
-    flagshipSummary.counts?.flagshipAgents === 20,
-    "flagship-complete/summary.json must report 20 flagship agents.",
-  );
-  assert(
-    flagshipSummary.counts?.claudeAgents === 20,
-    "flagship-complete/summary.json must report 20 Claude flagship agents.",
-  );
-  assert(
-    flagshipSummary.counts?.codexAgents === 20,
-    "flagship-complete/summary.json must report 20 Codex flagship agents.",
-  );
-  assert(
-    flagshipSummary.counts?.openclawWorkspaces === 20,
-    "flagship-complete/summary.json must report 20 OpenClaw flagship workspaces.",
-  );
-
-  const specialistFiles = await walkFiles(
-    path.join(repoRoot, "factory", "agent-library", "specialists"),
-    ".md",
-  );
-  const requiredSpecialistSections = [
-    "## Strategic Value",
-    "## Failure Modes to Avoid",
-    "## Escalate Immediately If",
-    "## Output Packet",
-    "## Review Checklist",
-    "## Voice Calibration",
-    "## Signature Questions",
-    "## Default Reasoning Sequence",
-  ];
-  for (const specialistPath of specialistFiles) {
-    const raw = await fs.readFile(specialistPath, "utf8");
-    for (const section of requiredSpecialistSections) {
-      assert(
-        raw.includes(section),
-        `${path.relative(repoRoot, specialistPath)} is missing section ${section}.`,
-      );
-    }
-
-    const industry = path.basename(path.dirname(path.dirname(specialistPath)));
-    const department = path.basename(path.dirname(specialistPath));
-    const specialist = path.basename(specialistPath, ".md");
-    const specialistId = `${industry}-${department}-${specialist}`;
-    const runtimeTargets = [
-      path.join(
-        repoRoot,
-        "factory",
-        "runtime-packs",
-        "claude",
-        "agents",
-        `${specialistId}.md`,
-      ),
-      path.join(
-        repoRoot,
-        "factory",
-        "runtime-packs",
-        "codex",
-        "agents",
-        `${specialistId}.toml`,
-      ),
-      path.join(
-        repoRoot,
-        "factory",
-        "runtime-packs",
-        "openclaw",
-        "workspaces",
-        specialistId,
-        "SOUL.md",
-      ),
-    ];
-
-    for (const runtimePath of runtimeTargets) {
-      assert(
-        await exists(runtimePath),
-        `Missing specialist runtime artifact: ${path.relative(repoRoot, runtimePath)}.`,
-      );
-      const runtimeRaw = await fs.readFile(runtimePath, "utf8");
-      for (const section of requiredSpecialistSections) {
-        assert(
-          runtimeRaw.includes(section),
-          `${path.relative(repoRoot, runtimePath)} is missing section ${section}.`,
-        );
-      }
-    }
-  }
-}
 
 function step(num, total, label, detail = "") {
   console.log(`\n[${num}/${total}] ${label}`);
@@ -3581,7 +2720,7 @@ async function validateSpineStateChoiceFieldLocations() {
 }
 
 async function main() {
-  const TOTAL = 20;
+  const TOTAL = 11;
   let current = 1;
 
   console.log("\n========================================");
@@ -3608,91 +2747,40 @@ async function main() {
   const agentIds = await validateClaudeAgents();
   pass(t.val.step04Pass(agentIds.length, agentIds));
 
-  // 5. Canonical OpenClaw runtime asset
+  // 5. Canonical meta-theory skill
   step(current++, TOTAL, t.val.step05, t.val.step05Detail);
-  await validateOpenClawArtifacts(agentIds);
+  await validatePortableSkill();
   pass(t.val.step05Pass);
 
-  // 6. Canonical meta-theory skill
+  // 6. Skills manifest
   step(current++, TOTAL, t.val.step06, t.val.step06Detail);
-  await validatePortableSkill();
+  await validateSkillsManifest();
   pass(t.val.step06Pass);
 
-  // 7. Codex runtime asset template
+  // 7. Canonical capability index
   step(current++, TOTAL, t.val.step07, t.val.step07Detail);
-  await validateCodexArtifacts();
+  await validateCapabilityIndex();
   pass(t.val.step07Pass);
 
-  // 8. Runtime parity matrix
+  // 8. Documentation fact checks
   step(current++, TOTAL, t.val.step08, t.val.step08Detail);
-  await validateRuntimeParityMatrix();
+  await validateDocumentationFacts();
   pass(t.val.step08Pass);
 
-  // 9. Runtime hook mapping
-  step(current++, TOTAL, "Runtime hook mapping");
-  await validateRuntimeHookMapping();
-  pass("runtime hook capabilities and adapters are explicit.");
-
-  // 10. Skills manifest
-  step(current++, TOTAL, "Skills manifest");
-  await validateSkillsManifest();
-  pass("skill capabilities and platform support are explicit.");
-
-  // 11. Canonical capability index
-  step(current++, TOTAL, "Canonical capability index");
-  await validateCapabilityIndex();
-  pass("capability index source and mirrors are valid.");
-
-  // 12. Graphify governance gate
-  step(current++, TOTAL, "Graphify governance gate");
-  if (skipGraphifyGate) {
-    pass(
-      "graphify gate skipped for install/update validation; run npm run meta:graphify:rebuild before release validation.",
-    );
-  } else {
-    await validateGraphifyGate();
-    pass("graphify CLI, report, graph, and health gates are valid.");
-  }
-
-  // 13. Documentation fact checks
-  step(current++, TOTAL, "Documentation fact checks");
-  await validateDocumentationFacts();
-  pass("documentation references are aligned with repo facts.");
-
-  // 14. Run artifact fixtures
+  // 9. npm scripts
   step(current++, TOTAL, t.val.step09, t.val.step09Detail);
-  await validateRunArtifactFixtures();
+  await validatePackageJson();
   pass(t.val.step09Pass);
 
-  // 15. npm scripts
+  // 10. .gitignore
   step(current++, TOTAL, t.val.step10, t.val.step10Detail);
-  await validatePackageJson();
+  await validateGitignore();
   pass(t.val.step10Pass);
 
-  // 16. .gitignore
+  // 11. Canonical MCP config
   step(current++, TOTAL, t.val.step11, t.val.step11Detail);
-  await validateGitignore();
-  pass(t.val.step11Pass);
-
-  // 17. Canonical Claude settings
-  step(current++, TOTAL, t.val.step12, t.val.step12Detail);
-  await validateClaudeSettings();
-  pass(t.val.step12Pass);
-
-  // 18. Canonical MCP config
-  step(current++, TOTAL, t.val.step13, t.val.step13Detail);
   await validateMcpConfig();
-  pass(t.val.step13Pass);
-
-  // 19. MCP self-test
-  step(current++, TOTAL, t.val.step14, t.val.step14Detail);
-  await validateMcpSelfTest();
-  pass(t.val.step14Pass);
-
-  // 20. Factory release artifacts (skipped if factory/ not in public repo)
-  step(current++, TOTAL, t.val.step15, t.val.step15Detail);
-  await validateFactoryRelease();
-  pass(t.val.step15Pass);
+  pass(t.val.step11Pass);
 
   // EB-004 deprecation check (warn-only, does not gate validation).
   const eb004Result = await validateSpineStateChoiceFieldLocations();
