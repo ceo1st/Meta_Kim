@@ -14,6 +14,8 @@ Every verified claim must answer:
 
 `workerTaskPackets[].verifySteps[].id` is the source of truth. `workerResultPackets[].workerExecutionEvidence[].verifyStepRef` must match one verify step.
 
+`status=skipped` is only a blocked/accepted-risk signal. It cannot support `verificationPacket.verified=true` or `summaryPacket.publicReady=true`.
+
 `successMarkerFormat`:
 
 - `stdout-text`: non-empty output required.

@@ -2531,7 +2531,7 @@
             "observedResult": {"type": "string", "description": "Observed result from the actual command or inspection."},
             "workingDirectory": {"type": "string", "description": "Directory where the command or check ran."},
             "stderrTail": {"type": "string", "description": "Captured stderr tail, empty string allowed when no stderr was produced."},
-            "status": {"type": "string", "enum": ["verified", "fabricated", "skipped"], "description": "verified = actually run; fabricated = claim without execution (forbidden); skipped = intentionally not run with reason"},
+            "status": {"type": "string", "enum": ["verified", "fabricated", "skipped"], "description": "verified = actually run; fabricated = claim without execution (forbidden); skipped = intentionally not run with reason and cannot support verificationPacket.verified=true or summaryPacket.publicReady=true"},
             "successMarkerFormat": {"type": "string", "enum": ["stdout-text", "exit-code-only", "json-output"], "description": "How the command signals success. stdout-text: requires non-empty actualOutput. exit-code-only: silent-success commands (node --check, tsc --noEmit) — accepts empty actualOutput only when exitCode is 0 AND commandRanAt timestamp set. json-output: actualOutput must contain parseable JSON. EB-008 closure."},
             "exitCode": {"type": "integer", "description": "Required when successMarkerFormat is exit-code-only. Must be 0 for status=verified."},
             "commandRanAt": {"type": "string", "description": "ISO 8601 timestamp. Required when successMarkerFormat is exit-code-only to prove command actually executed."},

@@ -2933,7 +2933,7 @@ function validateFileCompletionList(resultPacket, taskPacket, context) {
   }
 }
 
-function validateWorkerExecutionEvidence(resultPacket, taskPacket, context) {
+function validateWorkerExecutionEvidence(resultPacket, taskPacket, context, artifact) {
   ensureArray(taskPacket.verifySteps, `${context}.matchedWorkerTask.verifySteps`);
   ensureArray(
     resultPacket.workerExecutionEvidence,
@@ -3028,6 +3028,13 @@ function validateWorkerExecutionEvidence(resultPacket, taskPacket, context) {
       }
     }
     if (item.status === "skipped") {
+      const claimsVerified =
+        artifact.verificationPacket?.verified === true ||
+        artifact.summaryPacket?.publicReady === true;
+      ensure(
+        !claimsVerified,
+        `${context}.workerExecutionEvidence[${index}] has skipped worker verification evidence but verificationPacket.verified or summaryPacket.publicReady claims a verified run.`,
+      );
       ensureString(
         item.skipReason,
         `${context}.workerExecutionEvidence[${index}].skipReason`,
@@ -3221,6 +3228,7 @@ function validateWorkerPackets(contract, artifact) {
       packet,
       taskPacket,
       `workerResultPackets[${index}]`,
+      artifact,
     );
     resultById.set(packet.taskPacketId, packet);
   }

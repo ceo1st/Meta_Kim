@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -56,5 +56,20 @@ describe("sync-global-meta-theory hook policy", () => {
         assert.match(error.stdout, /Claude Code global hooks/);
       }
     });
+  });
+
+  test("release verification uses the global hook hard gate", async () => {
+    const pkg = JSON.parse(
+      await readFile(path.join(REPO_ROOT, "package.json"), "utf8"),
+    );
+    assert.match(
+      pkg.scripts["meta:check:global:release"],
+      /--check.*--with-global-hooks|--with-global-hooks.*--check/,
+    );
+    assert.match(pkg.scripts["meta:verify:all"], /meta:check:global:release/);
+    assert.match(
+      pkg.scripts["meta:verify:all:live"],
+      /meta:check:global:release/,
+    );
   });
 });

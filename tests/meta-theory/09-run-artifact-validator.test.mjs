@@ -379,6 +379,28 @@ describe("validate-run-artifact.mjs", () => {
     );
   });
 
+  test("rejects skipped worker verification evidence for verified public-ready runs", async (t) => {
+    const tempFixture = await writeTempFixture(t, (artifact) => {
+      for (const packet of artifact.workerResultPackets) {
+        for (const evidence of packet.workerExecutionEvidence) {
+          evidence.status = "skipped";
+          evidence.skipReason = "not run";
+          delete evidence.actualOutput;
+          delete evidence.exitCode;
+          delete evidence.commandRanAt;
+        }
+      }
+    });
+    await assert.rejects(
+      execFileAsync(
+        "node",
+        ["scripts/validate-run-artifact.mjs", tempFixture],
+        { cwd: REPO_ROOT },
+      ),
+      /skipped worker verification evidence/,
+    );
+  });
+
   test("rejects worker evidence that is not bound to a verify step", async (t) => {
     const tempFixture = await writeTempFixture(t, (artifact) => {
       delete artifact.workerResultPackets[0].workerExecutionEvidence[0].verifyStepRef;
