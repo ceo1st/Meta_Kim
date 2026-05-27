@@ -37,6 +37,12 @@ Thinking must compare the `minimalFixPath` against the `tenXPathShift`: route, p
 
 User-facing closure must say why changed, what changed / where changed, user impact, verification evidence, and remaining limits. Plain language is not a substitute for product rationale.
 
+## Human-Readable Stage Feedback
+
+For Critical, Fetch, Thinking, and Review, output a compact human summary before or with the stage decision. Keep it token-minimal: max 3 bullets per stage, one short line each.
+
+Each visible stage note says: plain verdict, decision impact, next action. Hide packet ids, protocol fields, and debug traces by default; show them only when the user asks for audit/debug details.
+
 ## Architecture Type Pre-judgment
 
 Important note: **Architecture Type Distinction**. Meta Architecture means agent governance, collaboration relationships, and responsibility boundaries. Project Technical Architecture means code organization, tech stack, and design patterns. For deep technical architecture, route to an `architect` or `backend-architect` capability found during Fetch.

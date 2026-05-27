@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-27T16:58:23.163Z",
+  "generatedAt": "2026-05-27T17:23:08.465Z",
   "registryName": "meta-kim-capabilities",
   "scope": "repo-canonical",
   "canonicalProjection": "config/capability-index/meta-kim-capabilities.json",
@@ -207,8 +207,8 @@
         "type": "skills",
         "namespace": "canonical",
         "path": "canonical/skills/meta-theory/SKILL.md",
-        "size": 14781,
-        "modified": "2026-05-27T16:57:02.574Z"
+        "size": 15192,
+        "modified": "2026-05-27T17:22:06.338Z"
       },
       "repo:canonical-reference:create-agent": {
         "id": "create-agent",

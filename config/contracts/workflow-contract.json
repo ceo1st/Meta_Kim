@@ -317,6 +317,26 @@
         ],
         "rule": "User-facing closure must explain why the path was chosen or changed, what changed and where, how the user path or product behavior changes, what verification evidence supports it, and what remains limited or deferred. Plain language is not a substitute for product rationale."
       },
+      "userFacingStageFeedbackContract": {
+        "required": true,
+        "requiredStages": [
+          "Critical",
+          "Fetch",
+          "Thinking",
+          "Review"
+        ],
+        "requiredFields": [
+          "stage",
+          "plainVerdict",
+          "decisionImpact",
+          "nextAction"
+        ],
+        "maxBulletsPerStage": 3,
+        "maxLineCountPerStage": 3,
+        "hideProtocolIdsByDefault": true,
+        "debugOnlyFullPackets": true,
+        "rule": "Each visible governance stage must emit a compact human-readable note in the user's output language: what was decided, why it matters, and what happens next. Keep protocol packet names, internal field names, and full reasoning traces hidden unless the user asks for audit/debug detail."
+      },
       "dependencyPolicy": {
         "criticalDependencyFailureActions": [
           "block",

@@ -1136,6 +1136,28 @@ describe("workflow-contract.json — schema compliance", async () => {
     }
   });
 
+  test("quality policy requires compact user-facing stage feedback", () => {
+    const feedback = contract.runDiscipline?.qualityFirstPolicy?.userFacingStageFeedbackContract ?? {};
+    assert.equal(feedback.required, true);
+    assert.equal(feedback.maxBulletsPerStage, 3);
+    assert.equal(feedback.hideProtocolIdsByDefault, true);
+    assert.equal(feedback.debugOnlyFullPackets, true);
+
+    for (const stage of ["Critical", "Fetch", "Thinking", "Review"]) {
+      assert.ok(
+        feedback.requiredStages?.includes(stage),
+        `userFacingStageFeedbackContract missing ${stage}`,
+      );
+    }
+
+    for (const field of ["stage", "plainVerdict", "decisionImpact", "nextAction"]) {
+      assert.ok(
+        feedback.requiredFields?.includes(field),
+        `userFacingStageFeedbackContract missing ${field}`,
+      );
+    }
+  });
+
   test("run artifact validation is contract-backed", () => {
     const runArtifactValidation =
       contract.runDiscipline?.runArtifactValidation ?? {};

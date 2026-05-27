@@ -233,6 +233,15 @@ describe("SKILL.md structural integrity", async () => {
       assert.match(raw, /user impact/i);
       assert.match(raw, /verification/i);
     });
+
+    test("SKILL.md requires compact human-readable stage feedback", () => {
+      assert.match(raw, /Human-Readable Stage Feedback/i);
+      assert.match(raw, /Critical.*Fetch.*Thinking.*Review/s);
+      assert.match(raw, /human/i);
+      assert.match(raw, /token/i);
+      assert.match(raw, /debug/i);
+      assert.match(raw, /packet/i);
+    });
   });
 
   // ── 6. Contract files (3 tests) ────────────────────────────────────
