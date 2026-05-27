@@ -6,6 +6,17 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
 
+## [2.4.2] - 2026-05-28
+
+### 修复
+
+- **Planning files 8 阶段全覆盖** — 更新 `planning-files.md` 覆盖完整 spine（Critical → Fetch → Thinking → Execution → Review → Meta-Review → Verification → Evolution），而不仅限于 Stage 3。每个阶段现在都有明确的 planning file 更新职责。
+- **SKILL.md 引用对齐** — 更新 planning-files 引用描述，反映 8 阶段覆盖。
+
+### 变更
+
+- 版本升级：2.4.1 → 2.4.2。
+
 ## [2.4.1] - 2026-05-28
 
 ### 修复

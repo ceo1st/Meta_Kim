@@ -6,6 +6,17 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.4.2] - 2026-05-28
+
+### Fixed
+
+- **Planning files 8-stage coverage** — Updated `planning-files.md` to cover the full spine (Critical → Fetch → Thinking → Execution → Review → Meta-Review → Verification → Evolution) instead of only Stage 3. Each stage now has explicit planning file update responsibilities.
+- **SKILL.md reference alignment** — Updated planning-files reference description to reflect 8-stage coverage.
+
+### Changed
+
+- Version bump: 2.4.1 → 2.4.2.
+
 ## [2.4.1] - 2026-05-28
 
 ### Fixed
