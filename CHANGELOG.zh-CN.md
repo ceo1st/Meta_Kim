@@ -10,6 +10,7 @@
 
 ### 修复
 
+- **ECC 安装策略修正** — ECC 现在指向 `affaan-m/ECC` 和 `ecc@ecc`；`codex`、`opencode`、`qwen` 等 home target 使用 ECC 原生 CLI 的 `core` profile；安装更新会清理旧的 `everything-claude-code` fallback 目录；`cursor`、`zed`、`gemini`、`codebuddy`、`antigravity`、`joycode` 等 project-local target 会提示在项目根目录运行 ECC，而不是误装到 npm 缓存或 `skills/` fallback。Codex 当前会得到上游 `refactor-cleaner` agent，但不会有 `/refactor-clean` slash command，因为上游 ECC 的 Codex target 不包含 `commands-core`。
 - **H-001** — README.md 徽章链接已使用 https://（已验证，无需修改）
 - **M-002** — MCP Memory Service 端点使用 MCP_MEMORY_URL 环境变量（已验证，无需修改）
 - **M-003** — 版本号不一致 - 统一为 2.4.0

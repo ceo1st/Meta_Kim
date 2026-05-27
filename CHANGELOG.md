@@ -10,6 +10,7 @@ When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the
 
 ### Fixed
 
+- **ECC install policy corrected** — ECC now points at `affaan-m/ECC` and `ecc@ecc`, uses ECC's native CLI `core` profile for home targets (`codex`, `opencode`, `qwen`), removes legacy `everything-claude-code` fallback directories, and warns project-local targets (`cursor`, `zed`, `gemini`, `codebuddy`, `antigravity`, `joycode`) to run ECC from each project root instead of installing into an npm cache or `skills/` fallback. Codex currently receives the upstream `refactor-cleaner` agent, while `/refactor-clean` remains unavailable there because upstream ECC excludes `commands-core` from its Codex target.
 - **H-001** — README.md badge links already use https:// (verified, no fix needed)
 - **M-002** — MCP Memory Service endpoints use MCP_MEMORY_URL env (verified, no fix needed)
 - **M-003** — Version inconsistency - unified to 2.4.0
