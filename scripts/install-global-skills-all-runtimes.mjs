@@ -2941,6 +2941,13 @@ async function stageSkillFromSubdir(
     return true;
   }
 
+  if (dryRun) {
+    console.log(
+      t.dryRun(`stage sparse ${repoUrl} (${subdirPath}) -> ${stagedPath}`),
+    );
+    return true;
+  }
+
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "meta-kim-skill-"));
   try {
     await runGitAsync(
