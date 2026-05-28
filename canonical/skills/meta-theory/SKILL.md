@@ -66,7 +66,9 @@ Classify first:
 
 ## Product Reasoning Contract
 
-Users often state a surface request before the real product problem is clear. Critical separates the surface request, real product problem, user pain/value, success standard, and undecided choices.
+Users often state a surface request before the real product problem is clear. Critical must not claim to know true human intent. It judges whether the user's expression satisfies the intent completeness framework: desired outcome, target audience or user value, success criteria, scope boundary, constraints / permissions / safety, evidence freshness needs, and output format / delivery surface.
+
+If a missing or conflicting dimension changes route, scope, risk, acceptance, owner, permission, or non-goal, set `choiceSurfaceState = critical_clarification_allowed` and ask the fewest outcome-branching clarification questions through the native choice surface or localized chat decision card. If the dimension is inferable and low risk, record it as a default assumption in `intentFrameAssessment` and proceed with correction-friendly wording.
 
 Thinking must compare the `minimalFixPath` against the `tenXPathShift`: route, product shape, install path, validation model, owner, or abstraction changes that could make the outcome much better. Record the chosen rationale and any omitted ten-x option with reason.
 
@@ -121,6 +123,14 @@ Use `Agent(...)`, `spawn_agent`, a skill, command, MCP capability, runtime tool,
 
 `agentInvocationState`: `idle -> discovered -> matched -> dispatched -> returned` or `escalated`.
 
+## Warden Entry Gate And Evidence Routing
+
+`/meta-theory` activation enters the `meta-warden` entry gate first. The main thread may summarize and route, but it must not silently become the judge of whether evidence is fresh enough.
+
+Warden's entry gate decides whether the user's expression is complete enough to proceed, not whether the model has guessed the user's hidden intent. It requires an `intentFrameAssessment` against the intent completeness framework, then flags time-sensitive claims, third-party tool or platform status, pasted long-form source material, cross-project contamination risk, and missing evidence. Warden does not perform the research itself; it asks `meta-conductor` to validate the evidence lane and dispatches `meta-scout` when external evidence is needed.
+
+`meta-conductor` owns the evidence lane: what to search, which retrieval capability is available, which source categories are required, and how each finding changes route, owner, risk, scope, acceptance, or a rejected path. `meta-scout` owns external evidence only after local repo/index evidence is insufficient or the claim is current-fact dependent. `meta-prism` reviews Critical, Fetch, and Thinking readiness before output polish.
+
 ## DISPATCH SELF-CHECK
 
 - **Protocol-first Dispatch**: Stage 4 may not start before `runHeader`, `taskClassification`, `fetchPacket`, `contentEvidencePacket`, `preDecisionOptionFrame`, `dispatchBoard`, and `workerTaskPackets` are ready.
@@ -146,8 +156,8 @@ Visible stage names and summaries must be localized to the resolved user languag
 
 **Dynamic Stage Name Translation**: When outputting stage names, translate to the detected user language. Keep the format: "**[Translated Stage Name] (Stage N)**"
 
-1. **Critical**: classify path and risk. Record internally: `surfaceRequest`, `realProductProblem`, `realIntent`, `successCriteria`, `nonGoals`, `blockingUnknowns`, `noQuotaClarification`. **INTERACTION**: If intent is ambiguous or success criteria unclear, use a native choice surface or localized chat decision card to clarify before proceeding.
-2. **Fetch**: inspect only evidence that changes route, owner, risk, acceptance, or verification. Record internally: `evidence`, `decisionImpactMap`, `capabilityDiscovery`, `capabilityGap`, `contradictionLog`. **INTERACTION**: If evidence suggests multiple valid paths or requires user preference, surface the trade-off in the user's language.
+1. **Critical**: classify path and risk. Do not mind-read true human intent; evaluate the user's expression against the intent completeness framework and record internally: `surfaceRequest`, `realProductProblem`, `realIntent`, `userPainValue`, `successCriteria`, `intentFrameAssessment`, `nonGoals`, `blockingUnknowns`, `noQuotaClarification`. **INTERACTION**: If a required intent-frame dimension is missing or conflicting and the answer changes route, scope, risk, acceptance, owner, permission, or non-goal, set `choiceSurfaceState = critical_clarification_allowed` and use a native choice surface or localized chat decision card before Fetch, Thinking, or Execution. Do not present execution options during Critical.
+2. **Fetch**: inspect only evidence that changes route, owner, risk, acceptance, or verification. First extract material claims from large inputs: version, price, tool/platform/API status, paths, project ownership, user requirements, and non-goals. If a decision depends on current external facts, set `contentEvidencePacket.researchRequired = true` and require `researchCapabilityDiscovery` proof for `web_search`, `url_fetch`, `docs_lookup`, `browser_open`, or a recorded blocker. If required evidence is unavailable, return `blocked` / `user_fallback` before Thinking; do not fake certainty. Record internally: `evidence`, `decisionImpactMap`, `capabilityDiscovery`, `capabilityGap`, `contradictionLog`. **INTERACTION**: If evidence suggests multiple valid paths or requires user preference, surface the trade-off in the user's language.
 3. **Thinking**: produce Option Exploration with at least 2 solution paths, Pros / Cons, `minimalFixPath`, `tenXPathShift`, `chosenRationale`, `omittedTenXWithReason`, owner mapping, worker work orders, and verification plan. Thinking determines needed execution capabilities, matches existing capabilities, and creates or upgrades only for gaps. **INTERACTION**: Ask before Execution when choosing between paths with different scope/risk/cost. Present options clearly with a recommended default.
 4. **Execution**: dispatch bounded worker tasks. Stage 4 may not start before `runHeader`, `taskClassification`, `fetchPacket`, `dispatchBoard`, `workerTaskPackets`, and owner bindings are ready.
 5. **Review**: meta-prism checks quality, boundary fit, evidence, and whether Review can reproduce the claims. **INTERACTION**: If review finds issues that require user preference to resolve (e.g., quality vs. speed trade-off), use a native choice surface or localized chat decision card before proceeding.
@@ -173,14 +183,14 @@ Thinking -> Execution: run `agent-teams-playbook` only when there are 2+ indepen
 
 | Agent | Owns | Does not own |
 |---|---|---|
-| `meta-warden` | final gate, arbitration, public-ready decision | detailed quality review |
-| `meta-conductor` | flow, lanes, dispatch board, worker packets | product implementation |
+| `meta-warden` | entry gate, final gate, arbitration, public-ready decision | detailed quality review or research execution |
+| `meta-conductor` | flow, lanes, evidence lane, dispatch board, worker packets | product implementation or external research itself |
 | `meta-genesis` | SOUL, identity, agent boundary design | runtime install fixes |
 | `meta-artisan` | skill/tool/loadout fit, capability slots | final release claims |
 | `meta-sentinel` | safety, permissions, hooks, rollback, read-only reviewer ability | UX polish |
 | `meta-librarian` | memory, continuity, handoff context | code ownership |
-| `meta-prism` | review quality, drift, evidence closure | writing the fix it reviews |
-| `meta-scout` | external capability discovery and evaluation | durable governance writeback |
+| `meta-prism` | review Critical / Fetch / Thinking quality, drift, evidence closure | writing the fix it reviews |
+| `meta-scout` | external evidence, capability discovery, and evaluation | durable governance writeback |
 | `meta-chrysalis` | evolution signal aggregation and writeback coordination | bypassing Warden approval |
 
 ## Fetch Evidence Inventory (Research -> Inventory -> Thinking Handoff)
@@ -190,6 +200,8 @@ Record the evidence source, what it proves, decision impact, and owner impact. F
 Minimum handoff:
 
 - inspected files / graph / contracts / capability indexes
+- extracted material claims and which claims are current-fact dependent
+- `researchRequired`, selected retrieval capability, source categories, or explicit blocker
 - capability matches and gaps
 - contradictions or stale assumptions
 - exact reason a source was skipped
@@ -202,7 +214,7 @@ Minimum handoff:
 
 | Stage | When to Ask | Example Questions |
 |-------|-------------|-------------------|
-| Critical | Intent is ambiguous or multiple valid interpretations | "Should I focus on X or Y?" |
+| Critical | The user's expression fails the intent completeness framework and the missing answer changes route, scope, risk, acceptance, owner, permission, or non-goal | "Should I focus on X or Y?" |
 | Fetch | Evidence suggests multiple paths with different trade-offs | "I found A (faster) and B (more thorough). Which approach?" |
 | Thinking | Choosing between solution paths with different scope/cost | "Minimal fix: 2 hours. Ten-x shift: 2 days. Your choice?" |
 | Review | Issues found that require user preference to resolve | "Quality concern: rebuild or patch?" |

@@ -6,7 +6,7 @@ Critical -> Fetch -> Thinking -> Execution -> Review -> Meta-Review -> Verificat
 
 ## Required Outputs
 
-- Critical: `surfaceRequest`, `realProductProblem`, `realIntent`, `userPainValue`, `successCriteria`, `undecidedUserChoices`, `nonGoals`, `blockingUnknowns`, `noQuotaClarification`.
+- Critical: `surfaceRequest`, `realProductProblem`, `realIntent`, `userPainValue`, `successCriteria`, `intentFrameAssessment`, `undecidedUserChoices`, `nonGoals`, `blockingUnknowns`, `noQuotaClarification`.
 - Fetch: `evidence`, `decisionImpactMap`, `capabilityDiscovery`, `capabilityGap`, `contradictionLog`.
 - Thinking: `designFrame`, `workType`, `expertLens`, `minimalFixPath`, `tenXPathShift`, `chosenRationale`, `omittedTenXWithReason`, `consideredLanes`, `omittedLanesWithReason`, `workerTaskPackets`, `dependencyPolicy`.
 - Execution: `workerResultPackets`, `fileCompletionList`, `workerExecutionEvidence`.

@@ -87,7 +87,7 @@ After global install (`node setup.mjs` or `npx`), what works where:
 GitHub <a href="https://github.com/KimYx0207">KimYx0207</a> |
 X <a href="https://x.com/KimYx0207">@KimYx0207</a> |
 Website <a href="https://www.aiking.dev/">aiking.dev</a> |
-WeChat Official Account: <strong>Lao Jin Guides You Through AI</strong>
+WeChat Official Account: <strong>老金带你玩AI</strong>
 
 Feishu knowledge base:
 <a href="https://my.feishu.cn/wiki/OhQ8wqntFihcI1kWVDlcNdpznFf">long-term updates</a>
