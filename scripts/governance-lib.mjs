@@ -134,16 +134,16 @@ export function scriptExists(scriptPath) {
 
 export function classifyTaskShape(task) {
   const text = String(task ?? "").toLowerCase();
-  if (/hook|runtime|codex|claude|cursor|openclaw|windows|mac|wsl/.test(text)) {
+  if (/hook|runtime|codex|claude|cursor|openclaw|windows|mac|wsl|钩子|运行时|平台|安装|更新|配置|沙盒|权限|审批/.test(text)) {
     return "platform_governance";
   }
-  if (/strategy|growth|moneti[sz]e|pricing|business|product|pmf|conversion/.test(text)) {
+  if (/strategy|growth|moneti[sz]e|pricing|business|product|pmf|conversion|策略|增长|商业化|变现|定价|产品|转化|留存|分发|用户路径/.test(text)) {
     return "strategy_product_decision";
   }
-  if (/refactor|code|test|api|database|bug|integration/.test(text)) {
+  if (/refactor|code|test|api|database|bug|integration|重构|代码|测试|接口|数据库|缺陷|集成/.test(text)) {
     return "engineering_execution";
   }
-  if (/content|article|story|copy|narrative/.test(text)) {
+  if (/content|article|story|copy|narrative|内容|文章|叙事|文案|传播/.test(text)) {
     return "content_creation";
   }
   return "fuzzy_complex_task";
@@ -181,4 +181,3 @@ export function assert(condition, message) {
     fail(message);
   }
 }
-

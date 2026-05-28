@@ -11,32 +11,45 @@ const runtime = argValue("--runtime", "auto");
 const osTarget = argValue("--os", "auto");
 const json = process.argv.includes("--json");
 const taskShape = classifyTaskShape(task);
+const taskText = String(task ?? "").toLowerCase();
 
 const weapons = (await readJson("config/capability-index/weapon-registry.json")).weapons;
 const dependencies = (await readJson("config/capability-index/dependency-project-registry.json")).projects;
 
 function fitsTask(entry) {
   const haystack = JSON.stringify([entry.taskShapes, entry.triggerConditions, entry.name, entry.description]).toLowerCase();
-  return taskShape === "fuzzy_complex_task" || haystack.includes(taskShape.split("_")[0]) || /strategy|product|moneti/.test(task.toLowerCase()) && haystack.includes("decision");
+  if (taskShape === "fuzzy_complex_task") return true;
+  if (haystack.includes(taskShape.split("_")[0])) return true;
+  if (/strategy|product|moneti|策略|产品|商业化|变现|定价|增长|转化/.test(taskText) && haystack.includes("decision")) return true;
+  return false;
 }
 
 const candidateWeapons = weapons.filter(fitsTask);
 const candidateDependencies = dependencies.filter((dep) => {
   const text = JSON.stringify(dep.capabilityCard).toLowerCase();
-  if (/strategy|product|moneti|fuzzy|decision/.test(task.toLowerCase())) return text.includes("orchestration") || text.includes("runtime") || text.includes("agent");
-  if (/code|refactor|bug|test/.test(task.toLowerCase())) return !dep.capabilityCard?.notFor?.includes("direct code execution");
+  if (/strategy|product|moneti|fuzzy|decision|策略|产品|商业化|变现|定价|增长|转化/.test(taskText)) return text.includes("orchestration") || text.includes("runtime") || text.includes("agent");
+  if (/code|refactor|bug|test|代码|重构|缺陷|测试/.test(taskText)) return !dep.capabilityCard?.notFor?.includes("direct code execution");
   return true;
 });
 
 const routes = candidateWeapons.map((weapon) => {
-  const dep = candidateDependencies.find((candidate) => weapon.dependencyProjects?.includes(candidate.id)) ?? candidateDependencies[0] ?? null;
+  const dependencyIds = weapon.dependencyProjects ?? [];
+  const dep = dependencyIds.length
+    ? candidateDependencies.find((candidate) => dependencyIds.includes(candidate.id)) ?? null
+    : null;
   const selectedRuntime = runtime === "auto" ? "codex" : runtime;
   const selectedOs = osTarget === "auto" ? "windows" : osTarget;
   const runtimeSupport = supportScore(weapon.runtimeSupport?.[selectedRuntime] ?? "unknown");
   const osSupport = supportScore(weapon.osSupport?.[selectedOs] ?? "unknown");
   const dependencyFit = dep ? dep.scoring?.overall ?? 70 : weapon.type === "dependency_project" ? 50 : 70;
+  const strategyDecisionTask = taskShape === "strategy_product_decision" || /strategy|product|moneti|策略|产品|商业化|变现|定价|增长|转化/.test(taskText);
+  const intentFit = strategyDecisionTask && weapon.id === "meta-kim-decision-patterns"
+    ? 100
+    : strategyDecisionTask && weapon.id === "dependency-project-registry"
+      ? 80
+      : fitsTask(weapon) ? 85 : 50;
   const routeScore = scoreRoute({
-    intentFit: fitsTask(weapon) ? 85 : 50,
+    intentFit,
     ownerFit: weapon.ownerCandidates?.length ? 85 : 0,
     weaponFit: 90,
     dependencyFit,
@@ -69,7 +82,7 @@ const capabilityGapPacket = recommendedRoute && recommendedRoute.score >= 50 ? n
 const output = {
   taskShape,
   intentAmplificationPrecheck: {
-    needsIntentAmplification: /fuzzy|strategy|product|moneti|complex/.test(task.toLowerCase()),
+    needsIntentAmplification: taskShape === "fuzzy_complex_task" || /fuzzy|strategy|product|moneti|complex|模糊|复杂|策略|产品|商业化|变现|定价|增长|转化/.test(taskText),
     reason: "Route may change based on real intent and success criteria."
   },
   candidateOwners: [...new Set(candidateWeapons.flatMap((weapon) => weapon.ownerCandidates ?? []))],

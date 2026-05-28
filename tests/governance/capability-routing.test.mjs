@@ -17,6 +17,12 @@ test("routing fixtures recall internal patterns and platform/OS matrices", () =>
   const product = route("product monetization task");
   assert.ok(product.internalDecisionPatterns.includes("thinking-minimum-test"));
 
+  const chineseProduct = route("模糊目标：帮我把一个产品商业化，但我不知道先做增长、定价还是转化", "codex", "windows");
+  assert.equal(chineseProduct.taskShape, "strategy_product_decision");
+  assert.equal(chineseProduct.intentAmplificationPrecheck.needsIntentAmplification, true);
+  assert.equal(chineseProduct.recommendedRoute?.weapon, "meta-kim-decision-patterns");
+  assert.equal(chineseProduct.recommendedRoute?.dependencyProject, null);
+
   const refactor = route("complex code refactor");
   assert.ok(refactor.recommendedRoute || refactor.capabilityGapPacket);
 
