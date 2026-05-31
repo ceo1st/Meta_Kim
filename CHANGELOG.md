@@ -6,6 +6,33 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.7.0] - 2026-06-01
+
+### Added
+
+- **Two-speed capability discovery** — Added a Codex-ready discovery policy that uses full global scans for install, update, explicit refresh, stale or missing cache, missing required providers, and high-risk provider routes, while normal governed runs read cached global inventory plus a lightweight project scan.
+- **Provider-first owner routing** — Expanded owner discovery beyond agents and skills to include commands, hooks, rules/prompts, MCP capabilities, runtime tools, and plugins before creating or upgrading execution agents.
+- **Capability scan UX contract** — Added user-facing refresh guidance and token controls so runs expose counts, top candidates, and source refs instead of dumping full provider catalogs into context.
+- **Codex real-machine release smoke** — Verified the current Codex CLI can load Meta_Kim, project instructions, skills, and hooks in a read-only non-interactive run.
+
+### Changed
+
+- **Execution route selection** — `select-execution-route` now reports provider coverage, cache freshness, full-scan triggers, and current provider evidence in capability gap packets.
+- **Meta-theory execution discipline** — Critical, Fetch, Thinking, and Review now require existing owner/provider discovery evidence before execution or agent creation.
+- **Execution-agent card abstraction** — Durable execution-agent cards now stay capability-class oriented; concrete files, tickets, one-run tasks, and verification steps belong in worker task packets.
+- Version bump: 2.6.2 -> 2.7.0.
+
+### Verification
+
+- `codex --version`
+- `codex doctor`
+- `codex -a never exec --ephemeral --sandbox read-only -C D:/KimProject/Meta_Kim "Codex实机冒烟测试：不要修改文件，不要运行外部命令。读取项目说明后，用一句中文回答你能看到Meta_Kim项目且当前任务是发布前验证。"`
+- `npm run meta:sync`
+- `npm run meta:sync:global`
+- `npm run meta:check:global:release`
+- `npm run meta:verify:all`
+- `git diff --check`
+
 ## [2.6.2] - 2026-05-30
 
 ### Added

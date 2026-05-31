@@ -84,11 +84,15 @@ Dispatch to `meta-conductor` for business-flow blueprint and parallel lane orche
 
 ## Dispatch Self-Check
 
-Before Stage 4, record Protocol-first Dispatch: `runHeader`, `dispatchBoard`, `businessFlowBlueprintPacket`, `agentBlueprintPacket`, and `workerTaskPackets`. Stage 4 may not start before protocol artifacts are ready. `agentInvocationState`: `idle -> discovered -> matched -> dispatched -> returned/escalated`. `workerTaskPackets` must include `dependsOn`, `parallelGroup`, and `mergeOwner`. Option Exploration is MANDATORY in Stage 3: compare ≥2 solution paths with Pros / Cons or Decision Record and rejected alternatives. Apply Skip-Level Self-Reflection Gate and Escalation Signals before dispatch.
+Before Stage 4, record Protocol-first Dispatch: `runHeader`, `dispatchBoard`, `businessFlowBlueprintPacket`, `agentBlueprintPacket`, `ownerDiscoveryPacket`, and `workerTaskPackets`. Stage 4 may not start before protocol artifacts are ready. `agentInvocationState`: `idle -> discovered -> matched -> dispatched -> returned/escalated`. `workerTaskPackets` must include `dependsOn`, `parallelGroup`, and `mergeOwner`. `ownerDiscoveryPacket` must list repo canonical owners, runtime mirror owners, project runtime agents, local global agents, reusable skill/command/hook/rule/prompt/MCP/plugin/tool providers, and the Critical / Fetch / Thinking / Review governance-stage owners checked before any create or upgrade decision. Option Exploration is MANDATORY in Stage 3: compare ≥2 solution paths with Pros / Cons or Decision Record and rejected alternatives. Apply Skip-Level Self-Reflection Gate and Escalation Signals before dispatch.
 
 ## Fetch Evidence Inventory
 
 Research -> Inventory -> Thinking Handoff. Thinking determines needed execution capabilities, then match existing capabilities, then create or upgrade only for gaps. Fetch material claims include version, price, third-party, platform, and tool assertions. If current facts matter, set `contentEvidencePacket.researchRequired = true`, run `researchCapabilityDiscovery`, and prefer `web_search`, `url_fetch`, `docs_lookup`, or `browser_open`. If research is blocked, return `blocked` with `user_fallback` rather than guessing. Run Command discovery by package.json script scan and npm run inventory. Apply DRY conflict detection: overlap detect, duplicate reject, and keep one owner per capability. Skill selection ROI = (Task Coverage x Usage Frequency) / (Context Cost + Learning Curve).
+
+Execution-agent identity must stay abstract and provider-first. Durable `executionAgentCard` content may describe a reusable capability class, boundaries, abstract dependencies, inputs, and outputs; it must not contain repo paths, file lists, tickets, one-run work instructions, `todayTask`, `scopeFiles`, `deliverableLink`, or `verifySteps`. Match existing agents, skills, commands, hooks, rules/prompts, MCP tools, runtime tools, and plugins before creating or upgrading an execution agent. Put concrete work in `workerTaskPackets`, `capabilityBindings`, and `orchestrationTaskBoardPacket` only. If a card cannot be written without concrete task binding, return to Thinking and reuse an existing owner/provider or emit `capabilityGapPacket`.
+
+Capability scan UX: full global scans happen on install, update, explicit refresh, missing cache, cache older than 14 days, missing required provider, or high-risk provider routes. Normal execution reads cached global inventory, performs a lightweight project scan, shows only counts/top candidates/source refs, and avoids dumping full provider definitions into chat. If the last full scan is older than 2 weeks, tell the user this run will update first to match newly added content and reach the best capability route, then refresh before execution.
 
 ## Warden Entry Gate
 
@@ -175,6 +179,7 @@ Execution may start only when all are true:
 
 - `realIntent`, success criteria, non-goals, and blocking unknowns are recorded.
 - Fetch evidence and capability discovery are complete enough for the chosen path.
+- Existing-owner discovery has checked repo canonical index, runtime mirrors, project runtime agents, local global agent inventory, and available skill/command/hook/rule/prompt/MCP/plugin/tool providers; skipped sources must appear as blockers or no-impact evidence.
 - Route score is `>=85`, or a branch-changing user choice accepts a `70-84` route.
 - Owner is not `general-purpose`, not a runtime alias, and not a governance agent acting as implementation worker.
 - Weapon is callable and compatible with target runtime and OS.

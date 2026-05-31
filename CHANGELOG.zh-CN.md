@@ -6,6 +6,33 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
 
+## [2.7.0] - 2026-06-01
+
+### 新增
+
+- **两速能力发现模型** — 新增 Codex 可用的发现策略：安装、更新、用户明确刷新、缓存缺失或过期、缺少必要 provider、高风险 provider 路由时才做全局全扫；普通 governed run 读取全局缓存并轻扫当前项目。
+- **Provider-first owner 路由** — owner discovery 从 agents / skills 扩展到 commands、hooks、rules/prompts、MCP capabilities、runtime tools 和 plugins，创建或升级 execution agent 前必须先匹配已有 provider。
+- **能力扫描 UX 契约** — 新增刷新提示与 token 控制：运行时只暴露覆盖数量、top candidates 和 source refs，不把完整 provider catalog 倒进上下文。
+- **Codex 实机发布冒烟** — 验证当前 Codex CLI 可以在只读非交互模式下加载 Meta_Kim、项目说明、skills 和 hooks。
+
+### 变更
+
+- **Execution route selection** — `select-execution-route` 现在输出 provider coverage、cache freshness、full-scan triggers，并在 capability gap packet 中记录已检查的 provider 证据。
+- **Meta-theory 执行纪律** — Critical、Fetch、Thinking、Review 现在要求执行或创建 agent 前必须具备 existing owner/provider discovery evidence。
+- **Execution-agent card 抽象边界** — durable execution-agent card 保持能力类别抽象；具体文件、ticket、单次任务和 verification steps 只能进入 worker task packets。
+- 版本升级：2.6.2 -> 2.7.0。
+
+### 验证
+
+- `codex --version`
+- `codex doctor`
+- `codex -a never exec --ephemeral --sandbox read-only -C D:/KimProject/Meta_Kim "Codex实机冒烟测试：不要修改文件，不要运行外部命令。读取项目说明后，用一句中文回答你能看到Meta_Kim项目且当前任务是发布前验证。"`
+- `npm run meta:sync`
+- `npm run meta:sync:global`
+- `npm run meta:check:global:release`
+- `npm run meta:verify:all`
+- `git diff --check`
+
 ## [2.6.2] - 2026-05-30
 
 ### 新增
