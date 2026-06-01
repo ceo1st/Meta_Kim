@@ -320,9 +320,18 @@ export function createInitialState({ taskClassification, triggerReason }) {
     triggerReason: triggerReason || "user_invocation",
     dispatchedAgents: [],
     dispatchChain: {},
+    controlState: "normal",
+    gateState: "pending",
+    surfaceState: "silent",
     choiceSurfaceState: "not_allowed",
     queryBypass: false,
     executionStarted: false,
+    criticalFetchLoopCount: 0,
+    criticalFetchLoopMax: 3,
+    intentCard: null,
+    intentConfirmationState: null,
+    intentConfirmationTimestamp: null,
+    intentCorrectionPayload: null,
     // Audit trail for skipped hooks
     skippedHooks: [],
   };
@@ -469,6 +478,25 @@ export function completeStage(state, stageName) {
   }
 
   return newState;
+}
+
+export function incrementCriticalFetchLoop(state) {
+  const count = (state.criticalFetchLoopCount || 0) + 1;
+  const max = state.criticalFetchLoopMax || 3;
+  return {
+    ...state,
+    criticalFetchLoopCount: count,
+    criticalFetchLoopBudgetExhausted: count >= max,
+  };
+}
+
+export function recordIntentConfirmation(state, confirmationState, correctionPayload) {
+  return {
+    ...state,
+    intentConfirmationState: confirmationState,
+    intentConfirmationTimestamp: new Date().toISOString(),
+    intentCorrectionPayload: correctionPayload || null,
+  };
 }
 
 /**

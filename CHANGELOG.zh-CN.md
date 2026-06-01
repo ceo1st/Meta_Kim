@@ -6,6 +6,34 @@
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 发布新版本时，请在顶部（旧版本之前）添加新的 **`## [版本号] - YYYY-MM-DD`** 部分。
 
+## [2.8.1] - 2026-06-02
+
+### 修复
+
+- **决策面跳过策略澄清** — `queryBypass`/只读现在是安全和路径分类边界，不是存在分支选项时的决策面跳过理由。在所有合约、策略和 agent 定义中将 `pure_read_only_queryBypass` 重命名为 `no_branching_choice`。
+- **移除 simpleMode 后门** — 从脊柱状态创建、所有门控检查、跳过逻辑和四语言 i18n 字符串中移除 `simpleMode` 标志。simpleMode 是仅消费者功能，没有生产者侧初始化，造成了绕过调度治理的不对称。
+- **修复 queryBypass 脊柱状态死锁** — 添加死锁打破机制：`queryBypass` 运行现在可以写入 `spine-state.json` 本身（通过 `isSpineStateWrite()` 限定范围），否则一旦激活就无法清除 `queryBypass`。
+- **清理 i18n 过时引用** — 从四种语言的恢复指令中移除过时的 simple-mode 引用。
+
+### 变更
+
+- **隐藏状态骨架初始化** — `createInitialState` 现在在 claude 和 shared 脊柱状态模块中种子 `controlState: "normal"`、`gateState: "pending"`、`surfaceState: "silent"`。
+- **controlState/gateState/surfaceState 枚举统一** — `controlState` 收敛为 `normal / skip / interrupt / override / iteration / intentional_silence / degraded`。`gateState` 为 `pending / pass / fail / rework / blocked`。`surfaceState` 为 `silent / notice / decision`。公开就绪状态从 `surfaceState` 分离到摘要/公开面数据包。
+- **新增 Critical-Fetch 意图循环** — 模糊或歧义输入现在进入有界 Critical-Fetch 循环（最多 `criticalFetchLoopMax = 3` 轮），配合 IntentCard 确认。新字段：`criticalFetchLoopCount`、`intentCard`、`intentConfirmationState`、`intentCorrectionPayload`。
+- **能力发现路由优化** — 所有者发现现在使用 provider-first evidence / owner-last binding。路由输出暴露 `runtimeToolProviders`、`discoveryPrinciple`、`ownerBindingOrder` 和 `routeExecutionGate`（过期缓存可预览路由但不能进入 Execution）。
+- **运行时矩阵测试加固** — Cursor hook/subagent 断言从弱正则改为结构化字段检查。OpenClaw `popup / overlay / approval UI` 从 `partial` 收紧为非原生。OpenClaw 文档澄清内部 hooks 与 typed plugin hooks 的区别，workspace 不是硬沙箱。
+- **决策模板渲染器中立** — 通用决策和批量模板不再嵌入运行时特定 schema（AskUserQuestion JSON）。渲染器特定 payload 放在运行时适配器合约中（`runtime-claude.md`、`runtime-codex.md`）。
+- **choice-surface-policy.json 扩展** — 新增 `intentConfirmationCard`、`choiceSurfaceAdapterContract` 和 `readOnlyPolicy`。
+
+### 验证
+
+- `tests/meta-theory/11-eight-stage-spine.test.mjs` — 106/106 通过
+- `tests/meta-theory/00-capability-discovery.test.mjs` — 42/42 通过
+- `tests/meta-theory/e2e-eight-stage-live.test.mjs` — 37/37 通过
+- `tests/governance/capability-routing.test.mjs` — 1/1 通过
+- `tests/governance/runtime-capability-matrix.test.mjs` — 1/1 通过
+- `scripts/validate-capability-routing.mjs` — valid
+
 ## [2.8.0] - 2026-06-01
 
 ### 新增

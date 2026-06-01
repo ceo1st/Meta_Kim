@@ -937,12 +937,20 @@
       "anonymousExecutionForbidden": true,
       "existingOwnerPreferred": true,
       "existingOwnerDiscoveryRequired": true,
+      "discoveryPrinciple": "provider_first_evidence_owner_last_binding",
+      "providerEvidenceOrder": [
+        "available_capability_providers_skills_tools_mcp",
+        "runtime_tool_provider_inventory",
+        "repo_canonical_capability_index",
+        "runtime_mirror_indexes",
+        "project_runtime_agent_inventory",
+        "local_global_agent_inventory"
+      ],
       "existingOwnerEvidenceOrder": [
         "repo_canonical_capability_index",
         "runtime_mirror_indexes",
         "project_runtime_agent_inventory",
-        "local_global_agent_inventory",
-        "available_capability_providers_skills_tools_mcp"
+        "local_global_agent_inventory"
       ],
       "capabilityDiscoveryRuntimePolicy": {
         "defaultMode": "cached_global_inventory_plus_project_light_scan",
@@ -955,7 +963,7 @@
           "scheduled_refresh_older_than_14_days",
           "high_risk_provider_route"
         ],
-        "perRunBehavior": "Every governed execution reads the cached global capability inventory and performs a lightweight project scan for agents, skills, commands, hooks, rules/prompts, and MCP config references. It must not run a full global filesystem scan on every dispatch; it must require a full refresh first when the cache is missing or older than 14 days.",
+        "perRunBehavior": "Every governed execution reads the cached global capability inventory and performs a lightweight project scan for agents, skills, commands, hooks, rules/prompts, MCP config references, and runtime tool evidence. It must not run a full global filesystem scan on every dispatch. It may preview a route with missing cache or cache older than 14 days, but it must not enter Execution until discovery refreshes or returns to Fetch.",
         "staleAfterMinutes": 20160,
         "staleAfterDays": 14,
         "refreshCommand": "npm run discover:global",

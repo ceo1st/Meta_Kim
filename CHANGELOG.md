@@ -6,6 +6,34 @@ All notable changes to Meta_Kim are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 When you tag a release, add a new **`## [version] - YYYY-MM-DD`** section at the top (above older entries) and list changes there.
 
+## [2.8.1] - 2026-06-02
+
+### Fixed
+
+- **Choice surface skip policy clarified** — `queryBypass`/read-only is now a safety and path-classification boundary, not a choice-surface skip reason when branch-changing options exist. Renamed `pure_read_only_queryBypass` to `no_branching_choice` across all contracts, policies, and agent definitions.
+- **simpleMode backdoor removed** — Removed `simpleMode` flag from spine state creation, all gate checks, skip logic, and i18n strings (en/zh/ja/ko). SimpleMode was a consumer-only feature that had no producer-side initialization, creating an asymmetry that could bypass dispatch governance.
+- **queryBypass spine-state deadlock fixed** — Added deadlock breaker: `queryBypass` runs can now write `spine-state.json` itself (scoped via `isSpineStateWrite()`), otherwise clearing `queryBypass` would be impossible once active.
+- **i18n stale references cleaned** — Removed stale simple-mode references from restore instructions across all 4 locales.
+
+### Changed
+
+- **Hidden state skeleton initialized** — `createInitialState` now seeds `controlState: "normal"`, `gateState: "pending"`, `surfaceState: "silent"` in both claude and shared spine state modules.
+- **controlState/gateState/surfaceState enums unified** — `controlState` converged to `normal / skip / interrupt / override / iteration / intentional_silence / degraded`. `gateState` to `pending / pass / fail / rework / blocked`. `surfaceState` to `silent / notice / decision`. Public readiness separated from `surfaceState` into summary/public surface packets.
+- **Critical-Fetch Intent Loop added** — Wishful or ambiguous input now enters a bounded Critical-Fetch loop (up to `criticalFetchLoopMax = 3` rounds) with IntentCard confirmation. New fields: `criticalFetchLoopCount`, `intentCard`, `intentConfirmationState`, `intentCorrectionPayload`.
+- **Capability discovery routing refined** — Owner discovery now uses provider-first evidence / owner-last binding. Route output exposes `runtimeToolProviders`, `discoveryPrinciple`, `ownerBindingOrder`, and `routeExecutionGate` (stale cache may preview route but cannot enter Execution).
+- **Runtime matrix tests hardened** — Cursor hook/subagent assertions changed from weak regex to structured field checks. OpenClaw `popup / overlay / approval UI` tightened from `partial` to non-native. OpenClaw docs clarify internal hooks vs typed plugin hooks, workspace is not a hard sandbox.
+- **Decision templates renderer-neutral** — Generic decision and batch templates no longer embed runtime-specific schemas (AskUserQuestion JSON). Renderer-specific payloads live in runtime adapter contracts (`runtime-claude.md`, `runtime-codex.md`).
+- **choice-surface-policy.json expanded** — Added `intentConfirmationCard`, `choiceSurfaceAdapterContract`, and `readOnlyPolicy`.
+
+### Verification
+
+- `tests/meta-theory/11-eight-stage-spine.test.mjs` — 106/106 passed
+- `tests/meta-theory/00-capability-discovery.test.mjs` — 42/42 passed
+- `tests/meta-theory/e2e-eight-stage-live.test.mjs` — 37/37 passed
+- `tests/governance/capability-routing.test.mjs` — 1/1 passed
+- `tests/governance/runtime-capability-matrix.test.mjs` — 1/1 passed
+- `scripts/validate-capability-routing.mjs` — valid
+
 ## [2.8.0] - 2026-06-01
 
 ### Added

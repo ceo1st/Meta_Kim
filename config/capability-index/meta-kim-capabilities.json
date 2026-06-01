@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T13:07:00.236Z",
+  "generatedAt": "2026-06-01T17:35:14.420Z",
   "registryName": "meta-kim-capabilities",
   "scope": "repo-canonical",
   "canonicalProjection": "config/capability-index/meta-kim-capabilities.json",
@@ -135,8 +135,8 @@
         "type": "agents",
         "namespace": "canonical",
         "path": "canonical/agents/meta-conductor.md",
-        "size": 61103,
-        "modified": "2026-05-28T18:47:28.783Z",
+        "size": 61306,
+        "modified": "2026-06-01T13:14:30.060Z",
         "layer": "meta",
         "executionBlock": true
       },
@@ -165,8 +165,8 @@
         "type": "agents",
         "namespace": "canonical",
         "path": "canonical/agents/meta-prism.md",
-        "size": 34663,
-        "modified": "2026-05-28T18:47:28.789Z",
+        "size": 34656,
+        "modified": "2026-06-01T13:14:30.061Z",
         "layer": "meta",
         "executionBlock": true
       },
@@ -207,8 +207,8 @@
         "type": "skills",
         "namespace": "canonical",
         "path": "canonical/skills/meta-theory/SKILL.md",
-        "size": 29137,
-        "modified": "2026-06-01T12:11:11.158Z"
+        "size": 29755,
+        "modified": "2026-06-01T14:51:37.507Z"
       },
       "repo:canonical-reference:create-agent": {
         "id": "create-agent",
@@ -225,8 +225,8 @@
         "namespace": "canonical-reference",
         "path": "canonical/skills/meta-theory/references/dev-governance.md",
         "relativePath": "dev-governance.md",
-        "size": 15101,
-        "modified": "2026-05-31T20:10:51.618Z"
+        "size": 16248,
+        "modified": "2026-06-01T17:29:20.379Z"
       },
       "repo:canonical-reference:evolution-writeback": {
         "id": "evolution-writeback",
@@ -270,8 +270,8 @@
         "namespace": "canonical-reference",
         "path": "canonical/skills/meta-theory/references/path-selection.md",
         "relativePath": "path-selection.md",
-        "size": 3423,
-        "modified": "2026-05-28T18:46:12.846Z"
+        "size": 3557,
+        "modified": "2026-06-01T13:14:30.059Z"
       },
       "repo:canonical-reference:planning-files": {
         "id": "planning-files",
@@ -306,8 +306,8 @@
         "namespace": "canonical-reference",
         "path": "canonical/skills/meta-theory/references/runtime-codex.md",
         "relativePath": "runtime-codex.md",
-        "size": 10500,
-        "modified": "2026-06-01T09:25:06.114Z"
+        "size": 11254,
+        "modified": "2026-06-01T13:14:30.058Z"
       },
       "repo:canonical-reference:spine-state": {
         "id": "spine-state",
@@ -315,8 +315,8 @@
         "namespace": "canonical-reference",
         "path": "canonical/skills/meta-theory/references/spine-state.md",
         "relativePath": "spine-state.md",
-        "size": 4723,
-        "modified": "2026-05-31T19:53:29.106Z"
+        "size": 6389,
+        "modified": "2026-06-01T17:29:20.380Z"
       },
       "repo:canonical-reference:ten-step-governance": {
         "id": "ten-step-governance",
@@ -353,8 +353,8 @@
         "namespace": "canonical-runtime-assets",
         "path": "canonical/runtime-assets/shared/hooks/hook-i18n.mjs",
         "relativePath": "hook-i18n.mjs",
-        "size": 6748,
-        "modified": "2026-05-19T17:37:48.281Z"
+        "size": 6218,
+        "modified": "2026-06-01T13:32:10.170Z"
       },
       "repo:canonical-runtime-assets:meta-kim-memory-save.mjs": {
         "id": "meta-kim-memory-save.mjs",
@@ -371,8 +371,8 @@
         "namespace": "canonical-runtime-assets",
         "path": "canonical/runtime-assets/shared/hooks/skip-reminder.mjs",
         "relativePath": "skip-reminder.mjs",
-        "size": 6453,
-        "modified": "2026-05-19T17:38:02.754Z"
+        "size": 6397,
+        "modified": "2026-06-01T13:32:09.553Z"
       },
       "repo:canonical-runtime-assets:spine-state.mjs": {
         "id": "spine-state.mjs",
@@ -380,8 +380,8 @@
         "namespace": "canonical-runtime-assets",
         "path": "canonical/runtime-assets/claude/hooks/spine-state.mjs",
         "relativePath": "spine-state.mjs",
-        "size": 37319,
-        "modified": "2026-06-01T10:41:35.068Z"
+        "size": 37778,
+        "modified": "2026-06-01T17:29:02.864Z"
       },
       "repo:canonical-runtime-assets:utils.mjs": {
         "id": "utils.mjs",
@@ -425,8 +425,8 @@
         "namespace": "canonical-runtime-assets",
         "path": "canonical/runtime-assets/claude/hooks/enforce-agent-dispatch.mjs",
         "relativePath": "enforce-agent-dispatch.mjs",
-        "size": 38409,
-        "modified": "2026-06-01T11:38:35.615Z"
+        "size": 38419,
+        "modified": "2026-06-01T13:32:09.551Z"
       },
       "repo:canonical-runtime-assets:post-console-log-warn.mjs": {
         "id": "post-console-log-warn.mjs",
@@ -556,6 +556,8 @@
       }
     },
     "plugins": {},
+    "rules": {},
+    "prompts": {},
     "commands": {
       "repo:canonical-runtime-assets:save-progress": {
         "id": "save-progress",

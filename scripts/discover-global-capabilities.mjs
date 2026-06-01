@@ -768,6 +768,10 @@ async function scanPlatform(platformId, platform) {
       hooks: [],
       plugins: [],
       commands: [],
+      rules: [],
+      prompts: [],
+      mcpServers: [],
+      mcpTools: [],
     },
     errors: [],
   };
@@ -962,6 +966,8 @@ async function collectRepoCanonicalCapabilities() {
       toRepoCapability(item, "mcpTools", "repo-mcp"),
     ),
     plugins: [],
+    rules: [],
+    prompts: [],
     commands: [...claudeCommands, ...codexCommands].map((item) =>
       toRepoCapability(item, "commands", "canonical-runtime-assets"),
     ),
@@ -1032,6 +1038,8 @@ async function buildRepoCapabilityIndex() {
         ]),
       ),
       plugins: {},
+      rules: {},
+      prompts: {},
       commands: Object.fromEntries(
         capabilities.commands.map((cap) => [
           `repo:${cap.namespace}:${cap.id}`,
@@ -1117,6 +1125,8 @@ async function buildGlobalCapabilityInventory(scannedResults, profile) {
       totalMcpTools: 0,
       totalPlugins: 0,
       totalCommands: 0,
+      totalRules: 0,
+      totalPrompts: 0,
     },
     byPlatform: {},
     byCapabilityType: {
@@ -1127,6 +1137,8 @@ async function buildGlobalCapabilityInventory(scannedResults, profile) {
       mcpTools: {},
       plugins: {},
       commands: {},
+      rules: {},
+      prompts: {},
     },
   };
 

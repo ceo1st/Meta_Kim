@@ -80,6 +80,45 @@
       "verification"
     ]
   },
+  "intentConfirmationCard": {
+    "cardType": "intent_confirmation",
+    "requiredFields": [
+      "surfaceRequest",
+      "understoodIntent",
+      "confirmedDimensions",
+      "uncertainDimensions"
+    ],
+    "confirmationStates": ["pending", "confirmed", "corrected", "skipped"],
+    "allowedSkipReasons": ["trivial", "explicit_auto_proceed"],
+    "renderHint": "Show confirmed items as checkmarks, uncertain items as numbered questions. Prompt: reply 'yes' to confirm, or correct specific items.",
+    "surfacePreference": "Use the current runtime adapter's verified native choice surface when available. Fall back to chat card via the standard fallback chain."
+  },
+  "choiceSurfaceAdapterContract": {
+    "purpose": "Separate the canonical decision card from runtime-specific renderer schemas.",
+    "canonicalCardTypes": ["intent_confirmation", "pre_execution_decision"],
+    "adapterMayCompressForRenderer": true,
+    "adapterMustPreserve": [
+      "decision purpose",
+      "route-changing dimension",
+      "recommended default",
+      "option count",
+      "option trade-offs",
+      "selection result",
+      "fallback reason",
+      "writeback target"
+    ],
+    "canonicalMustNotContain": [
+      "renderer-specific payload schema",
+      "host-only option decoration",
+      "tool-specific field mapping",
+      "one-runtime-only labels"
+    ],
+    "runtimeSpecificMappingsLiveIn": [
+      "canonical/skills/meta-theory/references/runtime-claude.md",
+      "canonical/skills/meta-theory/references/runtime-codex.md",
+      "config/runtime-capability-matrix.json"
+    ]
+  },
   "codexUxRisks": [
     "request_user_input may be unavailable outside Plan mode or specific host surfaces",
     "inactive subagent approval can surface unexpectedly",

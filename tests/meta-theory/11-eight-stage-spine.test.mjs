@@ -7,7 +7,7 @@
  * Validates:
  * - All 8 stages have correct state transitions
  * - gateState is properly set at each gate
- * - controlState (normal/skip/interrupt/intentional-silence/iteration) switches correctly
+ * - controlState (normal/skip/interrupt/intentional_silence/iteration/degraded) switches correctly
  * - All required protocol packets exist for each stage
  * - Stage ordering is enforced (Critical before Fetch, Evolution last)
  * - The spine relationship to business workflow phases is distinct
@@ -30,8 +30,16 @@ import {
   checkChoiceSurfaceGate,
   checkStageRequirements,
   createInitialState,
+  incrementCriticalFetchLoop,
+  recordIntentConfirmation,
   STAGE_META_AGENT_MAP,
 } from "../../canonical/runtime-assets/claude/hooks/spine-state.mjs";
+import {
+  checkChoiceSurfaceGate as checkSharedChoiceSurfaceGate,
+  createInitialState as createSharedInitialState,
+  incrementCriticalFetchLoop as incrementSharedCriticalFetchLoop,
+  recordIntentConfirmation as recordSharedIntentConfirmation,
+} from "../../canonical/runtime-assets/shared/hooks/spine-state.mjs";
 import {
   REPO_ROOT,
   EIGHT_STAGES,
@@ -515,6 +523,9 @@ describe("Part B: hidden state skeleton", async () => {
   const devGov = await readFile(
     "canonical/skills/meta-theory/references/dev-governance.md",
   );
+  const spineState = await readFile(
+    "canonical/skills/meta-theory/references/spine-state.md",
+  );
 
   test("stageState progression is documented", () => {
     const stageStatePattern =
@@ -530,44 +541,43 @@ describe("Part B: hidden state skeleton", async () => {
       "normal",
       "skip",
       "interrupt",
-      "intentional-silence",
+      "override",
+      "intentional_silence",
       "iteration",
+      "degraded",
     ];
     for (const state of controlStates) {
       assert.ok(
-        devGov.includes(state),
-        `controlState value "${state}" must be documented in dev-governance.md`,
+        devGov.includes(state) && spineState.includes(state),
+        `controlState value "${state}" must be documented in dev-governance.md and spine-state.md`,
       );
     }
   });
 
   test("gateState values are documented", () => {
-    const gateStates = [
-      "planning-open",
-      "planning-passed",
-      "verification-open",
-      "verification-closed",
-      "synthesis-ready",
-    ];
-    let found = 0;
+    const gateStates = ["pending", "pass", "fail", "rework", "blocked"];
     for (const state of gateStates) {
-      if (devGov.includes(state)) found++;
+      assert.ok(
+        devGov.includes(state) && spineState.includes(state),
+        `gateState value "${state}" must be documented in both state references`,
+      );
     }
-    assert.ok(
-      found >= 3,
-      `dev-governance.md must document at least 3 gateState values (found ${found}/5)`,
-    );
   });
 
   test("surfaceState values are documented", () => {
-    const surfaceStates = ["debug-surface", "internal-ready", "public-ready"];
-    let found = 0;
+    const surfaceStates = ["silent", "notice", "decision"];
     for (const state of surfaceStates) {
-      if (devGov.includes(state)) found++;
+      assert.ok(
+        devGov.includes(state) && spineState.includes(state),
+        `surfaceState value "${state}" must be documented in both state references`,
+      );
     }
+  });
+
+  test("public readiness is not overloaded into surfaceState", () => {
     assert.ok(
-      found >= 2,
-      `dev-governance.md must document at least 2 surfaceState values (found ${found}/3)`,
+      spineState.includes("do not overload `surfaceState` with `internal-ready` or `public-ready`"),
+      "spine-state.md must separate public readiness from runtime surfaceState",
     );
   });
 
@@ -579,6 +589,230 @@ describe("Part B: hidden state skeleton", async () => {
     assert.ok(
       hasStage && hasControl && hasGate && hasSurface,
       "All 4 hidden state layers must be documented",
+    );
+  });
+
+  test("runtime state initializes the hidden state skeleton", () => {
+    const state = createInitialState({
+      taskClassification: "meta_theory_auto",
+      triggerReason: "test",
+    });
+    const sharedState = createSharedInitialState({
+      taskClassification: "meta_theory_auto",
+      triggerReason: "test",
+    });
+
+    for (const runtimeState of [state, sharedState]) {
+      assert.equal(runtimeState.controlState, "normal");
+      assert.equal(runtimeState.gateState, "pending");
+      assert.equal(runtimeState.surfaceState, "silent");
+    }
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Part B2: Critical-Fetch Intent Loop
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+describe("Part B2: Critical-Fetch intent loop", async () => {
+  const spineState = await readFile(
+    "canonical/skills/meta-theory/references/spine-state.md",
+  );
+
+  test("createInitialState includes loop control fields", () => {
+    const state = createInitialState({
+      taskClassification: "meta_theory_auto",
+      triggerReason: "test",
+    });
+    assert.equal(state.criticalFetchLoopCount, 0);
+    assert.equal(state.criticalFetchLoopMax, 3);
+    assert.equal(state.intentCard, null);
+    assert.equal(state.intentConfirmationState, null);
+    assert.equal(state.intentConfirmationTimestamp, null);
+    assert.equal(state.intentCorrectionPayload, null);
+  });
+
+  test("incrementCriticalFetchLoop counts up and detects exhaustion", () => {
+    const base = createInitialState({
+      taskClassification: "meta_theory_auto",
+      triggerReason: "test",
+    });
+    const round1 = incrementCriticalFetchLoop(base);
+    assert.equal(round1.criticalFetchLoopCount, 1);
+    assert.equal(round1.criticalFetchLoopBudgetExhausted, false);
+
+    const round2 = incrementCriticalFetchLoop(round1);
+    assert.equal(round2.criticalFetchLoopCount, 2);
+    assert.equal(round2.criticalFetchLoopBudgetExhausted, false);
+
+    const round3 = incrementCriticalFetchLoop(round2);
+    assert.equal(round3.criticalFetchLoopCount, 3);
+    assert.equal(round3.criticalFetchLoopBudgetExhausted, true);
+  });
+
+  test("shared runtime spine state keeps the same intent loop controls", () => {
+    const base = createSharedInitialState({
+      taskClassification: "meta_theory_auto",
+      triggerReason: "test",
+    });
+    assert.equal(base.criticalFetchLoopCount, 0);
+    assert.equal(base.criticalFetchLoopMax, 3);
+    assert.equal(base.intentCard, null);
+
+    const round1 = incrementSharedCriticalFetchLoop(base);
+    assert.equal(round1.criticalFetchLoopCount, 1);
+    assert.equal(round1.criticalFetchLoopBudgetExhausted, false);
+
+    const confirmed = recordSharedIntentConfirmation(round1, "confirmed", null);
+    assert.equal(confirmed.intentConfirmationState, "confirmed");
+    assert.equal(confirmed.intentCorrectionPayload, null);
+  });
+
+  test("recordIntentConfirmation records confirmed state", () => {
+    const base = createInitialState({
+      taskClassification: "meta_theory_auto",
+      triggerReason: "test",
+    });
+    const confirmed = recordIntentConfirmation(base, "confirmed", null);
+    assert.equal(confirmed.intentConfirmationState, "confirmed");
+    assert.ok(confirmed.intentConfirmationTimestamp);
+    assert.equal(confirmed.intentCorrectionPayload, null);
+  });
+
+  test("recordIntentConfirmation records corrected state with payload", () => {
+    const base = createInitialState({
+      taskClassification: "meta_theory_auto",
+      triggerReason: "test",
+    });
+    const corrected = recordIntentConfirmation(
+      base,
+      "corrected",
+      "I meant dark mode, not light mode",
+    );
+    assert.equal(corrected.intentConfirmationState, "corrected");
+    assert.equal(
+      corrected.intentCorrectionPayload,
+      "I meant dark mode, not light mode",
+    );
+  });
+
+  test("spine-state.md documents the Critical-Fetch Intent Loop", () => {
+    assert.ok(
+      spineState.includes("Critical-Fetch Intent Loop"),
+      "spine-state.md must document the Critical-Fetch Intent Loop section",
+    );
+    assert.ok(
+      spineState.includes("criticalFetchLoopCount"),
+      "spine-state.md must document criticalFetchLoopCount field",
+    );
+    assert.ok(
+      spineState.includes("criticalFetchLoopMax"),
+      "spine-state.md must document criticalFetchLoopMax field",
+    );
+    assert.ok(
+      spineState.includes("intentCard"),
+      "spine-state.md must document intentCard field",
+    );
+    assert.ok(
+      spineState.includes("intentConfirmationState"),
+      "spine-state.md must document intentConfirmationState field",
+    );
+  });
+
+  test("spine-state.md documents valid confirmation states", () => {
+    for (const validState of [
+      "pending",
+      "confirmed",
+      "corrected",
+      "skipped",
+    ]) {
+      assert.ok(
+        spineState.includes(validState),
+        `spine-state.md must document confirmation state "${validState}"`,
+      );
+    }
+  });
+
+  test("spine-state.md documents adaptive termination", () => {
+    assert.ok(
+      spineState.includes("earlyExitReason") ||
+        spineState.includes("adaptive"),
+      "spine-state.md must document adaptive loop termination",
+    );
+  });
+
+  test("choice-surface-policy.json defines intentConfirmationCard", async () => {
+    const policy = await readJson(
+      "config/governance/choice-surface-policy.json",
+    );
+    assert.ok(
+      policy.intentConfirmationCard,
+      "choice-surface-policy.json must define intentConfirmationCard",
+    );
+    assert.equal(
+      policy.intentConfirmationCard.cardType,
+      "intent_confirmation",
+    );
+    assert.ok(
+      policy.intentConfirmationCard.requiredFields.includes("surfaceRequest"),
+    );
+    assert.ok(
+      policy.intentConfirmationCard.requiredFields.includes("understoodIntent"),
+    );
+    assert.ok(
+      policy.intentConfirmationCard.confirmationStates.includes("confirmed"),
+    );
+    assert.ok(
+      policy.intentConfirmationCard.confirmationStates.includes("corrected"),
+    );
+  });
+
+  test("choice surface policy keeps canonical cards renderer-neutral", async () => {
+    const policy = await readJson(
+      "config/governance/choice-surface-policy.json",
+    );
+    assert.ok(
+      policy.choiceSurfaceAdapterContract,
+      "choice-surface-policy.json must define a runtime adapter contract",
+    );
+    assert.deepEqual(
+      policy.choiceSurfaceAdapterContract.canonicalCardTypes,
+      ["intent_confirmation", "pre_execution_decision"],
+    );
+    assert.ok(
+      policy.choiceSurfaceAdapterContract.adapterMustPreserve.includes(
+        "recommended default",
+      ),
+    );
+    assert.ok(
+      policy.choiceSurfaceAdapterContract.canonicalMustNotContain.includes(
+        "renderer-specific payload schema",
+      ),
+    );
+    assert.doesNotMatch(
+      policy.intentConfirmationCard.surfacePreference,
+      /AskUserQuestion|request_user_input/,
+      "generic intent confirmation policy must not name runtime-specific tools",
+    );
+  });
+
+  test("generic decision templates do not embed runtime-specific schemas", async () => {
+    const decisionTemplate = await readFile(
+      "canonical/templates/user-interaction/decision-template.md",
+    );
+    const batchTemplate = await readFile(
+      "canonical/templates/user-interaction/batch-decision-template.md",
+    );
+    const combined = `${decisionTemplate}\n${batchTemplate}`;
+    assert.doesNotMatch(
+      combined,
+      /AskUserQuestion Schema|request_user_input/,
+      "generic user-interaction templates must not embed runtime-specific renderer schemas",
+    );
+    assert.match(
+      combined,
+      /Runtime Adapter Payload/,
+      "generic templates must route renderer schemas through runtime adapters",
     );
   });
 });
@@ -1658,6 +1892,59 @@ describe("Part F2: choice surface runtime gate", async () => {
 
     const result = checkChoiceSurfaceGate(state);
     assert.equal(result.met, true);
+  });
+
+  test("allows no_branching_choice skip in both runtime state implementations", () => {
+    const base = {
+      currentStage: "execution",
+      fetchRecord: { capabilityMatches: ["frontend"] },
+      preDecisionOptionFrame: {
+        choiceGateSkip: "no_branching_choice",
+        skipSource: "pre_decision_frame",
+        skipSafetyRationale:
+          "Fetch evidence showed no user answer would change route, scope, risk, owner, permission, non-goal, or acceptance.",
+      },
+      choiceSurfaceState: "not_allowed",
+    };
+
+    const claudeState = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+      }),
+      ...base,
+    };
+    const sharedState = {
+      ...createSharedInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+      }),
+      ...base,
+    };
+
+    assert.equal(checkChoiceSurfaceGate(claudeState).met, true);
+    assert.equal(checkSharedChoiceSurfaceGate(sharedState).met, true);
+  });
+
+  test("rejects read-only queryBypass as a choiceGateSkip reason", () => {
+    const state = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+      }),
+      currentStage: "execution",
+      fetchRecord: { capabilityMatches: ["frontend"] },
+      preDecisionOptionFrame: {
+        choiceGateSkip: "pure_read_only_queryBypass",
+        skipSource: "query_bypass",
+        skipSafetyRationale:
+          "Read-only classification alone does not prove user choice is irrelevant.",
+      },
+      choiceSurfaceState: "not_allowed",
+    };
+
+    const result = checkChoiceSurfaceGate(state);
+    assert.equal(result.met, false);
   });
 
   test("execution hook imports and applies the choice surface gate", async () => {
