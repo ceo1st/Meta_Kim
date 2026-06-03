@@ -38,6 +38,50 @@ function textContains(entry, terms) {
   return terms.some((term) => text.includes(term));
 }
 
+function taskContainsAny(terms) {
+  return terms.some((term) => taskText.includes(term));
+}
+
+function implicitScriptCapabilityGapRequested() {
+  const recurrenceSignal = taskContainsAny([
+    "repeat",
+    "recurring",
+    "repeatedly",
+    "every time",
+    "stable",
+    "每次",
+    "反复",
+    "重复",
+    "稳定",
+  ]);
+  const deterministicSignal = taskContainsAny([
+    "mechanical",
+    "testable",
+    "local",
+    "deterministic",
+    "json summary",
+    "json report",
+    "stage outputs",
+    "verification owner",
+    "decision output",
+    "blocked gate reason",
+    "机械",
+    "可测试",
+    "本地",
+    "自动整理",
+    "检测缺失",
+  ]);
+  const noAgentSignal = taskContainsAny([
+    "no new agent",
+    "no agent identity",
+    "不需要新 agent",
+    "不需要新agent",
+    "不需要新 agent 身份",
+    "不需要新长期身份",
+  ]);
+  return recurrenceSignal && deterministicSignal && noAgentSignal;
+}
+
 function explicitCapabilityGapRequested() {
   return [
     "capability gap",
@@ -59,7 +103,7 @@ function explicitCapabilityGapRequested() {
     "创建 agent",
     "创建 script",
     "创建 mcp",
-  ].some((term) => taskText.includes(term));
+  ].some((term) => taskText.includes(term)) || implicitScriptCapabilityGapRequested();
 }
 
 function taskTerms() {

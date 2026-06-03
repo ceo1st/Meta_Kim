@@ -59,4 +59,23 @@ describe("23 — Capability Gap route integration", async () => {
     assert.equal(result.capabilityGapDecision.decisionEvidence.decisionRule.branchOwner, "meta-genesis");
     assert.notEqual(result.capabilityGapDecision.decisionEvidence.decisionRule.branchOwnerRole, "execution_worker");
   });
+
+  test("repeatable mechanical local summary routes naturally through create_script", () => {
+    const result = route(
+      "我需要 Meta_Kim 能把每次 Codex 真实测试后的 stage outputs 自动整理成一份稳定 JSON summary，并检测缺失的 verification owner、decision output、blocked gate reason。这个动作会反复跑，要求机械、可测试、本地完成，不需要新 agent 身份。"
+    );
+    assert.equal(result.capabilityGapDetected, true);
+    assert.equal(result.capabilityGapDecision.decision, "create_script");
+    assert.equal(result.capabilityGapDecision.decisionOutput.kind, "script_candidate_spec");
+    assert.equal(result.capabilityGapDecision.decisionOutput.acceptance.status, "pass");
+    assert.deepEqual(result.capabilityGapDecision.decisionOutput.acceptance.missingFields, []);
+    assert.equal(
+      result.capabilityGapDecision.decisionEvidence.decisionRule.branchOwner,
+      "script-provider"
+    );
+    assert.notEqual(
+      result.capabilityGapDecision.decisionEvidence.decisionRule.branchOwnerRole,
+      "execution_worker"
+    );
+  });
 });
