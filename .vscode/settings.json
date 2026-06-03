@@ -1,0 +1,28 @@
+{
+  "files.exclude": {
+    "**/.meta-kim": true,
+    "**/node_modules": true,
+    "**/graphify-out": true,
+    "**/.claude": true,
+    "**/.codex": true,
+    "**/.cursor": true,
+    "**/.agents": true,
+    "**/openclaw": true,
+    "**/codex": true,
+    "**/memory": true,
+    "**/pip": true
+  },
+  "search.exclude": {
+    "**/.meta-kim": true,
+    "**/node_modules": true,
+    "**/graphify-out": true,
+    "**/.claude": true,
+    "**/.codex": true,
+    "**/.cursor": true,
+    "**/.agents": true,
+    "**/openclaw": true,
+    "**/codex": true,
+    "**/memory": true,
+    "**/pip": true
+  }
+}
