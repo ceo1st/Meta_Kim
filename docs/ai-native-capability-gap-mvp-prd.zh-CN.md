@@ -450,6 +450,34 @@ critical_intent
 - 如果 governance owner 出现在 branch owner，只能是 `governance_design` 或 `safety_gate`，不能是 `execution_worker`。
 - 必须保留 fixture 里的 forbidden behaviors。
 
+### 机器可读判断源
+
+判断标准必须有一份 AI 和 validator 都能读取的 contract：
+
+```text
+config/contracts/capability-gap-decision-contract.json
+```
+
+这份 contract 是六类 decision 的机器可读标准，至少包含：
+
+- decision 名称。
+- LangGraph 风格 branch。
+- branch owner 和 ownerRole。
+- selectedBecause。
+- deliverable。
+- verifier。
+- candidateType。
+- forbiddenBehaviors。
+- requiredEvidenceKeys。
+- quantitativeAcceptance。
+
+实现要求：
+
+- `scripts/capability-gap-mvp.mjs` 必须读取这份 contract。
+- `scripts/select-execution-route.mjs` 在检测到显式能力缺口时，必须输出 `capabilityGapDecision`。
+- 普通 route 可以继续预览，但如果 `capabilityGapDecision.decision = blocked_or_needs_approval`，Execution gate 必须关闭。
+- route 不能用高分普通路线吞掉 missing dependency、imaginary provider、缺证据或未授权外部写动作。
+
 ### CandidateWriteback
 
 ```json
@@ -720,6 +748,15 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 - 输出：只接入最小 decision，不引入完整 graph。
 - 验收：`meta:capabilities:route` 或等价入口能读取 GapDecision；不要求 CapabilityGraph。
 
+最小 route 集成验收：
+
+- `select-execution-route` 对显式能力缺口输出 `capabilityGapDetected = true`。
+- 输出 `capabilityGapDecision.decision`、`gapDecision`、`decisionEvidence`、`graphPath`。
+- missing dependency / imaginary provider 必须走 `blocked_or_needs_approval`。
+- blocked decision 必须让 `routeExecutionGate.canEnterExecution = false`。
+- create_agent gap 必须产出 `GeneratedAgentSpec`，且 identityCleanliness 通过。
+- 这些判断必须来自 `config/contracts/capability-gap-decision-contract.json`。
+
 ## Feedback Loop
 
 每次任务后记录：
@@ -762,6 +799,8 @@ npm run meta:gap:mvp -- tests/meta-theory/scenarios/capability-gap-decision-fixt
 ```text
 node scripts/run-node-tests.mjs "tests/meta-theory/22-capability-gap-mvp.test.mjs"
 node scripts/run-node-tests.mjs "tests/meta-theory/21-generated-agent-quality.test.mjs"
+node scripts/run-node-tests.mjs "tests/meta-theory/23-capability-gap-route-integration.test.mjs"
+npm run meta:route:validate
 ```
 
 ## Review Checklist

@@ -1,20 +1,16 @@
 #!/usr/bin/env node
 
-import { promises as fs } from "node:fs";
+import { promises as fs, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { importDatabaseSync } from "./sqlite-runtime.mjs";
 
-export const GAP_DECISIONS = [
-  "create_skill",
-  "create_agent",
-  "create_script",
-  "create_mcp_provider",
-  "worker_task_only",
-  "blocked_or_needs_approval",
-];
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const contractPath = path.resolve(scriptDir, "../config/contracts/capability-gap-decision-contract.json");
+export const CAPABILITY_GAP_DECISION_CONTRACT = JSON.parse(readFileSync(contractPath, "utf8"));
+export const GAP_DECISIONS = Object.keys(CAPABILITY_GAP_DECISION_CONTRACT.decisions);
 
 const DEFAULT_PROVIDERS_CHECKED = [
   "repo_canonical_agents",
@@ -26,84 +22,17 @@ const DEFAULT_PROVIDERS_CHECKED = [
   "runtime_tools",
 ];
 
-const GRAPH_BRANCH_BY_DECISION = {
-  create_skill: "design_skill_candidate",
-  create_agent: "design_agent_spec",
-  create_script: "design_script_candidate",
-  create_mcp_provider: "design_mcp_provider_candidate",
-  worker_task_only: "make_worker_task",
-  blocked_or_needs_approval: "ask_approval_or_block",
-};
+const GRAPH_BRANCH_BY_DECISION = Object.fromEntries(
+  Object.entries(CAPABILITY_GAP_DECISION_CONTRACT.decisions).map(([decision, rule]) => [
+    decision,
+    rule.branch,
+  ]),
+);
 
-export const DECISION_RULES = {
-  create_skill: {
-    owner: "meta-artisan",
-    ownerRole: "governance_design",
-    selectedBecause: "重复出现的方法、流程或评审套路，不需要新的长期责任身份。",
-    deliverable: "skill CandidateWriteback",
-    verifier: "verify",
-    forbiddenBehaviors: ["create_agent", "worker_task_only", "automatic_canonical_write"],
-  },
-  create_agent: {
-    owner: "meta-genesis",
-    ownerRole: "governance_design",
-    selectedBecause: "缺稳定长期 owner，需要专业身份、拒绝项、输入输出、记忆和验收政策。",
-    deliverable: "GeneratedAgentSpec plus agent CandidateWriteback",
-    verifier: "verify",
-    forbiddenBehaviors: ["worker_task_only", "create_script", "bind_repo_path_to_identity"],
-  },
-  create_script: {
-    owner: "script-provider",
-    ownerRole: "execution_capability_candidate",
-    selectedBecause: "动作稳定、机械、可测试，本地脚本比 agent 更清楚。",
-    deliverable: "script CandidateWriteback",
-    verifier: "verify",
-    forbiddenBehaviors: ["create_agent", "create_mcp_provider", "manual_json_stitching"],
-  },
-  create_mcp_provider: {
-    owner: "mcp-provider-capability",
-    ownerRole: "execution_capability_candidate",
-    selectedBecause: "稳定外部系统能力需要权限、凭证、审计和调用边界。",
-    deliverable: "MCP provider CandidateWriteback",
-    verifier: "verify",
-    forbiddenBehaviors: [
-      "direct_unauthorized_credentials",
-      "one_off_curl_as_capability",
-      "automatic_external_write",
-    ],
-  },
-  worker_task_only: {
-    owner: "existing_execution_owner",
-    ownerRole: "execution_worker",
-    selectedBecause: "本次 run 内一次性任务，已有 owner/loadout 足够，没有长期复用证据。",
-    deliverable: "workerTaskPacket",
-    verifier: "verify",
-    forbiddenBehaviors: ["create_skill", "create_agent", "candidate_writeback"],
-  },
-  blocked_or_needs_approval: {
-    owner: "meta-sentinel",
-    ownerRole: "safety_gate",
-    selectedBecause: "缺权限、缺凭证、外部写、付费任务、证据不足或高风险。",
-    deliverable: "blocked reason or minimal approval request",
-    verifier: "meta-sentinel",
-    forbiddenBehaviors: [
-      "execute_external_write",
-      "create_provider_to_bypass_approval",
-      "validator_as_completion",
-    ],
-  },
-};
+export const DECISION_RULES = CAPABILITY_GAP_DECISION_CONTRACT.decisions;
 
-const DEFAULT_REQUIRED_EVIDENCE = [
-  "critical.intent_locked",
-  "fetch.providers_checked",
-  "thinking.decision_rule_applied",
-  "thinking.rejected_alternatives_recorded",
-  "execution.branch_owner_bound",
-  "review.quality_gate_recorded",
-  "verification.fixture_replayed",
-  "evolution.writeback_or_none_recorded",
-];
+const DEFAULT_REQUIRED_EVIDENCE =
+  CAPABILITY_GAP_DECISION_CONTRACT.requiredEvidenceKeys;
 
 function nowIso() {
   return new Date().toISOString();
@@ -140,6 +69,13 @@ function inferDecision(input) {
       "外部写",
       "remote label",
       "github pr",
+      "missing dependency",
+      "imaginary provider",
+      "unknown provider",
+      "no provider",
+      "证据不足",
+      "缺证据",
+      "不存在的 provider",
     ])
   ) {
     return "blocked_or_needs_approval";
@@ -252,12 +188,7 @@ function decisionReason(decision) {
 }
 
 function candidateType(decision) {
-  return {
-    create_skill: "skill",
-    create_agent: "agent",
-    create_script: "script",
-    create_mcp_provider: "mcp_provider",
-  }[decision] ?? null;
+  return DECISION_RULES[decision]?.candidateType ?? null;
 }
 
 function makeGeneratedAgentSpec(decision) {

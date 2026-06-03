@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import {
+  CAPABILITY_GAP_DECISION_CONTRACT,
   DECISION_RULES,
   GAP_DECISIONS,
   decideCapabilityGap,
@@ -20,6 +21,10 @@ describe("22 — Capability Gap MVP policy and RunStateStore", async () => {
   test("fixtures cover exactly the six MVP GapDecision branches", () => {
     assert.deepEqual(
       fixtures.map((fixture) => fixture.expectedDecision).sort(),
+      [...GAP_DECISIONS].sort()
+    );
+    assert.deepEqual(
+      Object.keys(CAPABILITY_GAP_DECISION_CONTRACT.decisions).sort(),
       [...GAP_DECISIONS].sort()
     );
   });
