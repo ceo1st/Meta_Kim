@@ -68,6 +68,7 @@
     "meta:capabilities:route": "node scripts/select-execution-route.mjs",
     "meta:gap:mvp": "node scripts/capability-gap-mvp.mjs",
     "meta:gap:codex-real-test": "node scripts/run-capability-gap-codex-real-test.mjs",
+    "meta:gap:isolated-report": "node scripts/run-capability-gap-isolated-report.mjs",
     "meta:capabilities:smoke": "node scripts/run-capability-discovery-smoke.mjs",
     "meta:lens:select": "node scripts/select-lenses.mjs",
     "meta:governance:validate": "node scripts/validate-governance-contracts.mjs",

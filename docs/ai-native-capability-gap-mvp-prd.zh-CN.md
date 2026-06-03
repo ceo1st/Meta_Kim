@@ -869,7 +869,15 @@ node scripts/run-node-tests.mjs "tests/meta-theory/21-generated-agent-quality.te
 node scripts/run-node-tests.mjs "tests/meta-theory/23-capability-gap-route-integration.test.mjs"
 npm run meta:route:validate
 npm run meta:gap:codex-real-test
+npm run meta:gap:isolated-report
 ```
+
+其中 `meta:gap:isolated-report` 是单任务隔离验收入口：它用新进程运行 route 和验证命令，固定抽取 `CapabilityGap`、`GapDecision`、`DecisionOutput`、Execution gate 和量化验收字段，并生成报告。它验证的是默认路径能否自然判断，而不是依赖人工总结。
+
+报告产物：
+
+- 本地状态 JSON：`.meta-kim/state/default/capability-gap-isolated-task-report.json`
+- 可读报告：`docs/capability-gap-isolated-task-report.zh-CN.md`
 
 ## Review Checklist
 
