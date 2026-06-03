@@ -2,7 +2,7 @@
 
 ## 文档控制
 
-- 版本：v0.4
+- 版本：v0.5
 - 状态：Core MVP implemented locally; complete product scope still open
 - Owner：meta-conductor 负责 PRD 与执行节奏，meta-warden 负责最终边界门禁
 - 建议目标版本：v2.9.0-alpha.1 先做 fixture 和决策策略验证；价值成立后再进入 v2.9.0
@@ -35,11 +35,47 @@
 | 默认产品入口 | 部分完成 | 已有 `meta:gap:mvp`、`meta:agent-process:mvp`、`meta:core:mvp:acceptance` | 还缺一条命令从自然输入跑完整链路并输出统一交付报告 |
 | 运行数据分析 | 未完成 | SQLite 中已有可分析事件 | 还缺 run analytics CLI/report，不能回答“哪里常错、哪里该升级” |
 | 完整产品验收 | 未完成 | Core MVP acceptance 已 pass | 还缺端到端产品验收：输入 -> 判断 -> 分支产物 -> review -> verify -> feedback -> evolve |
+| meta-theory 编排入口 | 部分完成 | `npm run meta:gap:orchestrate` 可生成 `orchestrationTaskBoardPacket` 和 `workerTaskPackets`，Codex 子窗口复测 pass | 还没接成所有 `/meta-theory` governed execution 的默认 runtime path |
+| 跨 runtime 投影验证 | 未完成 | Codex 本地主窗口和隔离子窗口已有证据 | 还没证明 Claude / Codex / Cursor / OpenClaw 四端都自然走新 orchestration 路线 |
+| Warden 审批写回 | 未完成 | 已能生成 CandidateWriteback、promotion candidate、none-with-reason，且禁止自动写 canonical | 还没做 Warden 批准后正式写入 `canonical/skills` 或 `canonical/agents` 的真实流程 |
+| 用户可读产品面板 | 未完成 | 现有 JSON / Markdown / CLI 报告能说明运行结果 | 还没有按 runId 查看 decision 原因、阻塞原因、交接 owner、长期升级建议的用户面板 |
 
 当前可以宣称的结论：
 
 - Core MVP 已经证明“系统能判断走哪条能力缺口路线”，并且有 fixture、真实输入、SQLite 和核心验收证据。
 - 还不能宣称“完整产品已经可用于万物制作”，因为反馈进化、可执行 graph contract、分析入口和完整端到端产品入口还没做完。
+
+## PRD 迭代与任务状态规则
+
+从 v0.5 开始，每次 Capability Gap / meta-theory 产品迭代都必须同步更新本 PRD。聊天记录、子窗口结论、测试输出和 commit 摘要都不能替代 PRD 状态。
+
+每次修改或迭代至少更新这些内容：
+
+- 文档控制中的版本、状态或目标版本建议。
+- `当前完成状态` 表中相关模块的状态、当前证据、还缺什么。
+- 对应 R 项的目标、量化验收、失败条件。
+- 新增或变更的测试入口、CLI 入口、报告入口。
+- 每项任务的状态：未开始、进行中、部分完成、已测通、阻塞。
+- GitHub 差距：本地相对 `origin/main` 新增了哪些产品能力、哪些仍未 push。
+
+状态口径：
+
+| 状态 | 含义 | 允许宣称 |
+|---|---|---|
+| 未开始 | 只有目标，没有实现或测试 | 只能说“已列入目标” |
+| 进行中 | 有代码或文档草稿，但未通过关键测试 | 只能说“正在实现” |
+| 部分完成 | 有局部入口或样例证据，但未覆盖默认路径或端到端 | 只能说“局部可用” |
+| 已测通 | 有可重复命令、测试或子窗口证据 | 可以说“该局部完成” |
+| 阻塞 | 缺权限、缺 runtime 支持、缺用户决策或外部条件 | 必须写明阻塞原因和返回阶段 |
+
+后续四条产品轨道：
+
+| Track | 产品设定 | 当前状态 | 当前证据 | Definition of Done |
+|---|---|---|---|---|
+| T-001 | 默认 meta-theory orchestration runtime path | 部分完成 | `meta:gap:orchestrate`、`tests/meta-theory/31-capability-gap-orchestration.test.mjs`、Codex 子窗口复测 | `/meta-theory` governed execution 默认进入 Warden -> Conductor -> orchestration board -> workerTaskPackets，而不是只靠显式 CLI |
+| T-002 | Claude / Codex / Cursor / OpenClaw 四端投影验证 | 未完成 | Codex 本地和子窗口验证 | 四端都有 live 或 smoke 证据，能自然走新 orchestration 路线，并记录 runtime 差异 |
+| T-003 | Warden 审批后的真实长期 writeback 流程 | 未完成 | CandidateWriteback 和 none-with-reason 已存在 | Warden 批准后，候选能力能以受控流程写入 canonical skill / agent，并经过 sync、review、verification |
+| T-004 | 用户可读 UI / 报告层 | 未完成 | JSON、Markdown、CLI 报告 | 用户可按 runId 查看判定原因、阻塞原因、下一步 owner、升级长期能力建议和验证状态 |
 
 ## Problem
 
@@ -955,6 +991,63 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 - Quantitative acceptance pass rate 100%。
 - 所有 fail 项必须有 `returnToStage` 和 owner。
 - `meta:test:meta-theory`、完整产品验收命令、`git diff --check` 必须通过后，才能声明本轮交付完成。
+
+### R-007 默认 meta-theory orchestration runtime path
+
+目标：
+
+- 把 orchestration 从显式 CLI / 测试入口接成所有 `/meta-theory` governed execution 的默认运行路线。
+
+量化验收：
+
+- `/meta-theory` 触发后必须记录 `meta-theory-skill-adapter -> meta-warden-entry-gate -> meta-conductor-orchestration -> capability-gap-decision-kernel`。
+- 默认路径必须生成 `orchestrationTaskBoardPacket`，且 `synthesisOwner = meta-conductor`。
+- 多 CapabilityGap 输入必须为每个 gap 生成独立 `workerTaskPacket`。
+- 同类型同 repeatKey 的需求必须分组，但不能折叠掉 worker 实例。
+- skill 只能是 trigger adapter，不能成为 planner 或 capability-gap owner。
+- 显式 CLI 可以保留为调试入口，但不能是唯一产品入口。
+
+### R-008 跨 runtime 真实投影验证
+
+目标：
+
+- 证明 Claude / Codex / Cursor / OpenClaw 四端都能自然走新 orchestration 路线，而不是只在 Codex 本地脚本里通过。
+
+量化验收：
+
+- 四端分别有 runtime evidence：触发输入、运行入口、orchestration board、workerTaskPackets、verification owner。
+- Codex 至少包含主窗口和新子窗口隔离复测证据。
+- Claude / Cursor / OpenClaw 必须记录真实可执行形态：live、smoke 或明确 unsupported-with-reason。
+- OpenClaw / Cursor 的 runtime 限制不能被写成 pass；只能写成 partial 或 blocked。
+- 四端验证报告必须说明 runtime 差异、降级路径和未覆盖风险。
+
+### R-009 Warden 审批后的真实长期 writeback 流程
+
+目标：
+
+- CandidateWriteback 不能只停在候选；当 Warden 明确批准后，系统必须能把候选能力正式写入 canonical，并保留审计证据。
+
+量化验收：
+
+- `candidate_only`、`none-with-reason`、`approved-for-writeback` 三种状态必须可区分。
+- Warden 批准前，canonical 写入数量必须为 0。
+- Warden 批准后，写入目标只能是允许的 canonical 路径，例如 `canonical/skills` 或 `canonical/agents`。
+- 写入后必须运行 projection sync、review、verification，并记录 rollback plan。
+- 每次 writeback 必须有 source gap、repeatKey、approval evidence、diff summary、verification result。
+
+### R-010 用户可读 UI / 报告层
+
+目标：
+
+- 让用户能看懂一次 run 为什么这么判、交给谁、为什么阻塞、下一步是否值得升级长期能力。
+
+量化验收：
+
+- 用户能按 runId 查看 CapabilityGap、GapDecision、DecisionOutput、Review、Verification、Evolution。
+- 报告必须解释：为什么判 `create_skill` / `create_agent` / `create_script` / `create_mcp_provider` / `worker_task_only` / `blocked_or_needs_approval`。
+- 报告必须展示下一步 owner、merge owner、parallelGroup、shardScope、blocking reason、approval request。
+- 报告不能泄露本机绝对路径、credentials、外部参考来源名或私有状态。
+- 至少一个可读入口可以从 RunStateStore 数据生成，而不是从聊天总结生成。
 
 ## 完整产品 Definition of Done
 

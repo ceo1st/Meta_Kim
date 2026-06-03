@@ -28,6 +28,10 @@ describe("29 — Capability Gap complete product PRD", () => {
       "R-004 Run Analytics",
       "R-005 默认产品入口",
       "R-006 完整产品验收命令",
+      "R-007 默认 meta-theory orchestration runtime path",
+      "R-008 跨 runtime 真实投影验证",
+      "R-009 Warden 审批后的真实长期 writeback 流程",
+      "R-010 用户可读 UI / 报告层",
       "完整产品 Definition of Done",
     ]) {
       assert.match(prd, new RegExp(section), `missing ${section}`);
@@ -46,6 +50,42 @@ describe("29 — Capability Gap complete product PRD", () => {
       "未授权外部写动作 0",
     ]) {
       assert.match(prd, new RegExp(metric), `missing metric ${metric}`);
+    }
+  });
+
+  test("requires PRD iteration status for every future product iteration", () => {
+    for (const marker of [
+      "## PRD 迭代与任务状态规则",
+      "每次 Capability Gap / meta-theory 产品迭代都必须同步更新本 PRD",
+      "每项任务的状态",
+      "GitHub 差距",
+      "未开始",
+      "进行中",
+      "部分完成",
+      "已测通",
+      "阻塞",
+    ]) {
+      assert.match(prd, new RegExp(marker), `missing iteration marker ${marker}`);
+    }
+  });
+
+  test("tracks the four next product targets with status and done standards", () => {
+    for (const marker of [
+      "T-001",
+      "默认 meta-theory orchestration runtime path",
+      "T-002",
+      "Claude / Codex / Cursor / OpenClaw 四端投影验证",
+      "T-003",
+      "Warden 审批后的真实长期 writeback 流程",
+      "T-004",
+      "用户可读 UI / 报告层",
+      "Definition of Done",
+      "orchestrationTaskBoardPacket",
+      "workerTaskPackets",
+      "approved-for-writeback",
+      "按 runId 查看",
+    ]) {
+      assert.match(prd, new RegExp(marker), `missing target marker ${marker}`);
     }
   });
 
