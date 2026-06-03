@@ -80,6 +80,7 @@ CapabilityGap -> GapDecision -> CandidateWriteback
 | Edge builder + 30 条边 | 可展示结构化关系 | fixture 还没证明 decision 正确，边越多越难 review | 暂不做 |
 | 全 runtime planner | 目标宏大 | 会提前碰 runtime 差异、hook、UI 和外部动作边界 | 暂不做 |
 | GapDecision MVP | 直接验证真实痛点，成本低，可回放 | 表达力有限 | 本期采用 |
+| 数据库驱动的控制图 | 状态可追踪、可回放、可埋点，后续容易接 LangGraph | 如果一开始做复杂 schema 会过度工程化 | 采用最小版本 |
 
 MVP 原则：
 
@@ -87,6 +88,159 @@ MVP 原则：
 - 长期能力和 run-scoped task 必须分离。
 - validators 只拒绝危险、空路线、污染路线；不能把 validator 当 planner。
 - 默认路径必须在 Thinking 阶段自然完成 owner / weapon / verification 选择。
+
+## PRD-as-Goal Execution Contract
+
+本 PRD 可以直接作为后续 `/goal` 的目标来源。目标不是“把文档写完”，而是按本文交付一个最小可测试闭环：
+
+```text
+输入任务
+-> 识别 CapabilityGap
+-> 产出 GapDecision
+-> 按 decision 分支生成 candidate / workerTask / blocked reason
+-> Review + Verification
+-> 记录埋点和反馈
+```
+
+目标完成必须同时满足：
+
+- 6 类 GapDecision fixture 全部通过。
+- `create_agent` 分支能生成完整 `GeneratedAgentSpec`，并通过 10/10 scorecard。
+- 所有 decision 都有数据库或等价持久化记录，可回放。
+- 外部写动作未授权时进入 blocked，不执行。
+- 治理 agent 没有变成执行 worker。
+- validator 只拒绝和返回 Thinking，不替代 planner。
+
+## Layered Architecture
+
+第一版按 5 层做，简单、可控、可扩展：
+
+| 层 | 负责什么 | 不负责什么 |
+|---|---|---|
+| 1. Policy layer | GapDecision 规则、scorecard、禁止行为 | 不直接读写文件或外部系统 |
+| 2. Orchestration layer | LangGraph 风格控制图，决定节点和 conditional edge | 不保存长期 canonical |
+| 3. Provider layer | agent / skill / script / MCP / runtime tool 发现与绑定 | 不决定产品目标 |
+| 4. Persistence layer | run state、event log、埋点、回放、用户纠正 | 不当 CapabilityGraph 或知识图数据库 |
+| 5. Projection layer | Claude / Codex / Cursor / OpenClaw runtime 输出 | 不改变 canonical 决策 |
+
+分层原则：
+
+- Policy 可以脱离 LangGraph 单独测试。
+- Orchestration 可以换实现，但必须保留同一批 state 和 event。
+- Persistence 是运行证据，不是长期身份源。
+- Projection 是投影，不是源头。
+
+## Database-Driven Runtime Shape
+
+数据库驱动是合适的，但第一版只做“状态与事件驱动”，不做图数据库。
+
+人话解释：
+
+- LangGraph 负责“下一步走哪条边”。
+- 数据库负责“刚刚发生了什么、为什么这么走、用户是否接受、下次怎么回放”。
+- canonical 文件仍然是长期规则源；数据库只记录运行状态、埋点、候选和反馈。
+
+推荐最小物理实现：
+
+- 本地开发：SQLite 或等价轻量 DB。
+- 测试：in-memory store 或 fixture JSON。
+- 后续多人/服务化：Postgres / Supabase adapter。
+
+必须通过接口隔离：
+
+```text
+RunStateStore
+  appendEvent(event)
+  getRun(runId)
+  getLatestDecision(gapId)
+  listCorrections(repeatKey)
+  replayFixture(fixtureId)
+```
+
+不要让业务代码直接依赖某个数据库。所有节点只读写 `RunStateStore`。
+
+### 最小持久化表
+
+这些是运行持久化 schema，不是新的长期能力大模型：
+
+| 表 | 用途 | 关键字段 |
+|---|---|---|
+| `runs` | 一次 governed run | `runId`、`status`、`startedAt`、`endedAt`、`primaryGoal` |
+| `run_events` | 事件流和埋点 | `eventId`、`runId`、`stage`、`eventType`、`payloadJson`、`createdAt` |
+| `capability_gaps` | 缺能力记录 | `gapId`、`runId`、`requestedCapability`、`checkedProvidersJson`、`insufficiencyReason` |
+| `gap_decisions` | 六分类决策 | `decisionId`、`gapId`、`decision`、`decisionReason`、`rejectedAlternativesJson`、`verificationOwner` |
+| `generated_agent_specs` | create_agent 成品规格 | `specId`、`decisionId`、`name`、`specJson`、`scorecardJson`、`identityCleanliness` |
+| `candidate_writebacks` | 长期能力候选 | `candidateId`、`sourceGapId`、`candidateType`、`promotionRule`、`writebackDecision` |
+| `user_feedback` | 用户纠正和接受情况 | `feedbackId`、`runId`、`repeatKey`、`gapDecisionAccepted`、`candidateWritebackAccepted`、`userCorrection` |
+
+### 埋点事件
+
+至少记录这些事件：
+
+| Event | 什么时候记 |
+|---|---|
+| `capability_gap_detected` | 识别出 CapabilityGap |
+| `providers_checked` | Fetch 完成 provider 搜索 |
+| `gap_decision_made` | 产出 GapDecision |
+| `alternative_rejected` | 拒绝某个替代路线 |
+| `generated_agent_spec_created` | create_agent 分支产出 GeneratedAgentSpec |
+| `worker_task_only_selected` | 选择一次性 workerTask |
+| `blocked_or_approval_required` | 外部写动作或高风险进入 blocked |
+| `validator_returned_to_thinking` | validator 拒绝但不规划 |
+| `review_score_recorded` | Prism 评分完成 |
+| `warden_gate_decided` | Warden 门禁完成 |
+| `fixture_replayed` | fixture 被回放 |
+| `user_feedback_recorded` | 用户接受、拒绝或纠正 |
+
+### LangGraph Compatibility
+
+这符合 LangGraph。原因是 LangGraph 的核心是：
+
+- `StateGraph`：定义运行 state。
+- node：读取 state，返回 state 更新。
+- normal edge：固定下一步。
+- conditional edge：根据 state 决定下一步。
+- persistence / checkpoint：保存运行状态，支持恢复和回放。
+
+本 PRD 对应关系：
+
+| Meta_Kim | LangGraph |
+|---|---|
+| `CapabilityGap` | state 字段 |
+| `GapDecision` | conditional edge 的路由依据 |
+| `GeneratedAgentSpec` | create_agent 分支节点输出 |
+| `CandidateWriteback` | evolution 节点输出 |
+| `RunStateStore` | persistence / checkpoint / event log adapter |
+| 埋点事件 | state transition evidence |
+
+第一版 LangGraph 控制图：
+
+```text
+critical_intent
+-> fetch_capabilities
+-> detect_gap
+-> decide_gap_route
+-> branch:
+   create_skill -> design_skill_candidate
+   create_agent -> design_agent_spec
+   create_script -> design_script_candidate
+   create_mcp_provider -> design_mcp_provider_candidate
+   worker_task_only -> make_worker_task
+   blocked_or_needs_approval -> ask_approval_or_block
+-> review_quality
+-> warden_gate
+-> verify_fixture
+-> record_feedback
+-> evolve_or_none
+```
+
+禁止事项：
+
+- 不把数据库当 planner。
+- 不把数据库当长期 identity 源。
+- 不让 LangGraph 节点直接自动写 canonical。
+- 不先做图数据库、向量库或完整 CapabilityGraph。
+- 不让每个 agent 自己维护长期记忆；记忆通过 `RunStateStore` 和 memory provider 受控读取。
 
 ## Goals
 
@@ -121,6 +275,81 @@ MVP 原则：
 
 5. 默认路径必须自然完成。
    如果正确决策只在 Review 或 validator 里补出来，本期就算失败。
+
+## Capability Role Boundaries
+
+本期必须分清 6 类东西，不能都叫 agent：
+
+| 类型 | 负责什么 | 不负责什么 | 本期判断 |
+|---|---|---|---|
+| 治理 agent | Critical / Fetch / Thinking / Review、边界、门禁、质量审计 | 不做业务实现 worker | 用来设计和审查路线 |
+| 执行 agent | 长期岗位 owner，有稳定职责、拒绝项、输入输出和验收 | 不绑定本次文件、ticket、今天任务 | 只有缺长期 owner 时才 create_agent |
+| skill | 可复用方法、流程、知识包 | 不拥有长期责任身份 | 重复流程优先 create_skill |
+| script / command | 稳定、机械、可测试的本地动作 | 不做判断和协作 | 机械转换优先 create_script |
+| MCP provider | 外部系统能力、权限、凭证、审计边界 | 不代表一次性外部写动作已获授权 | 外部能力优先 create_mcp_provider 或 blocked |
+| workerTask | 本次 run 的具体工作单 | 不进入长期 identity | 一次性任务优先 worker_task_only |
+
+配套说明见 `docs/meta-kim-capability-governance-langgraph-plan.zh-CN.md`。该文档把这些角色映射成 LangGraph 风格的 state、node 和 conditional edge；本 PRD 不先做完整 CapabilityGraph。
+
+## Owner Responsibility Matrix
+
+这部分回答“谁来负责”。每个环节只负责自己的判断和证据，不互相代班。
+
+| 环节 | 负责人 | 判断依据 | 交付物 | 验收方式 |
+|---|---|---|---|---|
+| 入口与最终放行 | `meta-warden` | 用户真实目标、非目标、风险边界、最终证据链 | run gate / final gate | 证据链闭合才允许说完成 |
+| 流程组织 | `meta-conductor` | Critical / Fetch / Thinking / Review 是否按顺序完成 | stage plan、owner 分配、merge plan | 每阶段有 owner、输入、输出、下一步 |
+| 能力证据 | `meta-scout` | 已查 agent、skill、script、command、MCP、runtime tool、capability index | provider search log | 不能没查就创建新能力 |
+| 能力类型判断 | `meta-artisan` | 缺的是方法、身份、机械动作、外部 provider，还是一次性任务 | GapDecision 推荐 | 每个 decision 有理由和拒绝项 |
+| 新 agent 规格 | `meta-genesis` | 是否真的需要长期责任边界和专业身份 | GeneratedAgentSpec | 通过 10 项 scorecard 和 identity cleanliness |
+| 权限与危险动作 | `meta-sentinel` | 外部写、凭证、付费任务、权限不明、known unsupported | blocked reason / approval request | 未授权外部动作必须阻塞 |
+| 质量审查 | `meta-prism` | Critical、Fetch、Thinking 是否有依据，是否空话或过度工程 | review findings | 发现缺证据返回对应阶段 |
+| 进化写回 | `meta-chrysalis` | 用户纠正、重复次数、接受情况、promotion rule | CandidateWriteback / none-with-reason | 重复 3 次以上才进入长期能力评审 |
+| 执行工作 | execution owner / skill / script / MCP / workerTask | Thinking 选出的 owner 和 loadout | run-scoped output | 不能由治理 agent 充当实现 worker |
+
+硬边界：
+
+- 治理 agent 负责判断、设计、审查、门禁，不负责业务实现。
+- `create_agent` 的执行不是“直接写 agent 文件”，而是先交付 `GeneratedAgentSpec` 和 CandidateWriteback。
+- `worker_task_only` 的执行结果只留在 run-scoped artifact，不进入长期 identity。
+- `blocked_or_needs_approval` 的交付物是最小授权请求或阻塞原因，不是绕过授权的 provider。
+
+## Decision Evidence Contract
+
+这部分回答“怎么判断、怎么保证不是空话”。每次 GapDecision 必须留下这张证据链；缺一项，Review 不能通过。
+
+| 阶段 | 必须回答的问题 | Owner | 必须证据 | 事件 |
+|---|---|---|---|---|
+| Critical | 真实目标是什么？成功标准和非目标是什么？ | `meta-warden` + `meta-conductor` | intent、success criteria、non-goals、blocking unknowns | `run_started` |
+| Fetch | 查过哪些现有能力？为什么不够？ | `meta-scout` | checked providers、候选能力、insufficiency reason | `providers_checked` |
+| Thinking | 为什么选这个 decision？为什么拒绝其他路线？ | `meta-artisan` | selected decision、decision rule、rejected alternatives、verification owner | `gap_decision_made`、`alternative_rejected` |
+| Branch execution | 这个 decision 交付什么？由谁做？ | 对应 branch owner | CandidateWriteback / GeneratedAgentSpec / workerTask / blocked reason | branch event |
+| Review | 判断依据是否足够？有没有 fake owner 或长期污染？ | `meta-prism` | review score、failure reason 或 pass reason | `review_score_recorded` |
+| Warden gate | 能不能对用户说完成？ | `meta-warden` | final gate decision、remaining risk | `warden_gate_decided` |
+| Verification | 怎么证明结果对？ | `verify` 或 `meta-sentinel` | fixture result、DB records、forbidden behavior check | `fixture_replayed` |
+| Evolution | 这次经验要不要沉淀？ | `meta-chrysalis` | user feedback、repeatKey、CandidateWriteback / none-with-reason | `user_feedback_recorded` |
+
+六类 decision 的判断依据：
+
+| Decision | 选择依据 | 分支交付物 | 禁止行为 | 验收 |
+|---|---|---|---|---|
+| `create_skill` | 重复出现的方法、流程、评审套路；不需要长期身份 | skill CandidateWriteback | 创建新 agent；自动写 canonical | 解释复用价值，候选不落地 |
+| `create_agent` | 缺稳定长期 owner；需要专业身份、拒绝项、输入输出、记忆和验收政策 | GeneratedAgentSpec + agent CandidateWriteback | 把今日任务、路径、ticket 写进 identity | 10/10 scorecard，identity pollution 0 |
+| `create_script` | 稳定、机械、可测试、本地可重复 | script CandidateWriteback | 让 agent 做机械脚本活 | 有测试入口和 verifier |
+| `create_mcp_provider` | 稳定外部系统能力，需要权限、凭证、审计边界 | MCP provider CandidateWriteback | 一次性 curl、未授权凭证、外部写 | provider 边界清楚，写动作未授权即 blocked |
+| `worker_task_only` | 单次 run 内可完成；已有 owner/loadout 足够；无复用证据 | workerTaskPacket | 写 CandidateWriteback；污染长期 identity | 无长期候选，run-scoped 输出 |
+| `blocked_or_needs_approval` | 缺权限、缺凭证、外部写、付费任务、证据不足或高风险 | blocked reason / approval request | 绕授权执行；validator 当完成 | 无外部状态改变，给出最小授权请求 |
+
+每条 fixture 必须带 `requiredEvidence`，至少覆盖：
+
+- `critical.intent_locked`
+- `fetch.providers_checked`
+- `thinking.decision_rule_applied`
+- `thinking.rejected_alternatives_recorded`
+- `execution.branch_owner_bound`
+- `review.quality_gate_recorded`
+- `verification.fixture_replayed`
+- `evolution.writeback_or_none_recorded`
 
 ## MVP Scope
 
@@ -184,6 +413,42 @@ MVP 原则：
 - 必须列出至少一个 rejectedAlternative，避免“看起来都行”。
 - 必须有 verificationOwner。
 - 必须能被 fixture 回放。
+- 必须能关联 `DecisionEvidenceContract`，说明谁判断、依据是什么、谁执行、谁验收。
+
+### DecisionEvidenceContract
+
+`DecisionEvidenceContract` 是 GapDecision 的必备证据附件，不是新的长期能力模型。它只证明本次判断链路是否合格。
+
+```json
+{
+  "contractVersion": "decision-evidence-v0.1",
+  "decisionRule": {
+    "decision": "create_agent",
+    "branchOwner": "meta-genesis",
+    "branchOwnerRole": "governance_design",
+    "deliverable": "GeneratedAgentSpec plus agent CandidateWriteback",
+    "verifier": "verify"
+  },
+  "requiredEvidence": [
+    "critical.intent_locked",
+    "fetch.providers_checked",
+    "thinking.decision_rule_applied",
+    "execution.branch_owner_bound",
+    "verification.fixture_replayed"
+  ],
+  "checklist": [
+    {"key": "fetch.providers_checked", "owner": "meta-scout", "status": "pass"}
+  ],
+  "status": "pass"
+}
+```
+
+最小要求：
+
+- 必须覆盖 Critical、Fetch、Thinking、Execution、Review、Verification、Evolution。
+- 必须说明 branch owner 和 owner role。
+- 如果 governance owner 出现在 branch owner，只能是 `governance_design` 或 `safety_gate`，不能是 `execution_worker`。
+- 必须保留 fixture 里的 forbidden behaviors。
 
 ### CandidateWriteback
 
@@ -206,6 +471,33 @@ MVP 原则：
 - 必须有 promotionRule。
 - 必须保留 none-with-reason。
 - 用户接受与否必须可记录。
+
+### create_agent 输出扩展：GeneratedAgentSpec
+
+`GeneratedAgentSpec` 不是第四个核心数据模型，只在 `GapDecision.decision = create_agent` 时出现。它的作用是证明“这个 agent 值得成为长期能力”，而不是只证明“我们决定创建 agent”。
+
+最小字段：
+
+- `name`：短、稳定、英文角色名，不是 runtime 昵称，也不是具体任务名。
+- `description`：一句话说明触发条件和专业能力。
+- `flowPosition`：它在 Think / Plan / Build / Review / Test / Ship / Reflect 哪一段发挥作用。
+- `purpose`：它长期负责哪类问题。
+- `capabilities`：4-8 个可复用能力类别，必须有领域专业词。
+- `nonCapabilities`：明确拒绝什么，特别是外部写动作、一次性实现工作、已有 owner 可承接的任务。
+- `loadoutSlots`：抽象能力槽，例如 test framework discovery、coverage report parsing；具体工具绑定留在 run-scoped artifact。
+- `inputs` / `outputs`：上下游交接能看懂。
+- `memoryPolicy`：无记忆、run-scoped、project-scoped 或 cross-project-readonly，并说明权限边界。
+- `gapPolicy`：遇到缺能力、缺证据、缺授权时如何回到 GapDecision。
+- `verificationPolicy`：怎么被 fixture 或 scorecard 验收。
+- `installProjection`：能否投影到 Claude / Codex / Cursor / OpenClaw，或只能 reference-only。
+- `identityCleanliness`：证明没有 repo path、文件列表、ticket、今天任务、deliverable link、verifySteps。
+
+验收重点：
+
+- 学 `wshobson/agents`：专业领域明确，不是万能人格。
+- 学 `gstack`：流程位置和上下游交接明确。
+- 学 `gbrain`：记忆、缺口、评估、权限边界明确。
+- 保留 Meta_Kim 自己的硬边界：provider-first、agent-last、workerTask 分离、CandidateWriteback 不自动写 canonical。
 
 ## Functional Requirements
 
@@ -269,6 +561,51 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 - 同类纠正重复 3 次以上时，生成 promotion review 候选。
 - 回放 fixture 时，已接受的用户纠正会影响下一次 GapDecision。
 
+### FR-007 create_agent 成品验收
+
+当 GapDecision 是 `create_agent` 时，系统必须产出 `GeneratedAgentSpec`，并通过 agent quality scorecard。
+
+验收：
+
+- `GeneratedAgentSpec` 字段完整。
+- `flowPosition`、`handoff`、`memoryPolicy`、`gapPolicy`、`verificationPolicy` 都有人话解释。
+- `identityCleanliness` 证明长期 identity 没有一次性任务污染。
+- `identity_clarity`、`domain_specificity`、`tool_least_privilege`、`memory_fit`、`gap_honesty`、`verification_readiness` 全部通过。
+
+### FR-008 RunStateStore 持久化
+
+系统必须把每次关键决策写入 `RunStateStore`，用于回放、审计和埋点。
+
+验收：
+
+- 每个 fixture 至少产生 `runs`、`run_events`、`capability_gaps`、`gap_decisions` 记录。
+- create_agent fixture 额外产生 `generated_agent_specs` 记录。
+- create_skill、create_script、create_mcp_provider 产生 `candidate_writebacks` 记录。
+- worker_task_only 不产生长期 `generated_agent_specs`。
+- blocked_or_needs_approval 产生 blocked event，且无外部写动作记录。
+
+### FR-009 LangGraph 控制图
+
+系统必须能把 GapDecision 映射到 LangGraph 风格控制图，且每个 decision 走不同 conditional edge。
+
+验收：
+
+- `decide_gap_route` 对 6 类 decision 输出 6 条不同分支。
+- 每条分支都有对应 node、owner、输入、输出和禁止行为。
+- graph state 包含 `capabilityGap`、`gapDecision`、`candidateWriteback`、`verificationEvidence`。
+- 数据库只作为 persistence / checkpoint / event log，不替代 conditional edge。
+
+### FR-010 判断依据合同
+
+系统必须为每个 GapDecision 产出 `DecisionEvidenceContract`。
+
+验收：
+
+- 每个 fixture 的 `requiredEvidence` 全部命中，缺一项即失败。
+- contract 里必须能看出谁判断、谁设计、谁执行、谁验收。
+- fixture 的 forbidden behaviors 必须进入 contract。
+- governance agent 不能以 `execution_worker` 身份出现在 branch owner。
+
 ## Quantitative Acceptance
 
 | 指标 | 目标 |
@@ -284,6 +621,16 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 | User-correction replay coverage | 100%，每条纠正可回放 |
 | User-correction replay count | 同类问题重复纠正次数较基线下降，首版目标下降 30% |
 | Decision latency for fixture | 每个 fixture 在 1 个 route pass 内产出 decision |
+| GeneratedAgentSpec completeness | create_agent fixture 100% 字段完整 |
+| Generated agent quality scorecard | create_agent fixture 必须 10/10 pass |
+| RunStateStore coverage | 100%，每个 fixture 有 run、event、gap、decision 记录 |
+| Telemetry event coverage | 100%，关键事件全部写入 |
+| LangGraph branch coverage | 100%，6 类 decision 都覆盖 conditional edge |
+| Database-as-planner count | 0 |
+| Direct canonical write from graph node | 0 |
+| Decision evidence contract coverage | 100%，每个 fixture 的 requiredEvidence 全部命中 |
+| Governance-agent-as-worker count | 0 |
+| User feedback persistence | 100%，每个 fixture 写入 user_feedback |
 
 ## Test Fixtures
 
@@ -296,10 +643,10 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 
 ### Fixture 2：create_agent
 
-- 输入：用户项目长期需要“数据隐私影响评估 owner”，需要稳定责任、拒绝项、输入输出和复用边界；现有 skill/script 只能做检查清单。
+- 输入：项目反复缺少“测试覆盖率策略 owner”：需要稳定判断哪些代码必须测、如何读覆盖率报告、如何发现测试缺口、如何把用户纠正变成下次 replay；现有 test owner 可以执行测试，但没有长期 coverage strategy owner。
 - 期望 decision：`create_agent`
-- 禁止行为：用 meta-sentinel 直接当执行 worker；用 checklist skill 伪装 owner；用 runtime nickname 当 roleDisplayName。
-- 验收方式：GapDecision 解释“缺长期责任 owner”；CandidateWriteback 类型为 agent；executionAgentCard 不含路径、今天任务或 verifySteps。
+- 禁止行为：用 meta-prism 或 test owner 硬接长期策略；创建只会跑一次覆盖率命令的 script；把某个仓库路径、当前失败测试、今天的 verifySteps 写进长期 identity。
+- 验收方式：GapDecision 解释“缺长期测试覆盖率策略 owner”；CandidateWriteback 类型为 agent；`GeneratedAgentSpec.name = test-coverage-specialist`；flowPosition 为 Test 或 Review/Test；memoryPolicy 只记录项目级重复模式和用户纠正；identityCleanliness 通过。
 
 ### Fixture 3：create_script
 
@@ -349,13 +696,25 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 - 输出：CapabilityGap -> GapDecision 的 policy，包含 rejectedAlternatives 与 verificationOwner。
 - 验收：6 个 fixture 决策全部正确；fake owner 0；missing verifier 0。
 
-### Phase 3：validator guardrails
+### Phase 3：RunStateStore 与埋点
+
+- 目标：用最小数据库/持久化接口记录 run、event、gap、decision、feedback。
+- 输出：`RunStateStore` adapter、最小表结构、fixture replay 入口。
+- 验收：每个 fixture 都能写入并回放；关键埋点覆盖 100%；数据库不替代 planner。
+
+### Phase 4：LangGraph 控制图
+
+- 目标：把 `decide_gap_route` 接成 LangGraph 风格的 control graph。
+- 输出：`critical_intent -> fetch_capabilities -> detect_gap -> decide_gap_route -> branch -> review -> verify -> evolve`。
+- 验收：6 类 decision 对应 6 条 conditional edge；每条边都有节点 owner、输入、输出、禁止行为；不引入完整 CapabilityGraph。
+
+### Phase 5：validator guardrails
 
 - 目标：让 validator 拒绝危险路线和污染路线，但不替代 planner。
 - 输出：guardrail rules。
 - 验收：validator 对缺解释、缺 verifier、fake owner、自动写 canonical、外部未授权写动作全部拒绝，并返回 Thinking。
 
-### Phase 4：optional route planner integration
+### Phase 6：optional route planner integration
 
 - 目标：价值成立后，再把 GapDecision 接入现有 route planner。
 - 输出：只接入最小 decision，不引入完整 graph。
@@ -377,6 +736,34 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 - 如果用户连续纠正同一类 decision，下一轮 fixture replay 必须覆盖该纠正。
 - 如果能力只在单次任务中出现，不进入长期 identity。
 
+## Local Executable MVP Slice
+
+本地第一片实现入口：
+
+```text
+npm run meta:gap:mvp -- tests/meta-theory/scenarios/capability-gap-decision-fixtures.json
+```
+
+当前本地实现必须证明：
+
+- 6 个 fixture 全部 replay。
+- 6 类 GapDecision 都出现一次。
+- 每个 decision 都有 `DecisionEvidenceContract`，并命中 fixture 的 `requiredEvidence`。
+- 每个 run 写入 `runs`、`run_events`、`capability_gaps`、`gap_decisions`。
+- create_agent 写入 `generated_agent_specs`，其他分支不写。
+- create_skill、create_agent、create_script、create_mcp_provider 写入 `candidate_writebacks`。
+- 每个 run 写入 `user_feedback`，用于用户纠正和 replay。
+- worker_task_only 不写长期候选。
+- blocked_or_needs_approval 不生成绕授权的 provider 或 agent。
+- 每个 decision 都能映射到 LangGraph 控制图分支。
+
+本地测试入口：
+
+```text
+node scripts/run-node-tests.mjs "tests/meta-theory/22-capability-gap-mvp.test.mjs"
+node scripts/run-node-tests.mjs "tests/meta-theory/21-generated-agent-quality.test.mjs"
+```
+
 ## Review Checklist
 
 ### Critical 失败条件
@@ -395,6 +782,8 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 - 先做完整 CapabilityGraph、Edge builder、图数据库或全 runtime planner。
 - 没有比较 MVP 路线和大架构路线。
 - 没把 workerTask-only 与 create_agent 分清。
+- 数据库替代了 planner 或 conditional edge。
+- LangGraph 图没有按 6 类 decision 分支。
 
 ### Review 失败条件
 
@@ -403,6 +792,8 @@ Validator 只负责拒绝危险或空路线，不负责规划路线。
 - 允许 fake owner、missing verifier、validator-as-planner 或长期 identity 污染。
 - CandidateWriteback 会自动写 canonical。
 - meta agent 被安排为执行 worker。
+- 关键事件没有埋点，导致 decision 不能回放。
+- 数据库记录不能证明为什么走某条边。
 
 ## 本期完成定义
 
@@ -410,6 +801,9 @@ PRD v0.2 完成不等于功能完成。本期完成定义是：
 
 - 本文档在 tracked 路径下新增。
 - 文档覆盖真实目标、原则、MVP scope、最小数据模型、FR、量化验收、fixture、执行计划和反馈机制。
+- 文档覆盖分层架构、RunStateStore、埋点事件、LangGraph 控制图和数据库非 planner 边界。
+- 文档覆盖 Owner Responsibility Matrix 和 Decision Evidence Contract。
+- 本地测试覆盖 requiredEvidence、forbidden behavior、branch owner role、user_feedback persistence。
 - `git diff --check -- docs/ai-native-capability-gap-mvp-prd.zh-CN.md` 通过。
 - `git check-ignore -v docs/ai-native-capability-gap-mvp-prd.zh-CN.md` 无输出。
 - 不提交、不推送、不发布。
