@@ -59,6 +59,38 @@ const prepareOpenClawScriptPath = path.join(
 const activeChildren = new Map();
 let cleanupInFlight = false;
 
+const RUNTIME_FAILURE_TAXONOMY = Object.freeze({
+  pass: "pass",
+  timeout: "timeout",
+  authMissing: "auth_missing",
+  nativeHarnessMissing: "native_harness_missing",
+  projectionOnly: "projection_only",
+  toolUnsupported: "tool_unsupported",
+  runtimeUnavailable: "runtime_unavailable",
+  structuralFailure: "structural_failure",
+  liveIncomplete: "live_incomplete",
+  unknownFailure: "unknown_failure",
+});
+
+const RUNTIME_EVIDENCE_COMMANDS = Object.freeze({
+  claude: {
+    smoke: "node scripts/eval-meta-agents.mjs --runtime=claude",
+    live: "node scripts/eval-meta-agents.mjs --runtime=claude --live",
+  },
+  codex: {
+    smoke: "node scripts/eval-meta-agents.mjs --runtime=codex",
+    live: "node scripts/eval-meta-agents.mjs --runtime=codex --live",
+  },
+  openclaw: {
+    smoke: "node scripts/eval-meta-agents.mjs --runtime=openclaw",
+    live: "node scripts/eval-meta-agents.mjs --runtime=openclaw --live",
+  },
+  cursor: {
+    smoke: "node scripts/eval-meta-agents.mjs --runtime=cursor",
+    live: "node scripts/eval-meta-agents.mjs --runtime=cursor --live",
+  },
+});
+
 function readEnvCliOverride(envKey) {
   const raw = process.env[envKey];
   if (raw == null) {
@@ -1749,6 +1781,169 @@ function summarizeRuntimeReport(runtimeName, report) {
   return {
     runtime: runtimeName,
     status: report.ok === true ? "passed" : "failed",
+  };
+}
+
+function runtimeReason(report) {
+  return String(
+    report?.reason ??
+      report?.unsupportedWithReason ??
+      report?.error ??
+      report?.detail ??
+      report?.runtimeAuthHydration?.reason ??
+      report?.sample?.runtime_live?.reason ??
+      report?.sample?.runtime_smoke?.reason ??
+      "",
+  );
+}
+
+function classifyRuntimeFailure(runtimeName, report, mode) {
+  const status = report?.status ?? (report?.ok === true ? "passed" : "failed");
+  const reason = runtimeReason(report).toLowerCase();
+
+  if (status === "passed") {
+    return mode === "live"
+      ? RUNTIME_FAILURE_TAXONOMY.pass
+      : RUNTIME_FAILURE_TAXONOMY.projectionOnly;
+  }
+  if (reason.includes("timeout")) {
+    return RUNTIME_FAILURE_TAXONOMY.timeout;
+  }
+  if (reason.includes("auth") || reason.includes("apikey") || reason.includes("api key")) {
+    return RUNTIME_FAILURE_TAXONOMY.authMissing;
+  }
+  if (
+    reason.includes("live_harness_unavailable") ||
+    reason.includes("native live-turn harness") ||
+    (runtimeName === "cursor" && status === "skipped")
+  ) {
+    return RUNTIME_FAILURE_TAXONOMY.nativeHarnessMissing;
+  }
+  if (reason.includes("command not found") || reason.includes("enoent")) {
+    return RUNTIME_FAILURE_TAXONOMY.toolUnsupported;
+  }
+  if (reason.includes("runtime_unavailable")) {
+    return RUNTIME_FAILURE_TAXONOMY.runtimeUnavailable;
+  }
+  if (reason.includes("incomplete")) {
+    return RUNTIME_FAILURE_TAXONOMY.liveIncomplete;
+  }
+  if (status === "skipped") {
+    return RUNTIME_FAILURE_TAXONOMY.runtimeUnavailable;
+  }
+  if (status === "failed") {
+    return RUNTIME_FAILURE_TAXONOMY.structuralFailure;
+  }
+  return RUNTIME_FAILURE_TAXONOMY.unknownFailure;
+}
+
+function runtimeEvidenceKind(status, mode, failureClass) {
+  if (status === "passed" && mode === "live") {
+    return "live";
+  }
+  if (status === "passed") {
+    return "smoke";
+  }
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.nativeHarnessMissing) {
+    return "unsupported";
+  }
+  if (status === "skipped") {
+    return "skipped";
+  }
+  if (status === "failed") {
+    return "failed";
+  }
+  return "unknown";
+}
+
+function runtimeRemainingAction(runtimeName, failureClass, mode) {
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.pass) {
+    return "No remaining runtime action for this eval scope.";
+  }
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.projectionOnly) {
+    return `Run ${runtimeName} with --live before claiming native live release evidence.`;
+  }
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.timeout) {
+    return "Recover the live session or retry with the recorded retryCommand/threadId evidence.";
+  }
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.authMissing) {
+    return `Configure ${runtimeName} auth and rerun the live evaluator.`;
+  }
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.nativeHarnessMissing) {
+    return "Implement a native live-turn harness or keep the runtime marked unsupported-with-reason.";
+  }
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.toolUnsupported) {
+    return `Install or expose the ${runtimeName} CLI/tool before rerunning.`;
+  }
+  if (failureClass === RUNTIME_FAILURE_TAXONOMY.liveIncomplete) {
+    return "Rerun the incomplete shard set and keep skipped shards out of release pass.";
+  }
+  if (mode === "live") {
+    return `Inspect ${runtimeName} live report and rerun after fixing the reported failure.`;
+  }
+  return `Inspect ${runtimeName} smoke report and fix projection/config evidence.`;
+}
+
+function buildRuntimeEvidenceRecord(runtimeName, report, mode) {
+  const status = report?.status ?? (report?.ok === true ? "passed" : "failed");
+  const failureClass = classifyRuntimeFailure(runtimeName, report, mode);
+  const evidenceKind = runtimeEvidenceKind(status, mode, failureClass);
+  const strictReleasePass =
+    status === "passed" &&
+    mode === "live" &&
+    failureClass === RUNTIME_FAILURE_TAXONOMY.pass;
+  return {
+    runtime: runtimeName,
+    mode,
+    status,
+    evidenceKind,
+    failureClass,
+    reason: runtimeReason(report) || null,
+    command:
+      RUNTIME_EVIDENCE_COMMANDS[runtimeName]?.[mode] ??
+      `node scripts/eval-meta-agents.mjs --runtime=${runtimeName}`,
+    artifact: `report.${runtimeName}`,
+    remainingAction: runtimeRemainingAction(runtimeName, failureClass, mode),
+    strictReleasePass,
+    blockedFromRelease:
+      !strictReleasePass ||
+      status === "skipped" ||
+      status === "failed" ||
+      failureClass !== RUNTIME_FAILURE_TAXONOMY.pass,
+  };
+}
+
+function buildRuntimeEvidencePacket(report, runtimeStatuses) {
+  const records = runtimeStatuses.map((item) =>
+    buildRuntimeEvidenceRecord(item.runtime, report[item.runtime], report.mode),
+  );
+  const failureClasses = Object.fromEntries(
+    records.map((record) => [record.runtime, record.failureClass]),
+  );
+  return {
+    schemaVersion: "runtime-evidence-v0.1",
+    generatedAt: report.timestamp,
+    mode: report.mode,
+    strictRuntimesRequired: requireAllRuntimes,
+    records,
+    failureClasses,
+    summary: {
+      livePass: records
+        .filter((record) => record.evidenceKind === "live" && record.strictReleasePass)
+        .map((record) => record.runtime),
+      smokeOnly: records
+        .filter((record) => record.failureClass === RUNTIME_FAILURE_TAXONOMY.projectionOnly)
+        .map((record) => record.runtime),
+      skippedOrUnsupported: records
+        .filter((record) => ["skipped", "unsupported"].includes(record.evidenceKind))
+        .map((record) => record.runtime),
+      failed: records
+        .filter((record) => record.status === "failed")
+        .map((record) => record.runtime),
+      releaseGrade:
+        records.length > 0 &&
+        records.every((record) => record.strictReleasePass === true),
+    },
   };
 }
 
@@ -3492,6 +3687,10 @@ async function main() {
       ? summarizeRuntimeReport("cursor", report.cursor)
       : null,
   ].filter(Boolean);
+  report.runtimeEvidencePacket = buildRuntimeEvidencePacket(
+    report,
+    runtimeStatuses,
+  );
 
   report.summary = {
     passed: runtimeStatuses
@@ -3503,11 +3702,17 @@ async function main() {
     failed: runtimeStatuses
       .filter((item) => item.status === "failed")
       .map((item) => item.runtime),
+    blocked: runtimeStatuses
+      .filter((item) => !["passed", "skipped", "failed"].includes(item.status))
+      .map((item) => item.runtime),
     strictRuntimesRequired: requireAllRuntimes,
+    releaseGrade: report.runtimeEvidencePacket.summary.releaseGrade,
+    failureClasses: report.runtimeEvidencePacket.failureClasses,
   };
 
   const overallOk =
     report.summary.failed.length === 0 &&
+    report.summary.blocked.length === 0 &&
     (!requireAllRuntimes || report.summary.skipped.length === 0);
 
   console.log(JSON.stringify(report, null, 2));

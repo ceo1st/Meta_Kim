@@ -235,6 +235,31 @@ describe("eval-meta-agents Claude smoke", () => {
     assert.match(source, /summarizeRuntimeReport\("cursor", report\.cursor\)/);
   });
 
+  test("Runtime evidence aggregator uses fixed failure taxonomy", () => {
+    const source = readFileSync(
+      path.join(repoRoot, "scripts", "eval-meta-agents.mjs"),
+      "utf8",
+    );
+
+    assert.match(source, /const RUNTIME_FAILURE_TAXONOMY/);
+    for (const failureClass of [
+      "timeout",
+      "auth_missing",
+      "native_harness_missing",
+      "projection_only",
+      "tool_unsupported",
+    ]) {
+      assert.match(source, new RegExp(failureClass));
+    }
+    assert.match(source, /function classifyRuntimeFailure/);
+    assert.match(source, /function buildRuntimeEvidencePacket/);
+    assert.match(source, /runtimeEvidencePacket/);
+    assert.match(source, /remainingAction/);
+    assert.match(source, /strictReleasePass/);
+    assert.match(source, /releaseGrade/);
+    assert.match(source, /blockedFromRelease/);
+  });
+
   test("Codex live validates governed orchestration and records timeout fallback evidence", () => {
     const source = readFileSync(
       path.join(repoRoot, "scripts", "eval-meta-agents.mjs"),
@@ -310,5 +335,9 @@ describe("eval-meta-agents Claude smoke", () => {
       report.codex.sample.runtime_recovery.threadId,
       "codex-live-timeout-fixture-thread",
     );
+    assert.equal(report.runtimeEvidencePacket.records[0].runtime, "codex");
+    assert.equal(report.runtimeEvidencePacket.records[0].evidenceKind, "live");
+    assert.equal(report.runtimeEvidencePacket.records[0].failureClass, "pass");
+    assert.equal(report.runtimeEvidencePacket.summary.releaseGrade, true);
   });
 });

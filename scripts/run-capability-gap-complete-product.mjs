@@ -315,7 +315,16 @@ async function buildGovernedExecutionEvidence() {
       stateDir: path.join(tempDir, "approved"),
       dbPath: path.join(tempDir, "approved.sqlite"),
       canonicalRoot: path.join(tempDir, "canonical"),
-      approvalEvidence: "complete-product-warden-approval-test",
+      approvalPacket: {
+        schemaVersion: "warden-approval-v0.1",
+        approvalId: "complete-product-warden-approval-test",
+        approver: "meta-warden",
+        approvedAt: "2026-06-04T00:00:00.000Z",
+        scope: "complete product temporary canonical writeback proof",
+        targets: ["canonical/skills/prd-review-standard-skill/SKILL.md"],
+        diffSummary: "Create one temporary skill candidate for complete-product acceptance.",
+        rollbackPlan: "Delete the temporary canonical root used by this test.",
+      },
       applyWriteback: true,
     });
     return {

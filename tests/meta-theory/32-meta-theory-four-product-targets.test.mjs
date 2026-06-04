@@ -65,13 +65,31 @@ describe("32 — Meta-theory four product targets", () => {
       );
       for (const runtime of runtimes) {
         assert.equal(runtime.status, "smoke_pass", `${runtime.runtime} should pass smoke`);
+        assert.equal(runtime.evidenceKind, "smoke");
+        assert.equal(runtime.failureClass, "projection_only");
         assert.equal(runtime.naturalRoute, true);
         assert.ok(runtime.runtimeEntry, `${runtime.runtime} must record entry`);
+        assert.ok(runtime.command, `${runtime.runtime} must record command`);
+        assert.ok(runtime.remainingAction, `${runtime.runtime} must record remaining action`);
         assert.ok(runtime.orchestrationBoard, `${runtime.runtime} must bind board`);
         assert.equal(runtime.workerTaskPackets, 4);
         assert.equal(runtime.verificationOwner, "verify");
         assert.ok(runtime.runtimeDifference);
       }
+      assert.equal(report.runtimeProjectionEvidence.releaseGrade, false);
+      assert.equal(report.runtimeEvidencePacket.releaseGrade, false);
+      assert.equal(report.runtimeEvidencePacket.failureClasses.cursor, "projection_only");
+      assert.equal(
+        report.runtimeEvidencePacket.records.filter(
+          (item) => item.failureClass === "projection_only"
+        ).length,
+        4
+      );
+      assert.equal(report.analytics.runtimeEvidenceDistribution.length, 4);
+      assert.deepEqual(
+        report.analytics.runtimeEvidenceDistribution.map((item) => item.failureClass).sort(),
+        ["projection_only", "projection_only", "projection_only", "projection_only"]
+      );
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
@@ -80,31 +98,51 @@ describe("32 — Meta-theory four product targets", () => {
   test("T-003 distinguishes candidate_only from Warden approved writeback and can apply to a temp canonical root", async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), "meta-kim-writeback-"));
     try {
+      const canonicalRoot = path.join(tempDir, "canonical");
       const candidateOnly = await runMetaTheoryGovernedExecution({
         task: "同一套 PRD review standard 需要 skill。",
         runId: "test-run-candidate-only",
         stateDir: path.join(tempDir, "candidate"),
         dbPath: path.join(tempDir, "candidate.sqlite"),
-        canonicalRoot: path.join(tempDir, "canonical"),
+        canonicalRoot,
       });
       assert.equal(candidateOnly.wardenWritebackFlow.status, "candidate_only");
       assert.equal(candidateOnly.wardenWritebackFlow.approvalRequired, true);
+      assert.equal(candidateOnly.wardenWritebackFlow.approvalValidation.ok, false);
+      assert.ok(candidateOnly.wardenWritebackFlow.approvalRequest);
+      assert.equal(candidateOnly.wardenWritebackFlow.dryRun.canonicalWrites, 0);
       assert.equal(candidateOnly.wardenWritebackFlow.candidates[0].writebackDecision, "candidate_only");
       assert.equal(candidateOnly.wardenWritebackFlow.candidates[0].applyStatus, "planned");
+      assert.equal(candidateOnly.wardenWritebackFlow.candidates[0].dryRunArtifact.canonicalWrites, 0);
+
+      const approvalPacket = {
+        schemaVersion: "warden-approval-v0.1",
+        approvalId: "warden-approved-test-evidence",
+        approver: "meta-warden",
+        approvedAt: "2026-06-04T00:00:00.000Z",
+        scope: "temp canonical writeback test",
+        targets: [
+          `canonical/${candidateOnly.wardenWritebackFlow.candidates[0].targetRelativeToCanonical}`,
+        ],
+        diffSummary: "Create one skill candidate in temp canonical root.",
+        rollbackPlan: "Remove the generated temp canonical file.",
+      };
 
       const approved = await runMetaTheoryGovernedExecution({
         task: "同一套 PRD review standard 需要 skill。",
         runId: "test-run-approved-writeback",
         stateDir: path.join(tempDir, "approved"),
         dbPath: path.join(tempDir, "approved.sqlite"),
-        canonicalRoot: path.join(tempDir, "canonical"),
-        approvalEvidence: "warden-approved-test-evidence",
+        canonicalRoot,
+        approvalPacket,
         applyWriteback: true,
       });
       const candidate = approved.wardenWritebackFlow.candidates[0];
       assert.equal(approved.wardenWritebackFlow.status, "approved-for-writeback");
+      assert.equal(approved.wardenWritebackFlow.approvalValidation.ok, true);
       assert.equal(candidate.writebackDecision, "approved-for-writeback");
       assert.equal(candidate.applyStatus, "created");
+      assert.equal(candidate.dryRunArtifact.canonicalWrites, 1);
       assert.equal(candidate.verificationResult.status, "pass");
       assert.match(candidate.diffSummary, /^Created /);
 
@@ -143,6 +181,7 @@ describe("32 — Meta-theory four product targets", () => {
         "下一步交给谁",
         "Runtime 投影证据",
         "长期能力升级建议",
+        "Warden 审批包",
         "验证状态",
       ]) {
         assert.match(readBack.markdown, new RegExp(section));

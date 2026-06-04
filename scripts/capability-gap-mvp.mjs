@@ -1204,6 +1204,19 @@ export async function openRunStateStore(dbPath = ":memory:") {
           ORDER BY gd.verification_owner
         `)
         .all();
+      const runtimeEvidenceDistribution = db
+        .prepare(`
+          SELECT
+            json_extract(payload_json, '$.runtime') AS runtime,
+            json_extract(payload_json, '$.status') AS status,
+            json_extract(payload_json, '$.failureClass') AS failureClass,
+            COUNT(*) AS count
+          FROM run_events
+          WHERE event_type = 'runtime_evidence_recorded'
+          GROUP BY runtime, status, failureClass
+          ORDER BY runtime, status, failureClass
+        `)
+        .all();
       return {
         decisionDistribution,
         userCorrectionDistribution,
@@ -1211,6 +1224,7 @@ export async function openRunStateStore(dbPath = ":memory:") {
         blockedReasons,
         repeatKeyTopList,
         ownerFailureRate,
+        runtimeEvidenceDistribution,
       };
     },
     replayFixture(fixture) {
