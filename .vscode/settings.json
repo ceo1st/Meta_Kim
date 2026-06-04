@@ -11,10 +11,9 @@
     "**/codex": true,
     "**/memory": true,
     "**/pip": true,
-    "**/docs/architecture.zh-CN.md": true,
-    "**/docs/governance": true,
-    "**/docs/protocols": true,
-    "**/docs/meta-kim-current-settings-zh": true
+    "**/docs/*": true,
+    "**/docs/images": false,
+    "**/docs/images/**": false
   },
   "search.exclude": {
     "**/.meta-kim": true,
@@ -28,9 +27,8 @@
     "**/codex": true,
     "**/memory": true,
     "**/pip": true,
-    "**/docs/architecture.zh-CN.md": true,
-    "**/docs/governance": true,
-    "**/docs/protocols": true,
-    "**/docs/meta-kim-current-settings-zh": true
+    "**/docs/*": true,
+    "**/docs/images": false,
+    "**/docs/images/**": false
   }
 }
