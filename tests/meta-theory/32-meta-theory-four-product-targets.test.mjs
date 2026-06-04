@@ -1,0 +1,185 @@
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import process from "node:process";
+import {
+  readGovernedExecutionRun,
+  runMetaTheoryGovernedExecution,
+} from "../../scripts/run-meta-theory-governed-execution.mjs";
+
+const multiGapTask = [
+  "同一套 PRD review standard 需要 skill。",
+  "长期 test coverage owner 需要 agent。",
+  "release summary JSON 需要脚本。",
+  "内部知识库需要 MCP provider 边界。",
+].join("\n");
+
+describe("32 — Meta-theory four product targets", () => {
+  test("T-001 runs the default governed orchestration runtime path", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "meta-kim-governed-run-"));
+    try {
+      const report = await runMetaTheoryGovernedExecution({
+        task: multiGapTask,
+        runId: "test-run-default",
+        stateDir: tempDir,
+        dbPath: path.join(tempDir, "runs.sqlite"),
+      });
+
+      assert.equal(report.status, "pass");
+      assert.equal(report.defaultRuntimePath.status, "pass");
+      assert.equal(report.defaultRuntimePath.entry, "meta:theory:run");
+      assert.deepEqual(report.defaultRuntimePath.triggerChain, [
+        "meta-theory-skill-adapter",
+        "meta-warden-entry-gate",
+        "meta-conductor-orchestration",
+        "capability-gap-decision-kernel",
+      ]);
+      assert.equal(
+        report.defaultRuntimePath.orchestrationTaskBoardPacket.synthesisOwner,
+        "meta-conductor"
+      );
+      assert.equal(report.defaultRuntimePath.workerTaskPackets.length, 4);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("T-002 records Claude, Codex, Cursor, and OpenClaw projection smoke evidence", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "meta-kim-runtime-smoke-"));
+    try {
+      const report = await runMetaTheoryGovernedExecution({
+        task: multiGapTask,
+        runId: "test-run-runtime-smoke",
+        stateDir: tempDir,
+        dbPath: path.join(tempDir, "runs.sqlite"),
+      });
+      const runtimes = report.runtimeProjectionEvidence.results;
+
+      assert.equal(report.runtimeProjectionEvidence.status, "pass");
+      assert.deepEqual(
+        runtimes.map((item) => item.runtime).sort(),
+        ["claude", "codex", "cursor", "openclaw"]
+      );
+      for (const runtime of runtimes) {
+        assert.equal(runtime.status, "smoke_pass", `${runtime.runtime} should pass smoke`);
+        assert.equal(runtime.naturalRoute, true);
+        assert.ok(runtime.runtimeEntry, `${runtime.runtime} must record entry`);
+        assert.ok(runtime.orchestrationBoard, `${runtime.runtime} must bind board`);
+        assert.equal(runtime.workerTaskPackets, 4);
+        assert.equal(runtime.verificationOwner, "verify");
+        assert.ok(runtime.runtimeDifference);
+      }
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("T-003 distinguishes candidate_only from Warden approved writeback and can apply to a temp canonical root", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "meta-kim-writeback-"));
+    try {
+      const candidateOnly = await runMetaTheoryGovernedExecution({
+        task: "同一套 PRD review standard 需要 skill。",
+        runId: "test-run-candidate-only",
+        stateDir: path.join(tempDir, "candidate"),
+        dbPath: path.join(tempDir, "candidate.sqlite"),
+        canonicalRoot: path.join(tempDir, "canonical"),
+      });
+      assert.equal(candidateOnly.wardenWritebackFlow.status, "candidate_only");
+      assert.equal(candidateOnly.wardenWritebackFlow.approvalRequired, true);
+      assert.equal(candidateOnly.wardenWritebackFlow.candidates[0].writebackDecision, "candidate_only");
+      assert.equal(candidateOnly.wardenWritebackFlow.candidates[0].applyStatus, "planned");
+
+      const approved = await runMetaTheoryGovernedExecution({
+        task: "同一套 PRD review standard 需要 skill。",
+        runId: "test-run-approved-writeback",
+        stateDir: path.join(tempDir, "approved"),
+        dbPath: path.join(tempDir, "approved.sqlite"),
+        canonicalRoot: path.join(tempDir, "canonical"),
+        approvalEvidence: "warden-approved-test-evidence",
+        applyWriteback: true,
+      });
+      const candidate = approved.wardenWritebackFlow.candidates[0];
+      assert.equal(approved.wardenWritebackFlow.status, "approved-for-writeback");
+      assert.equal(candidate.writebackDecision, "approved-for-writeback");
+      assert.equal(candidate.applyStatus, "created");
+      assert.equal(candidate.verificationResult.status, "pass");
+      assert.match(candidate.diffSummary, /^Created /);
+
+      const targetPath = path.join(
+        tempDir,
+        "canonical",
+        candidate.targetRelativeToCanonical
+      );
+      const written = await readFile(targetPath, "utf8");
+      assert.match(written, /Generated by the Warden-approved Capability Gap writeback flow/);
+      assert.match(written, /approvalEvidence: warden-approved-test-evidence/);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("T-004 renders and reads a user-readable run report by runId", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "meta-kim-run-report-"));
+    try {
+      const report = await runMetaTheoryGovernedExecution({
+        task: multiGapTask,
+        runId: "test-run-readable-report",
+        stateDir: tempDir,
+        dbPath: path.join(tempDir, "runs.sqlite"),
+      });
+      const readBack = await readGovernedExecutionRun({
+        runId: report.runId,
+        stateDir: tempDir,
+      });
+
+      assert.equal(readBack.artifact.runId, "test-run-readable-report");
+      assert.equal(readBack.artifact.runReport.status, "pass");
+      for (const section of [
+        "判定摘要",
+        "为什么这么判",
+        "下一步交给谁",
+        "Runtime 投影证据",
+        "长期能力升级建议",
+        "验证状态",
+      ]) {
+        assert.match(readBack.markdown, new RegExp(section));
+        assert.ok(readBack.artifact.runReport.sections.includes(section));
+      }
+      await stat(readBack.paths.json);
+      await stat(readBack.paths.markdown);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("CLI accepts natural language task text and reports the runId", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "meta-kim-governed-cli-"));
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [
+          "scripts/run-meta-theory-governed-execution.mjs",
+          "--task",
+          "同一套 PRD review standard 需要 skill。",
+          "--run-id",
+          "test-run-cli",
+          "--state-dir",
+          tempDir,
+          "--db",
+          path.join(tempDir, "runs.sqlite"),
+        ],
+        { cwd: process.cwd(), encoding: "utf8" }
+      );
+      assert.equal(result.status, 0, result.stderr);
+      const summary = JSON.parse(result.stdout);
+      assert.equal(summary.status, "pass");
+      assert.equal(summary.runId, "test-run-cli");
+      assert.match(summary.report, /test-run-cli\.zh-CN\.md$/);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+});
