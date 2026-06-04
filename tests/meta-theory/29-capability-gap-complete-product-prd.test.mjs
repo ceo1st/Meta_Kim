@@ -156,6 +156,9 @@ describe("29 — Capability Gap complete product PRD", () => {
       "同类型多需求拆分",
       "P-021",
       "非 agent 能力候选站点质量门",
+      "stationCoverage",
+      "npm run meta:gap:validate-board",
+      "npm run meta:gap:score-candidates",
       "P-022",
       "产品面板数据合同",
       "P-023",
@@ -170,6 +173,22 @@ describe("29 — Capability Gap complete product PRD", () => {
       "Release closure",
     ]) {
       assert.match(prd, new RegExp(marker), `missing parallel queue marker ${marker}`);
+    }
+  });
+
+  test("records v0.16 orchestration quality completion and GitHub delta", () => {
+    for (const marker of [
+      "版本：v0.16",
+      "编排质量轨",
+      "tests/meta-theory/33-capability-gap-orchestration-quality.test.mjs",
+      "当前 GitHub 差距",
+      "P-015 到 P-021 编排质量轨",
+      "仍未完成且不能对 GitHub 宣称完成",
+      "P-006 / P-007",
+      "P-012 / P-013 / P-014 / P-022 / P-023",
+      "P-024 Cursor native live pass 解阻",
+    ]) {
+      assert.match(prd, new RegExp(marker), `missing v0.16 marker ${marker}`);
     }
   });
 
