@@ -163,9 +163,11 @@ describe("29 — Capability Gap complete product PRD", () => {
       "OpenClaw",
       "MiniMax M3",
       "Cursor",
-      "live unsupported-with-reason",
-      "cursor_live_harness_unavailable",
-      "不能用 projection smoke 冒充 native/live pass",
+      "native live blocked-with-contract",
+      "cursor-live-turn-harness-v0.1",
+      "native_harness_missing",
+      "evidenceKind = \"unsupported\"",
+      "不能当 release-grade native live pass",
     ]) {
       assert.match(prd, new RegExp(marker), `missing live evidence marker ${marker}`);
     }

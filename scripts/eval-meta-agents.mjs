@@ -56,6 +56,12 @@ const prepareOpenClawScriptPath = path.join(
   "scripts",
   "prepare-openclaw-local.mjs",
 );
+const cursorLiveHarnessContractPath = path.join(
+  repoRoot,
+  "config",
+  "contracts",
+  "cursor-live-turn-harness-contract.json",
+);
 const activeChildren = new Map();
 let cleanupInFlight = false;
 
@@ -418,6 +424,58 @@ function getResolvedCodexCommand() {
     });
   }
   return resolvedCodexCmdPromise;
+}
+
+let resolvedCursorAgentCmdPromise = null;
+async function getResolvedCursorAgentCandidates() {
+  if (!resolvedCursorAgentCmdPromise) {
+    resolvedCursorAgentCmdPromise = (async () => {
+      const candidates = [];
+      try {
+        const direct = await resolveCliCommand({
+          envKey: "META_KIM_CURSOR_AGENT_BIN",
+          unixName: "cursor-agent",
+          winWhereCandidates: [
+            "cursor-agent.cmd",
+            "cursor-agent",
+            "cursor-agent.exe",
+          ],
+        });
+        candidates.push({
+          id: "cursor-agent-binary",
+          command: direct,
+          toArgs: direct.toArgs,
+        });
+      } catch (error) {
+        candidates.push({
+          id: "cursor-agent-binary",
+          unavailable: true,
+          error: error.message,
+        });
+      }
+
+      try {
+        const cursor = await resolveCliCommand({
+          envKey: "META_KIM_CURSOR_BIN",
+          unixName: "cursor",
+          winWhereCandidates: ["cursor.cmd", "cursor", "cursor.exe"],
+        });
+        candidates.push({
+          id: "cursor-agent-subcommand",
+          command: cursor,
+          toArgs: (args) => cursor.toArgs(["agent", ...args]),
+        });
+      } catch (error) {
+        candidates.push({
+          id: "cursor-agent-subcommand",
+          unavailable: true,
+          error: error.message,
+        });
+      }
+      return candidates;
+    })();
+  }
+  return resolvedCursorAgentCmdPromise;
 }
 
 const claudeSchema = JSON.stringify({
@@ -1800,6 +1858,12 @@ function runtimeReason(report) {
 function classifyRuntimeFailure(runtimeName, report, mode) {
   const status = report?.status ?? (report?.ok === true ? "passed" : "failed");
   const reason = runtimeReason(report).toLowerCase();
+  if (
+    typeof report?.failureClass === "string" &&
+    Object.values(RUNTIME_FAILURE_TAXONOMY).includes(report.failureClass)
+  ) {
+    return report.failureClass;
+  }
 
   if (status === "passed") {
     return mode === "live"
@@ -3137,18 +3201,203 @@ async function runCursorSmoke() {
   };
 }
 
+async function readCursorLiveHarnessContract() {
+  return JSON.parse(
+    await fs.readFile(cursorLiveHarnessContractPath, "utf8"),
+  );
+}
+
+function helpSupportsCursorHarness(helpText, contractCandidate) {
+  const text = String(helpText ?? "");
+  return (contractCandidate.requiredHelpPatterns ?? []).every((pattern) =>
+    text.includes(pattern),
+  );
+}
+
+function cursorLivePayloadOk(payload) {
+  return (
+    payload?.runtime === "cursor" &&
+    payload?.governed_entry === "meta-theory" &&
+    payload?.warden_entry_gate === true &&
+    payload?.conductor_orchestration === true &&
+    payload?.orchestrationTaskBoardPacket?.synthesisOwner ===
+      "meta-conductor" &&
+    Array.isArray(payload?.workerTaskPackets) &&
+    payload.workerTaskPackets.length > 0 &&
+    typeof payload?.verificationOwner === "string" &&
+    payload.verificationOwner.trim().length > 0
+  );
+}
+
+async function probeCursorAgentHarness(contract) {
+  const candidates = await getResolvedCursorAgentCandidates();
+  const contractCandidates = new Map(
+    (contract.nativeHarnessCandidates ?? []).map((candidate) => [
+      candidate.id,
+      candidate,
+    ]),
+  );
+  const probes = [];
+  for (const candidate of candidates) {
+    const contractCandidate = contractCandidates.get(candidate.id);
+    if (!contractCandidate) {
+      continue;
+    }
+    if (candidate.unavailable) {
+      probes.push({
+        id: candidate.id,
+        ok: false,
+        unavailable: true,
+        reason: "cursor_agent_command_not_found",
+        error: candidate.error,
+      });
+      continue;
+    }
+    try {
+      const help = await runCommandWithIgnoredStdin(
+        candidate.command.file,
+        candidate.toArgs(["--help"]),
+        {
+          cwd: repoRoot,
+          timeout: 30_000,
+          env: { ...process.env, NO_COLOR: "1" },
+        },
+      );
+      const helpOutput = mergeCommandOutput(help.stdout, help.stderr);
+      const ok = helpSupportsCursorHarness(helpOutput, contractCandidate);
+      probes.push({
+        id: candidate.id,
+        ok,
+        command: contractCandidate.command,
+        missingHelpPatterns: (contractCandidate.requiredHelpPatterns ?? []).filter(
+          (pattern) => !helpOutput.includes(pattern),
+        ),
+        helpTail: tailText(helpOutput, 1200),
+      });
+      if (ok) {
+        return {
+          ok: true,
+          selected: {
+            ...candidate,
+            contractCandidate,
+          },
+          probes,
+        };
+      }
+    } catch (error) {
+      probes.push({
+        id: candidate.id,
+        ok: false,
+        command: contractCandidate.command,
+        reason: "cursor_agent_help_failed",
+        error: error.message,
+      });
+    }
+  }
+  return {
+    ok: false,
+    probes,
+  };
+}
+
 async function runCursorLive() {
   const smoke = await runCursorSmoke();
-  return {
-    status: "skipped",
-    ok: smoke.ok,
-    skipped: true,
-    retryable: false,
-    reason: "cursor_live_harness_unavailable",
-    unsupportedWithReason:
-      "Meta_Kim can validate Cursor projection files, hooks, rules, and subagent mirrors, but this repository does not yet provide a Cursor native live-turn harness. Do not mark Cursor native/live pass from projection smoke.",
-    smoke,
-  };
+  const contract = await readCursorLiveHarnessContract();
+  const harnessProbe = await probeCursorAgentHarness(contract);
+  if (!harnessProbe.ok) {
+    return {
+      status: "blocked",
+      ok: false,
+      blocked: true,
+      retryable: true,
+      reason: "cursor_live_harness_blocked",
+      unsupportedWithReason: contract.unsupportedWithReason,
+      failureClass: "native_harness_missing",
+      contract: {
+        schemaVersion: contract.schemaVersion,
+        path: "config/contracts/cursor-live-turn-harness-contract.json",
+        officialEvidence: contract.officialEvidence,
+        passCriteria: contract.passCriteria,
+        blockedCriteria: contract.blockedCriteria,
+        releaseBoundary: contract.releaseBoundary,
+      },
+      localProbe: {
+        cursorVersionCommand: "cursor --version",
+        candidates: harnessProbe.probes,
+      },
+      remainingAction:
+        "Install or expose Cursor Agent CLI (`cursor-agent`) or a `cursor agent` subcommand with -p/--print and --output-format support, authenticate it, then rerun `node scripts/eval-meta-agents.mjs --runtime=cursor --live`.",
+      smoke,
+    };
+  }
+
+  const prompt =
+    "Return JSON only. Prove the governed Meta_Kim Cursor route for one tiny task: " +
+    "identify whether a reusable skill should be created for repeated release report formatting. " +
+    'Set runtime to "cursor" and governed_entry to "meta-theory". ' +
+    "Set warden_entry_gate and conductor_orchestration true only if the route is Warden -> Conductor. " +
+    'orchestrationTaskBoardPacket.synthesisOwner must be "meta-conductor" and route must mention Warden -> Conductor -> board -> workerTaskPackets. ' +
+    "workerTaskPackets must contain one bounded task with owner, deliverable, and verificationOwner. " +
+    "Do not modify files and do not explain outside JSON.";
+
+  try {
+    const selected = harnessProbe.selected;
+    const { stdout, stderr } = await runCommandWithIgnoredStdin(
+      selected.command.file,
+      selected.toArgs([...selected.contractCandidate.runArgs, prompt]),
+      {
+        cwd: repoRoot,
+        timeout: 120_000,
+        env: { ...process.env, NO_COLOR: "1" },
+      },
+    );
+    const payload = parseJsonObjectFromText(mergeCommandOutput(stdout, stderr));
+    const ok = cursorLivePayloadOk(payload);
+    return {
+      status: ok ? "passed" : "failed",
+      ok,
+      mode: "live",
+      contract: {
+        schemaVersion: contract.schemaVersion,
+        path: "config/contracts/cursor-live-turn-harness-contract.json",
+      },
+      localProbe: {
+        selectedHarness: selected.id,
+        candidates: harnessProbe.probes,
+      },
+      sample: {
+        runtime_smoke: payload,
+      },
+      smoke,
+    };
+  } catch (error) {
+    return {
+      status: "blocked",
+      ok: false,
+      blocked: true,
+      retryable: true,
+      reason: isCommandTimeoutFailure(error)
+        ? "cursor_live_timeout"
+        : "cursor_live_harness_blocked",
+      unsupportedWithReason:
+        "Cursor native agent CLI was detected, but the live run did not return parseable governed JSON.",
+      failureClass: isCommandTimeoutFailure(error) ? "timeout" : "native_harness_missing",
+      contract: {
+        schemaVersion: contract.schemaVersion,
+        path: "config/contracts/cursor-live-turn-harness-contract.json",
+      },
+      localProbe: {
+        selectedHarness: harnessProbe.selected?.id,
+        candidates: harnessProbe.probes,
+        error: error.message,
+        stdoutTail: tailText(error.stdout),
+        stderrTail: tailText(error.stderr),
+      },
+      remainingAction:
+        "Fix Cursor Agent CLI auth/output mode or rerun after confirming it can return JSON in non-interactive mode.",
+      smoke,
+    };
+  }
 }
 
 async function collectOpenClawBaseStatus({ useMainConfig = false } = {}) {

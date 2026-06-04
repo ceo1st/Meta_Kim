@@ -217,22 +217,84 @@ describe("eval-meta-agents Claude smoke", () => {
     assert.match(source, /attempts: turnAttempt/);
   });
 
-  test("Cursor runtime reports projection smoke and explicit live unsupported boundary", () => {
+  test("Cursor runtime reports projection smoke and explicit live harness contract boundary", () => {
     const source = readFileSync(
       path.join(repoRoot, "scripts", "eval-meta-agents.mjs"),
       "utf8",
+    );
+    const contract = JSON.parse(
+      readFileSync(
+        path.join(
+          repoRoot,
+          "config",
+          "contracts",
+          "cursor-live-turn-harness-contract.json",
+        ),
+        "utf8",
+      ),
     );
 
     assert.match(source, /\["claude", "codex", "openclaw", "cursor"\]/);
     assert.match(source, /async function runCursorSmoke/);
     assert.match(source, /async function runCursorLive/);
+    assert.match(source, /async function probeCursorAgentHarness/);
+    assert.match(source, /function cursorLivePayloadOk/);
+    assert.match(source, /META_KIM_CURSOR_AGENT_BIN/);
+    assert.match(source, /META_KIM_CURSOR_BIN/);
+    assert.match(source, /cursor-live-turn-harness-contract\.json/);
     assert.match(source, /"skills",\s*"meta-theory"/);
     assert.match(source, /"hooks\.json"/);
     assert.match(source, /"rules"/);
-    assert.match(source, /cursor_live_harness_unavailable/);
+    assert.match(source, /cursor_live_harness_blocked/);
     assert.match(source, /unsupportedWithReason/);
-    assert.match(source, /Do not mark Cursor native\/live pass from projection smoke/);
+    assert.match(source, /native_harness_missing/);
+    assert.match(source, /localProbe/);
+    assert.match(source, /blockedCriteria/);
     assert.match(source, /summarizeRuntimeReport\("cursor", report\.cursor\)/);
+    assert.equal(contract.schemaVersion, "cursor-live-turn-harness-v0.1");
+    assert.equal(
+      contract.releaseBoundary.projectionSmokeIsLivePass,
+      false,
+    );
+    assert.ok(
+      contract.nativeHarnessCandidates.some((item) =>
+        item.requiredHelpPatterns.includes("--output-format"),
+      ),
+    );
+  });
+
+  test("Cursor live with missing native agent reports structured blocked boundary", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["scripts/eval-meta-agents.mjs", "--runtime=cursor", "--live"],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          META_KIM_CURSOR_AGENT_BIN: path.join(repoRoot, ".missing-cursor-agent.exe"),
+          META_KIM_CURSOR_BIN: path.join(repoRoot, ".missing-cursor.exe"),
+          NO_COLOR: "1",
+        },
+        encoding: "utf8",
+        timeout: 30_000,
+      },
+    );
+
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.cursor.status, "blocked");
+    assert.equal(report.cursor.reason, "cursor_live_harness_blocked");
+    assert.equal(report.cursor.failureClass, "native_harness_missing");
+    assert.equal(
+      report.cursor.contract.schemaVersion,
+      "cursor-live-turn-harness-v0.1",
+    );
+    assert.equal(
+      report.runtimeEvidencePacket.records[0].failureClass,
+      "native_harness_missing",
+    );
+    assert.equal(report.runtimeEvidencePacket.records[0].evidenceKind, "unsupported");
+    assert.equal(report.summary.releaseGrade, false);
   });
 
   test("Runtime evidence aggregator uses fixed failure taxonomy", () => {
