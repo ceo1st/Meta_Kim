@@ -17,7 +17,9 @@ describe("29 — Capability Gap complete product PRD", () => {
     assert.match(prd, /已测通/);
     assert.match(prd, /Complete product MVP 已经在本地证明/);
     assert.match(prd, /还不能宣称“发布级 live\/native 全 runtime 完成”/);
-    assert.match(prd, /Codex CLI live 当前 timeout/);
+    assert.match(prd, /Cursor 还没有 native live-turn harness/);
+    assert.match(prd, /Claude \/ OpenClaw 还只完成 `meta-warden` live shard/);
+    assert.match(prd, /Codex \| live pass/);
     assert.match(prd, /Cursor 还没有 native live-turn harness/);
   });
 
@@ -92,6 +94,7 @@ describe("29 — Capability Gap complete product PRD", () => {
       "设计、执行、验收、反馈、交付内容",
       "Codex live pass",
       "Cursor live harness",
+      "全 meta agents shard evidence",
     ]) {
       assert.match(prd, new RegExp(marker), `missing target marker ${marker}`);
     }
@@ -104,10 +107,13 @@ describe("29 — Capability Gap complete product PRD", () => {
       "可子窗口并行",
       "P-001",
       "Codex live prompt 最小化",
+      "已测通",
       "P-002",
       "Codex session recovery",
+      "codex_live_timeout",
       "P-003",
       "Codex 主窗口 / 子窗口隔离复测",
+      "019e9163-31ec-7510-86f9-9fc645c95811",
       "P-004",
       "Cursor native live-turn harness 设计",
       "P-005",
@@ -146,7 +152,8 @@ describe("29 — Capability Gap complete product PRD", () => {
       "Claude",
       "live pass",
       "Codex",
-      "smoke pass，live timeout",
+      "orchestrationTaskBoardPacket.synthesisOwner",
+      "workerTaskPackets\\[0\\].owner",
       "OpenClaw",
       "MiniMax M3",
       "Cursor",

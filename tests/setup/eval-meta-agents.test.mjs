@@ -233,4 +233,32 @@ describe("eval-meta-agents Claude smoke", () => {
     assert.match(source, /Do not mark Cursor native\/live pass from projection smoke/);
     assert.match(source, /summarizeRuntimeReport\("cursor", report\.cursor\)/);
   });
+
+  test("Codex live validates governed orchestration and records timeout fallback evidence", () => {
+    const source = readFileSync(
+      path.join(repoRoot, "scripts", "eval-meta-agents.mjs"),
+      "utf8",
+    );
+
+    assert.match(source, /const codexLiveOrchestrationSchema/);
+    assert.match(source, /governed_entry/);
+    assert.match(source, /warden_entry_gate/);
+    assert.match(source, /conductor_orchestration/);
+    assert.match(source, /orchestrationTaskBoardPacket/);
+    assert.match(source, /workerTaskPackets/);
+    assert.match(source, /synthesisOwner/);
+    assert.match(source, /roleDisplayName/);
+    assert.match(source, /isCommandTimeoutFailure/);
+    assert.match(source, /META_KIM_COMMAND_TIMEOUT/);
+    assert.match(source, /codex_live_timeout/);
+    assert.match(source, /codex_exec_orchestration_prompt/);
+    assert.match(source, /retryCommand/);
+    assert.match(source, /stdoutTail/);
+    assert.match(source, /stderrTail/);
+    assert.match(source, /120_000/);
+    assert.match(
+      source,
+      /Warden -> Conductor -> orchestrationTaskBoardPacket -> workerTaskPackets/,
+    );
+  });
 });

@@ -425,6 +425,56 @@ const codexSmokeSchema = JSON.stringify({
   ],
 });
 
+const codexLiveOrchestrationSchema = JSON.stringify({
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    runtime: { type: "string" },
+    governed_entry: { type: "string" },
+    warden_entry_gate: { type: "boolean" },
+    conductor_orchestration: { type: "boolean" },
+    orchestrationTaskBoardPacket: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        synthesisOwner: { type: "string" },
+        route: { type: "string" },
+      },
+      required: ["synthesisOwner", "route"],
+    },
+    workerTaskPackets: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          owner: { type: "string" },
+          roleDisplayName: { type: "string" },
+          deliverable: { type: "string" },
+          verificationOwner: { type: "string" },
+        },
+        required: [
+          "owner",
+          "roleDisplayName",
+          "deliverable",
+          "verificationOwner",
+        ],
+      },
+    },
+    verificationOwner: { type: "string" },
+  },
+  required: [
+    "runtime",
+    "governed_entry",
+    "warden_entry_gate",
+    "conductor_orchestration",
+    "orchestrationTaskBoardPacket",
+    "workerTaskPackets",
+    "verificationOwner",
+  ],
+});
+
 const claudeCases = {
   "meta-warden": {
     ownGroups: [
@@ -1539,6 +1589,21 @@ function isRetryableCodexFailure(message) {
   );
 }
 
+function isCommandTimeoutFailure(error) {
+  return (
+    error?.code === "META_KIM_COMMAND_TIMEOUT" ||
+    String(error?.message || "").toLowerCase().includes("timed out after")
+  );
+}
+
+function tailText(value, maxChars = 2_000) {
+  const text = String(value || "").trim();
+  if (text.length <= maxChars) {
+    return text;
+  }
+  return text.slice(-maxChars);
+}
+
 function isOptionalRuntimeUnavailable(message) {
   const normalized = String(message || "").toLowerCase();
   return (
@@ -1652,11 +1717,15 @@ async function runCommandWithIgnoredStdin(file, args, options = {}) {
     if (typeof options.timeout === "number" && options.timeout > 0) {
       timeoutId = setTimeout(() => {
         void terminateChildTree(child).finally(() => {
-          settle(
-            new Error(
-              `Command timed out after ${options.timeout}ms: ${file} ${args.join(" ")}`,
-            ),
+          const error = new Error(
+            `Command timed out after ${options.timeout}ms: ${file} ${args.join(" ")}`,
           );
+          error.code = "META_KIM_COMMAND_TIMEOUT";
+          error.timeoutMs = options.timeout;
+          error.command = `${file} ${args.join(" ")}`;
+          error.stdout = stdout;
+          error.stderr = stderr;
+          settle(error);
         });
       }, options.timeout);
     }
@@ -2606,43 +2675,68 @@ async function runCodexLive() {
     payload.request_user_input_default_mode === true;
 
   const schemaDir = await fs.mkdtemp(path.join(os.tmpdir(), "meta-kim-codex-"));
-  const schemaPath = path.join(schemaDir, "codex-smoke.schema.json");
-  await fs.writeFile(schemaPath, codexSmokeSchema, "utf8");
+  const schemaPath = path.join(schemaDir, "codex-live-orchestration.schema.json");
+  await fs.writeFile(schemaPath, codexLiveOrchestrationSchema, "utf8");
 
   let runtimePayload = null;
   try {
     const prompt =
-      "Read the current Meta_Kim repository and reply with JSON only. " +
-      'runtime must be "codex". entrypoint must be "AGENTS.md". ' +
-      'canonical_skill_root must be "canonical/skills/meta-theory". ' +
-      'sync_manifest must be "config/sync.json". ' +
-      "has_meta_warden_agent must be true only if the repo exposes that custom agent. " +
-      "mcp_supported, sandbox_configurable, and approvals_configurable must reflect the repository configuration. " +
-      "Do not modify files.";
+      "Return JSON only. Prove the governed Meta_Kim Codex route for one tiny task: " +
+      "identify whether a reusable skill should be created for repeated release report formatting. " +
+      'Set runtime to "codex" and governed_entry to "meta-theory". ' +
+      "Set warden_entry_gate and conductor_orchestration true only if the route is Warden -> Conductor. " +
+      'orchestrationTaskBoardPacket.synthesisOwner must be "meta-conductor" and route must mention Warden -> Conductor -> board -> workerTaskPackets. ' +
+      "workerTaskPackets must contain one bounded task with owner, deliverable, and verificationOwner. " +
+      "Do not modify files and do not explain outside JSON.";
 
+    const codexExecArgs = codexCmd.toArgs([
+      "exec",
+      "--json",
+      "--skip-git-repo-check",
+      "--sandbox",
+      "read-only",
+      "--output-schema",
+      schemaPath,
+      "--cd",
+      repoRoot,
+      prompt,
+    ]);
     const { stdout } = await runCommandWithIgnoredStdin(
       codexCmd.file,
-      codexCmd.toArgs([
-        "exec",
-        "--json",
-        "--skip-git-repo-check",
-        "--sandbox",
-        "read-only",
-        "--output-schema",
-        schemaPath,
-        "--cd",
-        repoRoot,
-        prompt,
-      ]),
+      codexExecArgs,
       {
         cwd: repoRoot,
-        timeout: 180_000,
+        timeout: 120_000,
         env: { ...process.env, NO_COLOR: "1" },
       },
     );
 
     runtimePayload = extractCodexReply(stdout);
   } catch (error) {
+    if (isCommandTimeoutFailure(error)) {
+      return {
+        status: "skipped",
+        ok: structuralOk,
+        skipped: true,
+        retryable: true,
+        reason: "codex_live_timeout",
+        sample: {
+          ...payload,
+          runtime_live: {
+            skipped: true,
+            reason: "codex_live_timeout",
+            stage: "codex_exec_orchestration_prompt",
+            timeoutMs: error.timeoutMs ?? 120_000,
+            retryCommand:
+              "node scripts/eval-meta-agents.mjs --runtime=codex --live",
+            promptContract:
+              "Warden -> Conductor -> orchestrationTaskBoardPacket -> workerTaskPackets",
+            stdoutTail: tailText(error.stdout),
+            stderrTail: tailText(error.stderr),
+          },
+        },
+      };
+    }
     if (isRetryableCodexFailure(error.message)) {
       return {
         status: "skipped",
@@ -2668,13 +2762,15 @@ async function runCodexLive() {
   const ok =
     structuralOk &&
     runtimePayload?.runtime === "codex" &&
-    runtimePayload?.entrypoint === "AGENTS.md" &&
-    runtimePayload?.canonical_skill_root === "canonical/skills/meta-theory" &&
-    runtimePayload?.sync_manifest === "config/sync.json" &&
-    runtimePayload?.has_meta_warden_agent === true &&
-    runtimePayload?.mcp_supported === true &&
-    runtimePayload?.sandbox_configurable === true &&
-    runtimePayload?.approvals_configurable === true;
+    runtimePayload?.governed_entry === "meta-theory" &&
+    runtimePayload?.warden_entry_gate === true &&
+    runtimePayload?.conductor_orchestration === true &&
+    runtimePayload?.orchestrationTaskBoardPacket?.synthesisOwner ===
+      "meta-conductor" &&
+    Array.isArray(runtimePayload?.workerTaskPackets) &&
+    runtimePayload.workerTaskPackets.length > 0 &&
+    typeof runtimePayload?.verificationOwner === "string" &&
+    runtimePayload.verificationOwner.trim().length > 0;
 
   return {
     status: ok ? "passed" : "failed",
