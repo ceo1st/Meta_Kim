@@ -33,6 +33,26 @@ Meta_Kim is built for that. It is **AI above AI**: a unified governance layer th
 
 This is not a new concept. Mature engineering teams already do this. Meta_Kim turns it into a runnable system instead of relying on human discipline alone.
 
+### 3-minute proof
+
+Meta_Kim is easiest to understand by watching one governed run, not by reading every rule.
+
+```bash
+npm run meta:theory:run
+npm run meta:theory:report -- --run-id latest
+npm run meta:delivery:bundle
+```
+
+The proof path shows five things:
+
+- a fuzzy request is turned into an explicit intent and success standard
+- capability search happens before execution ownership is chosen
+- work is split into bounded worker tasks instead of one giant chat response
+- review and verification produce artifacts, not just reassuring prose
+- blocked runtime evidence stays blocked, for example Cursor native live is not promoted from smoke evidence
+
+For a guided walk-through, start with [examples/first-run/README.md](examples/first-run/README.md).
+
 ## Quick Start
 
 If you just want to try it quickly, run:
@@ -780,6 +800,8 @@ Start with `package.json` scripts. The supported maintenance paths are the `meta
 | `npm run meta:deps:install:claude-plugins` | Install Claude Code marketplace plugins only |
 | `npm run discover:global` | Scan global capabilities |
 | `npm run meta:sync:global` | Sync meta-theory to the user-level runtime |
+
+`planning-with-files` is a core external dependency, not a project-local `.agents/skills/` mirror. After dependency install, check runtime home directories such as `~/.codex/skills/planning-with-files/`, `~/.claude/skills/planning-with-files/`, `~/.cursor/skills/planning-with-files/`, or `~/.openclaw/skills/planning-with-files/`. Do not conclude it is missing from the absence of `.agents/skills/planning-with-files/` alone.
 
 #### Native dependency installs (Superpowers, ECC, cli-anything)
 
