@@ -17,11 +17,17 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green"/>
 </p>
 
+<p>
+  <img alt="Meta_Kim turns chaotic AI coding into governed execution" src="docs/images/meta-kim-social-card.png" width="100%"/>
+</p>
+
 </div>
 
 ## Overview
 
-**Meta_Kim** is not another AI coding tool. It is a governance system that gives AI coding assistants a brain.
+**Meta_Kim** is not another AI coding tool. It is the governance layer for AI coding work.
+
+The hard part of AI coding is no longer getting a model to change files. The hard part is deciding what should happen first, which capability should own it, what evidence proves it worked, and how the lesson survives the next run.
 
 Claude Code, Codex, OpenClaw, and Cursor are all hands: they can write code and change files. But who decides which file to change first? Who reviews the result? Who fixes the problems that show up? And how do we make sure the same mistake does not repeat next time?
 
@@ -32,6 +38,15 @@ Meta_Kim is built for that. It is **AI above AI**: a unified governance layer th
 > **First clarify what needs to happen -> then decide who should do it -> review after execution -> preserve what was learned -> feed that back into the next run.**
 
 This is not a new concept. Mature engineering teams already do this. Meta_Kim turns it into a runnable system instead of relying on human discipline alone.
+
+### Before / After
+
+| Without Meta_Kim | With Meta_Kim |
+|---|---|
+| One giant chat response tries to do everything | Work is routed through intent, capability, owner, review, verification, and writeback |
+| A tool is chosen because it is available | A capability is selected because it fits the task, runtime, OS, dependency, and risk |
+| Passing commands get mistaken for success | Evidence is checked against the user's real goal |
+| Good fixes disappear into chat history | Reusable lessons become governed skills, agents, scripts, contracts, or run-scoped tasks |
 
 ### 3-minute proof
 
