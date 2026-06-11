@@ -66,6 +66,8 @@ The proof path shows five things:
 - review and verification produce artifacts, not just reassuring prose
 - blocked runtime evidence stays blocked, for example Cursor native live is not promoted from smoke evidence
 
+The executable core-loop contract is `config/contracts/core-loop-contract.json`; it binds the default path to `npm run meta:theory:run` and keeps Critical -> Fetch -> Thinking -> Execution -> Review -> Meta-Review -> Verification -> Evolution testable.
+
 For a guided walk-through, start with [examples/first-run/README.md](examples/first-run/README.md).
 
 ## Quick Start
@@ -295,6 +297,7 @@ Meta_Kim contracts are not verbal agreements. They are **structured packets**:
 
 | Contract artifact | Stage | Purpose |
 | --- | --- | --- |
+| `coreLoop` | All stages | Compact evidence that the default governed path followed the eight-stage contract |
 | `intentPacket` | Critical | Lock the real intent and prevent drift |
 | `dispatchBoard` | Thinking | Define owners, dependencies, and parallel groups |
 | `workerTaskPacket` | Execution | Carry the full context for each subtask |

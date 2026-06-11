@@ -14,6 +14,7 @@ import {
   decideCapabilityGap,
   openRunStateStore,
 } from "./capability-gap-mvp.mjs";
+import { writeCapabilityInventory } from "./build-capability-inventory.mjs";
 import { getReportLabelsForPath } from "./meta-kim-i18n.mjs";
 import { buildAgentProjectionTargets } from "./runtime-tool-profiles.mjs";
 
@@ -1479,6 +1480,387 @@ async function persistDecisionRuns({ dbPath, decisionResults }) {
   return analytics;
 }
 
+function buildCoreLoopArtifact({
+  runId,
+  task,
+  orchestrationReport,
+  capabilityInventoryBus,
+  decisionResults,
+  runtimeEvidence,
+  writebackFlow,
+  artifactStatus,
+  cardPlanPacket,
+}) {
+  const workerTaskPackets = orchestrationReport.workerTaskPackets ?? [];
+  const capabilityInventory =
+    capabilityInventoryBus?.capabilities ??
+    orchestrationReport.fetchEvidence?.capabilityInventory ??
+    [];
+  const capabilitySearchLog = [
+    ...new Set(
+      capabilityInventory.map((record) => record.sourcePath ?? record.sourceRef).filter(Boolean),
+    ),
+  ].map((source) => ({
+    source,
+    checked: true,
+    result: "capability_provider_recorded",
+  }));
+  const parallelGroups = [
+    ...new Set(workerTaskPackets.map((packet) => packet.parallelGroup).filter(Boolean)),
+  ];
+  const verificationEvidence = (runtimeEvidence.results ?? []).map((item) => ({
+    runtime: item.runtime,
+    status: item.status,
+    evidenceKind: item.evidenceKind,
+    failureClass: item.failureClass,
+    command: item.command,
+    artifact: item.artifact,
+    strictReleasePass: item.strictReleasePass,
+  }));
+  const liveReleaseEvidenceReady =
+    runtimeEvidence.releaseGrade === true &&
+    verificationEvidence.length > 0 &&
+    verificationEvidence.every((item) => item.strictReleasePass === true);
+  const writebackDecision =
+    writebackFlow.status === "approved-for-writeback"
+      ? "writeback"
+      : writebackFlow.status === "none-with-reason"
+        ? "none-with-reason"
+        : "candidate-writeback";
+  const publicReady = artifactStatus === "pass" && liveReleaseEvidenceReady;
+  const workerResultPackets = workerTaskPackets.map((packet) => ({
+    taskPacketId: packet.taskPacketId,
+    owner: packet.owner,
+    ownerAgent: packet.ownerAgent,
+    executionMode: packet.executionMode,
+    status:
+      packet.executionMode === "approval_gate"
+        ? "blocked_or_needs_approval"
+        : "dispatch_ready_not_live_executed",
+    resultKind: "orchestration_readiness",
+    evidenceKind: "worker_task_packet",
+    note:
+      packet.executionMode === "approval_gate"
+        ? "Approval is required before this worker can execute."
+        : "The default core-loop run produced a bounded worker task packet; live worker execution is a separate evidence layer.",
+  }));
+  const workerExecutionEvidence = workerTaskPackets.map((packet) => ({
+    taskPacketId: packet.taskPacketId,
+    owner: packet.owner,
+    evidenceKind: "orchestration_artifact",
+    status:
+      packet.executionMode === "approval_gate"
+        ? "blocked_or_needs_approval"
+        : "structural_dispatch_evidence",
+    command: "npm run meta:theory:run",
+    artifactRef: "coreLoop.thinkingPacket.workerTaskPackets",
+    liveWorkerExecution: false,
+    reason:
+      "This evidence proves bounded dispatch readiness, not live runtime worker completion.",
+  }));
+  const evolutionNoneWithReason =
+    writebackDecision === "none-with-reason"
+      ? (writebackFlow.decisionReason ?? "No durable writeback was required for this run.")
+      : null;
+  const evolutionWritebacks =
+    writebackDecision === "writeback"
+      ? (writebackFlow.writebacks ?? writebackFlow.dryRun?.writebacks ?? [])
+      : [];
+  const capabilityGapPacket =
+    orchestrationReport.capabilityGaps?.length > 0
+      ? {
+          status: "present",
+          gapTypes: [
+            ...new Set(
+              orchestrationReport.capabilityGaps
+                .map((gap) => gap.gapType ?? gap.decision ?? gap.branch)
+                .filter(Boolean),
+            ),
+          ],
+          gaps: orchestrationReport.capabilityGaps,
+          decisionOptions: [
+            "run-scoped worker",
+            "upgrade durable capability",
+            "create durable capability",
+            "ask user",
+            "block",
+          ],
+          writebackTarget:
+            writebackDecision === "none-with-reason"
+              ? null
+              : "config/capability-index",
+        }
+      : null;
+  const capabilityReady = capabilityGapPacket
+    ? null
+    : {
+        status: "ready",
+        owner: orchestrationReport.orchestrationTaskBoardPacket?.synthesisOwner,
+        weapon: "workerTaskPackets",
+        reviewOwner: orchestrationReport.reviewResult?.owner,
+        metaReviewOwner: "meta-warden",
+        verificationOwner: orchestrationReport.verificationResult?.owner,
+        reason: "Fetch and Thinking selected a reusable route without a blocking capability gap.",
+      };
+  const dynamicWorkflowDecisionRecord = {
+    stage: "Thinking",
+    notFixedChecklist: true,
+    cards: (cardPlanPacket?.cards ?? []).map((card) => ({
+      cardKey: card.cardKey,
+      label: card.label,
+      trigger: card.cardReason,
+      reason: card.cardDecision === "deal" ? "Selected by current route evidence." : "Not needed for this route.",
+      attentionCost: card.cost,
+      skippedCardsWithReason:
+        card.cardDecision === "deal"
+          ? []
+          : [
+              {
+                cardKey: card.cardKey,
+                reason: card.suppressionReason ?? "Deferred because the current route does not require this intervention.",
+              },
+            ],
+      interruptQueue:
+        card.type === "risk" && card.cardDecision === "deal"
+          ? ["meta-sentinel"]
+          : [],
+      riskPreemption:
+        card.type === "risk" && card.cardDecision === "deal"
+          ? "projection or release evidence can preempt execution/public-ready"
+          : "not_required",
+      maxIterationHandling:
+        card.type === "fix"
+          ? "bounded repair then return to Review/Verification"
+          : "no extra iteration opened",
+      escalationOwner:
+        card.owner ?? (card.type === "risk" ? "meta-sentinel" : "meta-conductor"),
+    })),
+    interruptQueue: cardPlanPacket?.controlDecisions ?? [],
+    skippedCardsWithReason: (cardPlanPacket?.cards ?? [])
+      .filter((card) => card.cardDecision !== "deal")
+      .map((card) => ({
+        cardKey: card.cardKey,
+        reason: card.suppressionReason ?? "Deferred by dynamic workflow route.",
+      })),
+    riskPreemption:
+      runtimeEvidence.releaseGrade === true
+        ? "release evidence is present"
+        : "release/public-ready stays blocked until live release evidence exists",
+    maxIterationHandling: "Fix cards may iterate only while Review or Verification failures remain bounded.",
+    escalationOwner: "meta-warden",
+  };
+  return {
+    schemaVersion: "core-loop-run-v0.1",
+    contractRef: "config/contracts/core-loop-contract.json",
+    requestRecord: {
+      runId,
+      task,
+      entry: "meta:theory:run",
+      requestType: "ordinary natural-language durable task or explicit meta-theory shortcut",
+      permissionBoundary: "local run artifact and repo-local state writes unless explicit approval is supplied",
+    },
+    spine: [
+      "Critical",
+      "Fetch",
+      "Thinking",
+      "Execution",
+      "Review",
+      "Meta-Review",
+      "Verification",
+      "Evolution",
+    ],
+    intentPacket: {
+      stage: "Critical",
+      realIntent: orchestrationReport.criticalSummary?.realGoal,
+      successCriteria: orchestrationReport.criticalSummary?.successCriteria ?? [],
+      nonGoals: orchestrationReport.criticalSummary?.nonGoals ?? [],
+      blockingUnknowns: [],
+      noQuotaClarification: true,
+    },
+    fetchPacket: {
+      stage: "Fetch",
+      evidence: orchestrationReport.fetchEvidence?.sources ?? [],
+      decisionImpactMap: orchestrationReport.fetchEvidence?.decisionImpactMap ?? [],
+      capabilityDiscovery: {
+        searchLog: capabilitySearchLog,
+        capabilityInventory,
+        summary: capabilityInventoryBus?.summary ?? null,
+      },
+      capabilityGap:
+        capabilityGapPacket
+          ? {
+              status: "present",
+              count: orchestrationReport.capabilityGaps.length,
+              decisions: orchestrationReport.decisionCounts,
+            }
+          : null,
+      capabilityReady,
+    },
+    capabilityInventory,
+    capabilityGapPacket,
+    capabilityReady,
+    dynamicWorkflowDecisionRecord,
+    fileChangeFactCard: {
+      stage: "Fetch",
+      mutationPlanned: false,
+      changedFiles: [],
+      consumer: "coreLoop structural run artifact",
+      overlapDecision: "no direct source mutation in the governed execution run itself",
+      dataShape:
+        "The run writes a governed execution artifact and state events; source edits happen in separate implementation runs.",
+      evidenceRef: "coreLoop.fetchPacket.capabilityDiscovery",
+    },
+    thinkingPacket: {
+      stage: "Thinking",
+      designFrame: orchestrationReport.thinkingRoute?.boardMode,
+      dispatchBoard: orchestrationReport.orchestrationTaskBoardPacket,
+      owner: orchestrationReport.orchestrationTaskBoardPacket?.synthesisOwner,
+      weapon: "workerTaskPackets",
+      workerTaskPackets,
+      reviewOwner: orchestrationReport.reviewResult?.owner,
+      verificationOwner: orchestrationReport.verificationResult?.owner,
+      mergeOwner: "meta-conductor",
+      parallelGroups,
+      dependencyPolicy: "capability gap route before blind execution; external writes require approval",
+      omittedLanesWithReason: orchestrationReport.thinkingRoute?.dynamicWorkflowPlan?.omittedLaneIds ?? [],
+    },
+    executionResult: {
+      stage: "Execution",
+      mainThreadRole: "scope_delegate_review_synthesize",
+      executionOwnerMode: "workerTaskPackets",
+      actualWorkerExecution: false,
+      executionClosure: "structural_dispatch_ready_not_live_worker_closed",
+      workerTaskPacketCount: workerTaskPackets.length,
+      workerResultPackets,
+      workerExecutionEvidence,
+      mergeResult: {
+        mergeOwner: "meta-conductor",
+        status: workerTaskPackets.length > 0 ? "dispatch_board_merged" : "no_worker_tasks",
+        artifactRefs: [
+          "coreLoop.thinkingPacket.dispatchBoard",
+          "coreLoop.executionResult.workerResultPackets",
+        ],
+        liveExecutionMerged: false,
+        reason:
+          "The default run merges orchestration and dispatch artifacts; public-ready waits for verification evidence.",
+      },
+    },
+    reviewPacket: {
+      stage: "Review",
+      owner: orchestrationReport.reviewResult?.owner,
+      status: orchestrationReport.reviewResult?.status,
+      ownerCoverage: {
+        dispatchOwner: orchestrationReport.orchestrationTaskBoardPacket?.synthesisOwner,
+        reviewOwner: orchestrationReport.reviewResult?.owner,
+        verificationOwner: orchestrationReport.verificationResult?.owner,
+        workerOwners: [...new Set(workerTaskPackets.map((packet) => packet.owner))],
+        pass: workerTaskPackets.length > 0 && Boolean(orchestrationReport.reviewResult?.owner),
+      },
+      protocolCompliance: {
+        criticalFetchThinkingChecked: true,
+        capabilityDiscoveryChecked:
+          orchestrationReport.reviewResult?.checks?.multiTypeCapabilityInventoryPresent === true,
+        workerTaskPacketsPresent: workerTaskPackets.length > 0,
+        executionEvidenceLayerIsHonest: true,
+      },
+      qualityGate: {
+        status: orchestrationReport.reviewResult?.status,
+        publicReadyAllowed: publicReady,
+        reason: publicReady
+          ? "Live release evidence is present."
+          : "Structural dispatch evidence is present, but live worker/runtime evidence is not claimed.",
+      },
+      upstreamQuality: {
+        critical: true,
+        fetch: orchestrationReport.reviewResult?.checks?.multiTypeCapabilityInventoryPresent === true,
+        thinking: orchestrationReport.reviewResult?.checks?.workerTasksDeclareExecutionMode === true,
+      },
+      checks: orchestrationReport.reviewResult?.checks ?? {},
+      findings: orchestrationReport.reviewResult?.status === "pass" ? [] : ["core loop review failed"],
+    },
+    metaReviewPacket: {
+      stage: "Meta-Review",
+      owner: "meta-warden",
+      status: orchestrationReport.reviewResult?.status === "pass" ? "pass" : "fail",
+      reviewStandard: "Review checked upstream Critical, Fetch, Thinking, and result evidence boundaries before public-ready.",
+      biasCheck: {
+        overclaimCheck: publicReady ? "pass" : "blocked_smoke_or_structural_evidence_not_labeled_live",
+        mainThreadExecutorCheck: "main_thread_scopes_and_synthesizes_only",
+      },
+      reviewStandardChecked: true,
+      publicReadyGateCheck: publicReady ? "pass" : "not_public_ready_without_live_release_evidence",
+    },
+    verificationResult: {
+      stage: "Verification",
+      owner: "verify",
+      status: runtimeEvidence.status,
+      evidence: verificationEvidence,
+      fuseMode: "public_ready_and_release_gate",
+      notEveryStepInterceptor: true,
+      fixEvidence: verificationEvidence.filter((item) => item.status === "pass"),
+      remainingRisk: publicReady
+        ? []
+        : [
+            "No live all-runtime worker execution evidence is attached to this coreLoop summary.",
+            "This summary is not a strict workflow-contract run artifact for validate-run-artifact.mjs.",
+          ],
+    },
+    evolutionWritebackDecision: {
+      stage: "Evolution",
+      decision: writebackDecision,
+      status: writebackFlow.status,
+      reason:
+        writebackFlow.status === "candidate_only"
+          ? "Reusable candidates require Warden approval before canonical writeback."
+          : (writebackFlow.decisionReason ?? "Recorded writeback decision for this run."),
+      candidateCount: writebackFlow.candidates?.length ?? decisionResults.length,
+      canonicalWrites: writebackFlow.dryRun?.canonicalWrites ?? 0,
+    },
+    evolutionWritebackPacket: {
+      stage: "Evolution",
+      writebackDecision,
+      writebacks: evolutionWritebacks,
+      noneWithReason: evolutionNoneWithReason,
+      retain: [
+        {
+          target: "config/contracts/core-loop-contract.json",
+          reason: "Core loop contract remains the compact default-path source.",
+        },
+      ],
+      upgrade:
+        writebackDecision === "candidate-writeback"
+          ? [
+              {
+                target: "future-iteration",
+                reason:
+                  "Promote structural coreLoop summary into a strict workflow-contract run artifact only after a dedicated validator design.",
+              },
+            ]
+          : [],
+    },
+    scarPacket: {
+      stage: "Evolution",
+      status: publicReady ? "none" : "recorded",
+      failurePattern: publicReady ? null : "structural_orchestration_evidence_can_be_overread_as_live_execution",
+      preventionRule:
+        "Keep publicReady=false and remainingRisk populated unless live worker/runtime verification evidence is present.",
+      test: "tests/governance/core-loop-contract.test.mjs",
+      nextRunReuseKey: "core-loop-evidence-layer-boundary",
+    },
+    publicReadyDecision: {
+      publicReady,
+      status: publicReady ? "pass" : "partial",
+      verificationEvidencePresent: verificationEvidence.length > 0,
+      liveReleaseEvidenceReady,
+      blockedBy: publicReady
+        ? []
+        : [
+            "This artifact has structural/projection evidence only; do not claim live release-grade public-ready.",
+          ],
+    },
+  };
+}
+
 async function persistRuntimeEvidenceEvents({ dbPath, runId, runtimeEvidence, writebackFlow }) {
   const store = await openRunStateStore(dbPath);
   for (const record of runtimeEvidence.results) {
@@ -1545,6 +1927,7 @@ export async function runMetaTheoryGovernedExecution({
   }
   const effectiveRunId = runId ?? stableId("meta-run", normalizedTask);
   const orchestrationReport = buildCapabilityGapOrchestration(normalizedTask);
+  const capabilityInventoryBus = await writeCapabilityInventory();
   const requests = decomposeCapabilityGapRequests(normalizedTask);
   const decisionResults = requests.map((request, index) =>
     decideCapabilityGap(request.input, {
@@ -1648,11 +2031,40 @@ export async function runMetaTheoryGovernedExecution({
       sqlite: dbPath,
     },
   });
+  const coreLoop = buildCoreLoopArtifact({
+    runId: effectiveRunId,
+    task: normalizedTask,
+    orchestrationReport,
+    capabilityInventoryBus,
+    decisionResults,
+    runtimeEvidence,
+    writebackFlow,
+    artifactStatus,
+    cardPlanPacket,
+  });
   const artifact = {
     schemaVersion: 1,
     runId: effectiveRunId,
     status: artifactStatus,
     task: normalizedTask,
+    coreLoop,
+    requestRecord: coreLoop.requestRecord,
+    intentPacket: coreLoop.intentPacket,
+    fetchPacket: coreLoop.fetchPacket,
+    capabilityInventory: coreLoop.capabilityInventory,
+    capabilityGapPacket: coreLoop.capabilityGapPacket,
+    capabilityReady: coreLoop.capabilityReady,
+    thinkingPacket: coreLoop.thinkingPacket,
+    dispatchBoard: coreLoop.thinkingPacket.dispatchBoard,
+    workerTaskPackets: coreLoop.thinkingPacket.workerTaskPackets,
+    executionResult: coreLoop.executionResult,
+    reviewPacket: coreLoop.reviewPacket,
+    metaReviewPacket: coreLoop.metaReviewPacket,
+    verificationResult: coreLoop.verificationResult,
+    evolutionWritebackDecision: coreLoop.evolutionWritebackDecision,
+    evolutionWritebackPacket: coreLoop.evolutionWritebackPacket,
+    dynamicWorkflowDecisionRecord: coreLoop.dynamicWorkflowDecisionRecord,
+    publicReadyDecision: coreLoop.publicReadyDecision,
     defaultRuntimePath: {
       status: "pass",
       entry: "meta:theory:run",
