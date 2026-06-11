@@ -8,9 +8,26 @@
 
 ## [Unreleased]
 
+## [2.8.19] - 2026-06-11
+
 ### 变更
 
 - **Apache-2.0 + NOTICE 署名声明** - Meta_Kim 主项目许可证从 MIT 调整为 Apache License 2.0，并新增根目录 `NOTICE` 文件承载推荐署名。商业使用仍然允许；分发 Meta_Kim 或其实质性部分时，需要保留 Apache 许可证文本和 NOTICE 署名声明。此前已经发布的版本仍按各自发布时附带的许可证适用。
+- **多项目运行时自动更新** - `setup.mjs` 现在可以一次刷新多个显式传入或已保存项目目录里的项目级运行时文件，支持用 `--project-dir` 传入脚本化目标、用 `--save-project-dirs` 保存脚本传入列表，也支持用 `--all-projects` 复用本机保存的目标列表。
+- **已保存项目目录管理器** - 更新向导现在支持管理已保存项目目录列表，可在一行里用分号或逗号输入多个目录，从菜单里更新全部已保存项目，也可用 `--all-projects` 复用。
+- **批量更新时保护项目配置** - 多项目运行时导出会保留并合并已有本地 `settings`、MCP 和 hook 配置，不再直接替换；`.claude/settings.local.json`、Codex 项目配置、OpenClaw workspace 状态等本地状态不会被导出。
+
+### 验证
+
+- `node --check setup.mjs`
+- `node --test tests/setup/project-deploy-protection.test.mjs tests/setup/setup-update-default-flow.test.mjs tests/setup/i18n.test.mjs`
+- `npm run meta:test:setup`
+- `npm run meta:sync`
+- `npm run meta:check`
+- `npm run meta:verify:all`
+- `npm --registry=https://registry.npmjs.org audit --audit-level=high`
+- `npm run meta:graphify:check`
+- `git diff --check`
 
 ## [2.8.18] - 2026-06-11
 

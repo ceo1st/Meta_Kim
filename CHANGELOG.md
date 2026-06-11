@@ -8,9 +8,26 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.19] - 2026-06-11
+
 ### Changed
 
 - **Apache-2.0 License With NOTICE Attribution** - Meta_Kim's main project license changed from MIT to Apache License 2.0, with a root `NOTICE` file that carries the recommended attribution. Commercial use remains allowed, while redistributions of Meta_Kim or substantial portions of it must keep the Apache license text and NOTICE attribution. Earlier releases remain governed by the license that shipped with those releases.
+- **Automated Multi-Project Runtime Updates** - `setup.mjs` can now refresh project-level runtime files across multiple explicit or saved project directories, including `--project-dir` for scriptable targets, `--save-project-dirs` to remember a script-provided list, and `--all-projects` for saved local targets.
+- **Saved Project Directory Manager** - The update wizard now lets users manage a saved project directory list, enter multiple directories in one semicolon/comma-separated line, update all saved projects from the menu, and rerun saved targets with `--all-projects`.
+- **Project Config Protection During Batch Updates** - Multi-project runtime exports preserve and merge existing local `settings`, MCP, and hook configs instead of blindly replacing them. Local-only state such as `.claude/settings.local.json`, Codex project config, and OpenClaw workspace state is not exported.
+
+### Verification
+
+- `node --check setup.mjs`
+- `node --test tests/setup/project-deploy-protection.test.mjs tests/setup/setup-update-default-flow.test.mjs tests/setup/i18n.test.mjs`
+- `npm run meta:test:setup`
+- `npm run meta:sync`
+- `npm run meta:check`
+- `npm run meta:verify:all`
+- `npm --registry=https://registry.npmjs.org audit --audit-level=high`
+- `npm run meta:graphify:check`
+- `git diff --check`
 
 ## [2.8.18] - 2026-06-11
 

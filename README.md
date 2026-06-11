@@ -775,8 +775,29 @@ The three memory layers work together toward two core goals:
 | `node setup.mjs` | Interactive install / update / check wizard |
 | `git pull --ff-only` | For clone installs, pull the latest Meta_Kim source from GitHub |
 | `node setup.mjs --update` | Refresh the current installation projections, skills, and dependencies; it does not pull Meta_Kim source code |
+| `node setup.mjs --update --project-dir <dir> --project-dir <dir>` | Refresh project-level runtime files in explicit project directories |
+| `node setup.mjs --update --all-projects` | Refresh project-level runtime files in saved project directories |
 | `node setup.mjs --check` | Environment check without writing |
 | `node setup.mjs --lang zh-CN` | Force the Chinese UI |
+
+Project directory updates only touch directories you select, pass with
+`--project-dir`, or save for reuse. Add `--save-project-dirs` with
+`--project-dir` to remember a script-provided list for later `--all-projects`
+runs. Existing local `settings`, MCP, and hook configuration files are merged
+or preserved instead of being blindly replaced.
+
+Interactive update flow:
+
+1. Run `node setup.mjs --update`.
+2. If you already saved project directories, choose "Update all saved project
+   directories".
+3. To configure them for the first time, choose "Add or change saved project
+   directories, then update them".
+4. Enter the directories in one line, separated by semicolons or commas:
+   `D:/Project/a; D:/Project/b; D:/Project/c`.
+5. Remembered directories are stored in `.meta-kim/local.overrides.json` under
+   this Meta_Kim checkout as `projectDeployDirs`; later runs can use
+   `node setup.mjs --update --all-projects`.
 
 ### Sync and validation
 

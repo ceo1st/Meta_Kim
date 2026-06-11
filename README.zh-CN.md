@@ -772,8 +772,26 @@ flowchart TB
 | `node setup.mjs` | 交互式安装/更新/检查向导 |
 | `git pull --ff-only` | clone 安装用户先用它从 GitHub 拉取最新 Meta_Kim 源码 |
 | `node setup.mjs --update` | 刷新当前安装的投影、技能和依赖；不会拉取 Meta_Kim 源码 |
+| `node setup.mjs --update --project-dir <目录> --project-dir <目录>` | 更新指定项目目录里的项目级运行时文件 |
+| `node setup.mjs --update --all-projects` | 更新已保存项目目录里的项目级运行时文件 |
 | `node setup.mjs --check` | 环境检查（不写盘） |
 | `node setup.mjs --lang zh-CN` | 指定中文界面 |
+
+项目目录更新只会作用于你选择、通过 `--project-dir` 传入，或保存复用的目录。
+如果用脚本传入目录，可以加 `--save-project-dirs` 保存这组目录，后续用
+`--all-projects` 复用。已有本地 `settings`、MCP 和 hook 配置会被合并或保留，
+不会被直接替换。
+
+交互式更新流程：
+
+1. 运行 `node setup.mjs --update`。
+2. 如果已经保存过项目目录，选择“更新全部已保存项目目录”即可一次更新。
+3. 第一次配置时，选择“添加或修改已保存项目目录，并立即更新”。
+4. 在一行里输入项目目录，多个目录用分号或逗号隔开：
+   `D:/Project/a; D:/Project/b; D:/Project/c`。
+5. 记住的目录会保存到本 Meta_Kim 仓库的 `.meta-kim/local.overrides.json`，
+   字段名是 `projectDeployDirs`；后续可运行 `node setup.mjs --update --all-projects`
+   一次更新所有已保存项目。
 
 ### 同步与校验
 
