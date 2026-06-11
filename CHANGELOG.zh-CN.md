@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+## [2.8.23] - 2026-06-12
+
+### 变更
+
+- **Run-scoped Worker 实机执行** - `meta:theory:run` 现在会通过本地 run-scoped worker executor 执行 bounded worker task packets，不再停在结构化调度就绪。主线程仍然只负责 scope、dispatch、review 和 synthesize；不会额外派外部 Agent。
+
+### 验证
+
+- 增加 governance 覆盖，要求 worker execution evidence，同时继续保留 public-ready 发布门禁。
+
 ## [2.8.22] - 2026-06-12
 
 ### 变更

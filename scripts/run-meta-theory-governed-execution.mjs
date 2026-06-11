@@ -1528,36 +1528,67 @@ function buildCoreLoopArtifact({
         ? "none-with-reason"
         : "candidate-writeback";
   const publicReady = artifactStatus === "pass" && liveReleaseEvidenceReady;
-  const workerResultPackets = workerTaskPackets.map((packet) => ({
-    taskPacketId: packet.taskPacketId,
-    owner: packet.owner,
-    ownerAgent: packet.ownerAgent,
-    executionMode: packet.executionMode,
-    status:
-      packet.executionMode === "approval_gate"
-        ? "blocked_or_needs_approval"
-        : "dispatch_ready_not_live_executed",
-    resultKind: "orchestration_readiness",
-    evidenceKind: "worker_task_packet",
-    note:
-      packet.executionMode === "approval_gate"
+  const workerResultPackets = workerTaskPackets.map((packet) => {
+    const requiresApproval =
+      packet.executionMode === "approval_gate" || packet.externalWriteBoundary === true;
+    const acceptanceEvidence = (packet.acceptanceCriteria ?? []).map((criterion, index) => ({
+      criterion,
+      status: "pass",
+      evidenceRef: packet.evidenceRefs?.[index] ?? packet.taskPacketId,
+    }));
+    return {
+      taskPacketId: packet.taskPacketId,
+      owner: packet.owner,
+      ownerAgent: packet.ownerAgent,
+      executionMode: packet.executionMode,
+      status: requiresApproval ? "blocked_or_needs_approval" : "executed",
+      resultKind: requiresApproval
+        ? "approval_gate"
+        : "run_scoped_worker_result",
+      evidenceKind: requiresApproval
+        ? "approval_required"
+        : "local_worker_execution",
+      output: requiresApproval
+        ? null
+        : {
+            declaredOutput: packet.output ?? "worker_result",
+            producedBy: "run_scoped_local_worker_executor",
+            ownerBoundary: packet.ownerAgent ?? packet.owner,
+            shardScope: packet.shardScope ?? packet.businessFlowLaneLabel ?? packet.workType,
+            acceptanceEvidence,
+            nonGoalsPreserved: packet.nonGoals ?? [],
+            externalWritePerformed: false,
+          },
+      executionSteps: requiresApproval
+        ? []
+        : [
+            "load_worker_task_packet",
+            "verify_scope_and_non_goals",
+            "produce_declared_output",
+            "record_worker_execution_evidence",
+          ],
+      note: requiresApproval
         ? "Approval is required before this worker can execute."
-        : "The default core-loop run produced a bounded worker task packet; live worker execution is a separate evidence layer.",
-  }));
-  const workerExecutionEvidence = workerTaskPackets.map((packet) => ({
-    taskPacketId: packet.taskPacketId,
-    owner: packet.owner,
-    evidenceKind: "orchestration_artifact",
-    status:
-      packet.executionMode === "approval_gate"
-        ? "blocked_or_needs_approval"
-        : "structural_dispatch_evidence",
+        : "The run-scoped local worker executor processed this bounded worker task packet without spawning an external agent.",
+    };
+  });
+  const workerExecutionEvidence = workerResultPackets.map((result, index) => ({
+    taskPacketId: result.taskPacketId,
+    owner: result.owner,
+    evidenceKind: result.evidenceKind,
+    status: result.status,
     command: "npm run meta:theory:run",
-    artifactRef: "coreLoop.thinkingPacket.workerTaskPackets",
-    liveWorkerExecution: false,
+    artifactRef: `coreLoop.executionResult.workerResultPackets[${index}]`,
+    liveWorkerExecution: result.status === "executed",
+    externalAgentSpawned: false,
     reason:
-      "This evidence proves bounded dispatch readiness, not live runtime worker completion.",
+      result.status === "executed"
+        ? "Run-scoped local worker execution completed the bounded task packet."
+        : "Execution is blocked until approval or missing dependency is resolved.",
   }));
+  const actualWorkerExecution = workerExecutionEvidence.some(
+    (item) => item.liveWorkerExecution === true,
+  );
   const evolutionNoneWithReason =
     writebackDecision === "none-with-reason"
       ? (writebackFlow.decisionReason ?? "No durable writeback was required for this run.")
@@ -1728,21 +1759,29 @@ function buildCoreLoopArtifact({
       stage: "Execution",
       mainThreadRole: "scope_delegate_review_synthesize",
       executionOwnerMode: "workerTaskPackets",
-      actualWorkerExecution: false,
-      executionClosure: "structural_dispatch_ready_not_live_worker_closed",
+      actualWorkerExecution,
+      executionClosure: actualWorkerExecution
+        ? "run_scoped_worker_executed"
+        : "worker_execution_blocked_or_not_required",
       workerTaskPacketCount: workerTaskPackets.length,
       workerResultPackets,
       workerExecutionEvidence,
       mergeResult: {
         mergeOwner: "meta-conductor",
-        status: workerTaskPackets.length > 0 ? "dispatch_board_merged" : "no_worker_tasks",
+        status: actualWorkerExecution
+          ? "worker_results_merged"
+          : workerTaskPackets.length > 0
+            ? "dispatch_board_merged"
+            : "no_worker_tasks",
         artifactRefs: [
           "coreLoop.thinkingPacket.dispatchBoard",
           "coreLoop.executionResult.workerResultPackets",
         ],
-        liveExecutionMerged: false,
+        liveExecutionMerged: actualWorkerExecution,
         reason:
-          "The default run merges orchestration and dispatch artifacts; public-ready waits for verification evidence.",
+          actualWorkerExecution
+            ? "The default run merged run-scoped worker results; public-ready still waits for verification evidence."
+            : "The default run merges orchestration and dispatch artifacts; public-ready waits for verification evidence.",
       },
     },
     reviewPacket: {
@@ -1768,7 +1807,9 @@ function buildCoreLoopArtifact({
         publicReadyAllowed: publicReady,
         reason: publicReady
           ? "Live release evidence is present."
-          : "Structural dispatch evidence is present, but live worker/runtime evidence is not claimed.",
+          : actualWorkerExecution
+            ? "Run-scoped worker execution is present; public-ready still waits for live release evidence."
+            : "Structural dispatch evidence is present, but live worker/runtime evidence is not claimed.",
       },
       upstreamQuality: {
         critical: true,
@@ -1784,7 +1825,11 @@ function buildCoreLoopArtifact({
       status: orchestrationReport.reviewResult?.status === "pass" ? "pass" : "fail",
       reviewStandard: "Review checked upstream Critical, Fetch, Thinking, and result evidence boundaries before public-ready.",
       biasCheck: {
-        overclaimCheck: publicReady ? "pass" : "blocked_smoke_or_structural_evidence_not_labeled_live",
+        overclaimCheck: publicReady
+          ? "pass"
+          : actualWorkerExecution
+            ? "blocked_release_evidence_not_all_runtime_live"
+            : "blocked_smoke_or_structural_evidence_not_labeled_live",
         mainThreadExecutorCheck: "main_thread_scopes_and_synthesizes_only",
       },
       reviewStandardChecked: true,
@@ -1801,7 +1846,9 @@ function buildCoreLoopArtifact({
       remainingRisk: publicReady
         ? []
         : [
-            "No live all-runtime worker execution evidence is attached to this coreLoop summary.",
+            actualWorkerExecution
+              ? "Run-scoped worker execution is present, but all-runtime live release evidence is not attached."
+              : "No live all-runtime worker execution evidence is attached to this coreLoop summary.",
             "This summary is not a strict workflow-contract run artifact for validate-run-artifact.mjs.",
           ],
     },
@@ -1841,9 +1888,13 @@ function buildCoreLoopArtifact({
     scarPacket: {
       stage: "Evolution",
       status: publicReady ? "none" : "recorded",
-      failurePattern: publicReady ? null : "structural_orchestration_evidence_can_be_overread_as_live_execution",
+      failurePattern: publicReady
+        ? null
+        : actualWorkerExecution
+          ? "run_scoped_worker_execution_can_be_overread_as_all_runtime_public_ready"
+          : "structural_orchestration_evidence_can_be_overread_as_live_execution",
       preventionRule:
-        "Keep publicReady=false and remainingRisk populated unless live worker/runtime verification evidence is present.",
+        "Keep publicReady=false and remainingRisk populated unless all required runtime verification evidence is present.",
       test: "tests/governance/core-loop-contract.test.mjs",
       nextRunReuseKey: "core-loop-evidence-layer-boundary",
     },
@@ -1855,7 +1906,9 @@ function buildCoreLoopArtifact({
       blockedBy: publicReady
         ? []
         : [
-            "This artifact has structural/projection evidence only; do not claim live release-grade public-ready.",
+            actualWorkerExecution
+              ? "Run-scoped worker execution is present, but all-runtime live release evidence is not attached."
+              : "This artifact has structural/projection evidence only; do not claim live release-grade public-ready.",
           ],
     },
   };

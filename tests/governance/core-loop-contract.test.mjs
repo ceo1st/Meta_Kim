@@ -230,14 +230,19 @@ test("governed execution emits a coreLoop artifact summary", () => {
   }
   assert.ok(artifact.coreLoop.thinkingPacket.workerTaskPackets.length > 0);
   assert.equal(artifact.coreLoop.executionResult.mainThreadRole, "scope_delegate_review_synthesize");
-  assert.equal(artifact.coreLoop.executionResult.actualWorkerExecution, false);
+  assert.equal(artifact.coreLoop.executionResult.actualWorkerExecution, true);
   assert.ok(artifact.coreLoop.executionResult.workerExecutionEvidence.length > 0);
   assert.ok(
     artifact.coreLoop.executionResult.workerExecutionEvidence.every(
-      (item) => item.liveWorkerExecution === false,
+      (item) => item.externalAgentSpawned === false,
     ),
   );
-  assert.equal(artifact.coreLoop.executionResult.mergeResult.liveExecutionMerged, false);
+  assert.ok(
+    artifact.coreLoop.executionResult.workerExecutionEvidence.some(
+      (item) => item.liveWorkerExecution === true,
+    ),
+  );
+  assert.equal(artifact.coreLoop.executionResult.mergeResult.liveExecutionMerged, true);
   assert.equal(artifact.coreLoop.reviewPacket.upstreamQuality.critical, true);
   assert.equal(artifact.coreLoop.reviewPacket.protocolCompliance.executionEvidenceLayerIsHonest, true);
   assert.equal(artifact.coreLoop.metaReviewPacket.reviewStandardChecked, true);

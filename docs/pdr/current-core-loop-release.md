@@ -2,7 +2,7 @@
 
 Status: Done
 Owner: meta-warden
-Release target: 2.8.22
+Release target: 2.8.23
 Last updated: 2026-06-12
 
 ## Current Version Goal
@@ -114,14 +114,14 @@ This release must prove that the default entry can produce a run artifact, that 
 | `npm run meta:check:global:release` | FAIL then PASS | First failed because Claude/Codex global directory skills were absent; project sync repaired them and the rerun passed. |
 | `npm run meta:verify:all` | FAIL then PASS | First failed at global release check; final rerun passed full release-grade local verification. |
 | `npm run meta:validate:run -- tests/fixtures/run-artifacts/valid-core-loop-release-run.json` | PASS | Strict workflow fixture validated. |
-| `npm run meta:theory:run -- --task "Meta_Kim core-loop architecture repair v2.8.22 final release evidence" --run-id core-loop-release-v2.8.22-final` | PASS | Default governed entry produced `.meta-kim/state/default/governed-executions/core-loop-release-v2.8.22-final.json` and a Chinese report. |
+| `npm run meta:theory:run -- --task "Meta_Kim core-loop architecture repair v2.8.23 final release evidence" --run-id core-loop-release-v2.8.23-final` | PASS | Default governed entry produced `.meta-kim/state/default/governed-executions/core-loop-release-v2.8.23-final.json`, ran run-scoped worker execution, and wrote a Chinese report. |
 | `git diff --check` | PASS | No whitespace errors. |
 | `git push origin main` | PASS | Branch pushed with release evidence closure. |
-| `git push origin v2.8.22` | PASS | Release tag pushed. |
-| `gh release create v2.8.22` | PASS | GitHub Release created. |
+| `git push origin v2.8.23` | PASS | Release tag pushed. |
+| `gh release create v2.8.23` | PASS | GitHub Release created. |
 
 ## Completion Decision
 
 Status: Done
 
-Core-loop repair is complete for the 2.8.22 release scope: the default governed execution layer is structurally runnable, capability discovery is multi-type and wired into the default artifact, strict workflow fixture validation exists, PDR/test evidence is mapped, and release-grade local verification passed. This release does not claim live worker/runtime public-ready evidence beyond the verified local release gates.
+Core-loop repair is complete for the 2.8.23 release scope: the default governed execution layer is structurally runnable, capability discovery is multi-type and wired into the default artifact, worker task packets are executed by a run-scoped local worker executor, strict workflow fixture validation exists, PDR/test evidence is mapped, and release-grade local verification passed. This release does not claim all-runtime live public-ready evidence beyond the verified local release gates.

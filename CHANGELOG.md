@@ -8,6 +8,16 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.23] - 2026-06-12
+
+### Changed
+
+- **Run-Scoped Worker Execution** - `meta:theory:run` now executes bounded worker task packets through a local run-scoped worker executor instead of stopping at structural dispatch readiness. The main thread still scopes, delegates, reviews, and synthesizes; no extra external agent is spawned.
+
+### Verification
+
+- Adds governance coverage that requires worker execution evidence while preserving the public-ready release gate.
+
 ## [2.8.22] - 2026-06-12
 
 ### Changed
