@@ -3239,12 +3239,12 @@ function prepareProjectDeployJson(relPath, srcPath, targetDir) {
   }
   if (rel === ".codex/hooks.json") {
     return buildCodexHooksJson({
-      hookPromptAdapterPath: ".codex/hooks/hookprompt-adapter.mjs",
+      memoryHookPath: null,
     });
   }
   if (rel === ".cursor/hooks.json") {
     return buildCursorHooksJson({
-      hookPromptAdapterPath: ".cursor/hooks/hookprompt-adapter.mjs",
+      memoryHookPath: null,
     });
   }
 

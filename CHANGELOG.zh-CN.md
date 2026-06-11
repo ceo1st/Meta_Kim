@@ -8,6 +8,26 @@
 
 ## [Unreleased]
 
+## [2.8.20] - 2026-06-11
+
+### 变更
+
+- **项目 Hook 归属合理化** - 项目级运行时导出现在只保留和 Meta_Kim 项目行为强相关的 hook，例如图谱上下文、能力优先调度和 meta-theory 激活。提示词优化、记忆生命周期、planning 辅助、通用危险命令拦截这类个人通用 hook，统一留在全局运行时目录，不再重复投影到每个项目。
+- **全局 Hook 同步覆盖补齐** - 全局同步和发布检查现在会明确比对被管理的全局 hook 文件；项目同步会清理 Codex / Cursor 项目目录里残留的全局专属 hook adapter。这样依赖项目自己的 hook 可以继续从源项目更新，也避免同一份提示词或上下文被重复注入。
+- **Codex MCP 配置合并规范化** - Codex MCP 配置合并逻辑进一步收紧，ECC 管理的 server 会按统一命名和结构归一化，同时继续保留用户自己的配置。
+
+### 验证
+
+- `npm run meta:release:smoke`
+- `npm run meta:check`
+- `npm run meta:check:global:release`
+- `npm run meta:test:setup`
+- `node scripts/validate-provider-capabilities.mjs`
+- `node scripts/validate-foundational-capabilities.mjs`
+- `node scripts/validate-hook-progression.mjs`
+- `npm run meta:graphify:check`
+- `git diff --check`
+
 ## [2.8.19] - 2026-06-11
 
 ### 变更
