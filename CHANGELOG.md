@@ -8,6 +8,16 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.22] - 2026-06-12
+
+### Changed
+
+- **Core Loop Release Evidence Closure** - Completed the PDR release checklist and final release evidence for the governed execution repair so the shipped tag includes commit, tag, push, and GitHub Release proof.
+
+### Verification
+
+- Reused the `2.8.21` core-loop implementation evidence and reran the local release checks for the final `2.8.22` patch release.
+
 ## [2.8.21] - 2026-06-12
 
 ### Changed
