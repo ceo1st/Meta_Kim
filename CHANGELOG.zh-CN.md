@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+## [2.8.26] - 2026-06-12
+
+### 修复
+
+- **Meta-Theory 深度 Fetch 入口** - 项目/仓库/代码库理解、商业化发展和策略类问题现在会进入治理化 Fetch 路径，不再落到浅层 fast path 回答。
+- **跨运行时入口对齐** - 新增 Claude Code `/meta-theory` command 投影支持、Cursor 原生 always-on dispatch rule、OpenClaw HEARTBEAT/SOUL 项目理解契约，让 Claude、Codex、Cursor、OpenClaw 都走同一条治理入口约束。
+- **Run artifact 证据补齐** - `meta:theory:run` 现在会为项目理解类运行记录项目概览、维护契约、命令库存、Graphify、MCP、能力索引、机器契约和外部检索能力等 Fetch source class。
+
+### 验证
+
+- `node --test tests/meta-theory/47-meta-theory-entry-classifier.test.mjs`
+- `node --test tests/setup/sync-runtimes-manifest.test.mjs`
+- `node --test tests/governance/core-loop-contract.test.mjs`
+- `npm run meta:sync`
+- `npm run meta:check`
+- `git diff --check`
+
 ## [2.8.25] - 2026-06-12
 
 ### 修复

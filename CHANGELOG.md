@@ -8,6 +8,23 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.26] - 2026-06-12
+
+### Fixed
+
+- **Meta-Theory Deep Fetch Entry** - Project/repo/codebase understanding and commercialization strategy prompts now enter the governed Fetch path instead of falling through to shallow fast-path answers.
+- **Cross-Runtime Entry Parity** - Added Claude Code `/meta-theory` command projection support, Cursor's native always-on dispatch rule, and OpenClaw HEARTBEAT/SOUL project-understanding requirements so Claude, Codex, Cursor, and OpenClaw all route through the same governed entry contract.
+- **Run Artifact Evidence** - `meta:theory:run` now records project overview, maintainer contract, command inventory, Graphify, MCP, capability-index, machine-contract, and external-research capability source classes for project-understanding runs.
+
+### Verification
+
+- `node --test tests/meta-theory/47-meta-theory-entry-classifier.test.mjs`
+- `node --test tests/setup/sync-runtimes-manifest.test.mjs`
+- `node --test tests/governance/core-loop-contract.test.mjs`
+- `npm run meta:sync`
+- `npm run meta:check`
+- `git diff --check`
+
 ## [2.8.25] - 2026-06-12
 
 ### Fixed

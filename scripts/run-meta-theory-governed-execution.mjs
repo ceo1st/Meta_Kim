@@ -1498,12 +1498,29 @@ function buildCoreLoopArtifact({
     [];
   const capabilitySearchLog = [
     ...new Set(
-      capabilityInventory.map((record) => record.sourcePath ?? record.sourceRef).filter(Boolean),
+      [
+        ...capabilityInventory
+          .map((record) => record.sourcePath ?? record.sourceRef)
+          .filter(Boolean),
+        ...(orchestrationReport.fetchEvidence?.sources ?? [])
+          .map((record) => {
+            if (typeof record === "string") return record;
+            const label = record.sourceType === "project_graph"
+              ? "Graphify project map"
+              : record.sourceType === "mcp_inventory"
+                ? "MCP inventory"
+                : record.sourceType;
+            return `${label}: ${record.source}`;
+          })
+          .filter(Boolean),
+      ],
     ),
   ].map((source) => ({
     source,
     checked: true,
-    result: "capability_provider_recorded",
+    result: String(source).includes(": ")
+      ? "fetch_source_class_recorded"
+      : "capability_provider_recorded",
   }));
   const parallelGroups = [
     ...new Set(workerTaskPackets.map((packet) => packet.parallelGroup).filter(Boolean)),

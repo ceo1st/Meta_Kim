@@ -76,6 +76,12 @@ const codexMetaTheoryCommandSource = path.join(
   "commands",
   "meta-theory.md",
 );
+const claudeMetaTheoryCommandSource = path.join(
+  canonicalRuntimeAssetsDir,
+  "claude",
+  "commands",
+  "meta-theory.md",
+);
 
 let runtimeHomes = {};
 let allowedRoots = [];
@@ -252,6 +258,27 @@ async function copyCodexMetaTheoryCommand() {
     rec.recordFile(targetPath, {
       source: "sync-global-meta-theory",
       purpose: "codex-global-command",
+      category: CATEGORIES.A,
+    }),
+  );
+  return targetPath;
+}
+
+async function copyClaudeMetaTheoryCommand() {
+  const commandsDir = path.join(runtimeHomes.claude.dir, "commands");
+  const targetPath = path.join(commandsDir, "meta-theory.md");
+  assertHomeBound(targetPath);
+  if (!(await pathExists(claudeMetaTheoryCommandSource))) {
+    throw new Error(
+      `Missing canonical Claude Code command source: ${claudeMetaTheoryCommandSource}`,
+    );
+  }
+  await fs.mkdir(commandsDir, { recursive: true });
+  await fs.copyFile(claudeMetaTheoryCommandSource, targetPath);
+  recordSafe((rec) =>
+    rec.recordFile(targetPath, {
+      source: "sync-global-meta-theory",
+      purpose: "claude-global-command",
       category: CATEGORIES.A,
     }),
   );
@@ -611,6 +638,25 @@ async function runCheck() {
     );
   }
 
+  if (selectedTargetIds.includes("claude")) {
+    const commandPath = path.join(
+      runtimeHomes.claude.dir,
+      "commands",
+      "meta-theory.md",
+    );
+    const sourceRaw = await fs.readFile(claudeMetaTheoryCommandSource, "utf8");
+    const targetRaw = (await pathExists(commandPath))
+      ? await fs.readFile(commandPath, "utf8")
+      : null;
+    const commandInSync = targetRaw === sourceRaw;
+    console.log(
+      `${commandInSync ? `${C.green}✓${C.reset}` : `${C.yellow}⊘${C.reset}`} ${C.dim}Claude Code /meta-theory command: ${commandPath}${C.reset}`,
+    );
+    if (!commandInSync) {
+      failed = true;
+    }
+  }
+
   if (selectedTargetIds.includes("codex")) {
     const commandPath = path.join(
       runtimeHomes.codex.dir,
@@ -686,6 +732,13 @@ async function runSync() {
     );
   }
 
+  if (selectedTargetIds.includes("claude")) {
+    const commandPath = await copyClaudeMetaTheoryCommand();
+    console.log(
+      `${C.green}✓${C.reset} ${C.dim}Synced Claude Code /meta-theory command: ${commandPath}${C.reset}`,
+    );
+  }
+
   if (selectedTargetIds.includes("codex")) {
     const commandPath = await copyCodexMetaTheoryCommand();
     console.log(
@@ -730,7 +783,10 @@ function printTargets() {
   console.log("- META_KIM_CODEX_HOME or CODEX_HOME");
   console.log("- META_KIM_CURSOR_HOME or CURSOR_HOME");
   console.log("");
-  console.log("Codex slash command (when codex is an active target):");
+  console.log("Runtime slash commands:");
+  console.log(
+    `- ${path.join(runtimeHomes.claude.dir, "commands", "meta-theory.md")}`,
+  );
   console.log(
     `- ${path.join(runtimeHomes.codex.dir, "commands", "meta-theory.md")}`,
   );

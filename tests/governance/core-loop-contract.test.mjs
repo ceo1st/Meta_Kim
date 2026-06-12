@@ -258,6 +258,57 @@ test("governed execution emits a coreLoop artifact summary", () => {
   assert.ok(artifact.coreLoop.publicReadyDecision.blockedBy.length > 0);
 });
 
+test("project-understanding governed run records deep Fetch source classes", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "scripts/run-meta-theory-governed-execution.mjs",
+      "--task",
+      "这个项目如果商业化应该怎么发展？",
+      "--run-id",
+      "core-loop-project-understanding-fetch-test",
+    ],
+    { encoding: "utf8", timeout: 120_000 },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const artifact = JSON.parse(
+    readFileSync(
+      ".meta-kim/state/default/governed-executions/core-loop-project-understanding-fetch-test.json",
+      "utf8",
+    ),
+  );
+  const sourceTypes = new Set(
+    artifact.coreLoop.fetchPacket.evidence.map((source) => source.sourceType),
+  );
+
+  for (const sourceType of [
+    "project_overview",
+    "maintainer_contract",
+    "command_inventory",
+    "project_graph",
+    "canonical_skill",
+    "machine_contract",
+    "capability_index",
+    "mcp_inventory",
+    "external_research_capability",
+  ]) {
+    assert.ok(sourceTypes.has(sourceType), `missing Fetch sourceType ${sourceType}`);
+  }
+  assert.equal(
+    artifact.coreLoop.fetchPacket.capabilityDiscovery.searchLog.some((entry) =>
+      String(entry.source ?? "").includes("Graphify"),
+    ),
+    true,
+  );
+  assert.equal(
+    artifact.coreLoop.fetchPacket.capabilityDiscovery.searchLog.some((entry) =>
+      String(entry.source ?? "").includes("MCP"),
+    ),
+    true,
+  );
+});
+
 test("core-loop release strict fixture validates with workflow run validator", () => {
   const result = spawnSync(
     process.execPath,
