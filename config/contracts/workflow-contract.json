@@ -1665,6 +1665,50 @@
         "defaultCount": 3,
         "constraint": "angles must be semantically distinct; rephrasing the same angle is forbidden"
       },
+      "deepResearchPlanQualityGate": {
+        "description": "Meta_Kim-native Fetch research gate. It internalizes external research practice as decision-grade evidence without copying third-party prompt text, report templates, command snippets, or visible structure into canonical governance.",
+        "requiredWhen": "contentEvidencePacket.researchRequired = true",
+        "requiredPlanFields": [
+          "decisionUse",
+          "questions",
+          "sourceCategoriesPlanned",
+          "deepReadTargets",
+          "sourceQualityLadder",
+          "claimAttributionRules",
+          "crossCheckStrategy",
+          "originalSynthesisRules",
+          "decisionImpactCriteria"
+        ],
+        "sourceQualityLadder": [
+          "primary_official_docs",
+          "source_code_or_release_notes",
+          "standards_or_regulatory_sources",
+          "peer_reviewed_or_benchmark_sources",
+          "reputable_news_or_analysis",
+          "community_or_forum_evidence_only_with_label"
+        ],
+        "minimumSearchAngles": 3,
+        "minimumKeySourcesToDeepRead": 3,
+        "minimumIndependentSourcesForRouteChangingClaim": 2,
+        "snippetOnlyPolicy": "Search snippets may discover candidates, but route-changing claims require full source reading or an explicit blocked / unverified label.",
+        "singleSourceClaimPolicy": "A claim supported by only one source must be flagged unverified and cannot alone decide owner, route, scope, acceptance, or release readiness.",
+        "originalSynthesisPolicy": {
+          "required": [
+            "extract abstract invariant",
+            "rename to Meta_Kim-native packet language",
+            "bind to Critical -> Fetch -> Thinking handoff",
+            "state what evidence changes the decision",
+            "record source references in research notes when external methods influenced the design"
+          ],
+          "forbidden": [
+            "copying third-party prompt text",
+            "copying third-party report template structure",
+            "copying provider-specific command examples into canonical governance",
+            "removing attribution from private research evidence",
+            "using cosmetic rewrites to disguise copied wording"
+          ]
+        }
+      },
       "evidenceScopeEnum": [
         "local_project",
         "external_research",

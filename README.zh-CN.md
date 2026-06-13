@@ -827,8 +827,8 @@ flowchart TB
 
 | 命令 | 作用 |
 | --- | --- |
-| `npm run meta:deps:install` | 安装 9 个社区技能到全局 |
-| `npm run meta:deps:install:all-runtimes` | 安装到所有工具端 |
+| `npm run meta:deps:install` | 按默认 Claude Code + Codex 主链安装 9 个社区技能到全局 |
+| `npm run meta:deps:install:all-runtimes` | 显式安装到 Claude Code、Codex、OpenClaw、Cursor |
 | `npm run meta:deps:install:claude-plugins` | 只安装 Claude Code marketplace plugin |
 | `npm run discover:global` | 扫描全局能力 |
 | `npm run meta:sync:global` | 同步 meta-theory 到用户级 |
@@ -853,7 +853,7 @@ Superpowers 在 Claude Code、Codex 和 Cursor 都有原生 plugin 入口。Meta
 | Qoder CLI | 仅 candidate probe：通用 bundle 探测可以看 `.qoder/` → `skills/`，但 ECC 不会对 Qoder 执行安装，因为上游 `ecc install --help` 当前没有 `qoder` |
 | Trae、Kiro、Windsurf / Devin Desktop Cascade、Cline、Roo Code、Continue | 仅 candidate probe：兼容原始能力已进入 `config/runtime-compatibility-catalog.json`，但没有 adapter、sync 路径和验证套件前不会安装或投影 |
 
-抽取结果装到 `~/.<tool>/skills/<id>/`。只装 Claude 市场 plugin：`npm run meta:deps:install:claude-plugins`；一次覆盖全工具端：`npm run meta:deps:install:all-runtimes`。**升级用户无需手动清理**：老版本的整 repo clone 残留会通过目标目录下的 `.claude-plugin/` 标志自动识别；旧版 Codex/Cursor `skills/superpowers` fallback 也会在更新时移除，并提示安装原生插件。
+抽取结果装到 `~/.<tool>/skills/<id>/`。安装/更新时直接回车会走 Claude Code + Codex 主链；只装 Claude 市场 plugin：`npm run meta:deps:install:claude-plugins`；显式覆盖 Claude Code、Codex、OpenClaw、Cursor：`npm run meta:deps:install:all-runtimes`。**升级用户无需手动清理**：老版本的整 repo clone 残留会通过目标目录下的 `.claude-plugin/` 标志自动识别；旧版 Codex/Cursor `skills/superpowers` fallback 也会在更新时移除，并提示安装原生插件。
 
 ### 高级运维
 

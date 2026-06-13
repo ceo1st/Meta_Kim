@@ -731,8 +731,8 @@ flowchart TB
 
 | 명령 | 목적 |
 | --- | --- |
-| `npm run meta:deps:install` | 9개 커뮤니티 스킬을 글로벌에 설치 |
-| `npm run meta:deps:install:all-runtimes` | 모든 런타임에 설치 |
+| `npm run meta:deps:install` | 기본 Claude Code + Codex 경로에 9개 커뮤니티 스킬 설치 |
+| `npm run meta:deps:install:all-runtimes` | Claude Code, Codex, OpenClaw, Cursor에 명시적으로 설치 |
 | `npm run meta:deps:install:claude-plugins` | Claude Code marketplace plugin만 설치 |
 | `npm run discover:global` | 글로벌 역량 스캔 |
 | `npm run meta:sync:global` | meta-theory를 사용자 수준에 동기화 |
@@ -753,7 +753,7 @@ flowchart TB
 | Qoder CLI | candidate probe 전용입니다. `.qoder/` → `skills/` 탐색은 가능하지만 upstream ECC가 `qoder`를 나열하지 않으므로 ECC install은 실행하지 않습니다 |
 | Trae, Kiro, Windsurf / Devin Desktop Cascade, Cline, Roo Code, Continue | candidate probe 전용입니다. 호환 primitive는 `config/runtime-compatibility-catalog.json`에서 추적하지만 adapter, sync path, validation suite가 생기기 전에는 install / projection하지 않습니다 |
 
-추출 결과는 `~/.<runtime>/skills/<id>/`에 배치됨. Claude marketplace plugin만 설치하려면 `npm run meta:deps:install:claude-plugins`, 모든 런타임을 한 번에 커버하려면 `npm run meta:deps:install:all-runtimes`. **업그레이드 시 수동 정리 불필요**: 이전 버전의 full-repo clone 잔존물은 대상 디렉터리 루트의 `.claude-plugin/` 마커로 자동 감지되어 다음 실행 시 재추출됨.
+추출 결과는 `~/.<runtime>/skills/<id>/`에 배치됨. 설치/업데이트에서 Enter를 누르면 기본값은 Claude Code + Codex임. Claude marketplace plugin만 설치하려면 `npm run meta:deps:install:claude-plugins`, Claude Code, Codex, OpenClaw, Cursor를 명시적으로 커버하려면 `npm run meta:deps:install:all-runtimes`. **업그레이드 시 수동 정리 불필요**: 이전 버전의 full-repo clone 잔존물은 대상 디렉터리 루트의 `.claude-plugin/` 마커로 자동 감지되어 다음 실행 시 재추출됨.
 
 ### 고급 운용
 

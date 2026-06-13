@@ -837,8 +837,8 @@ Start with `package.json` scripts. The supported maintenance paths are the `meta
 
 | Command | Purpose |
 | --- | --- |
-| `npm run meta:deps:install` | Install the 9 community skills globally |
-| `npm run meta:deps:install:all-runtimes` | Install them into all runtimes |
+| `npm run meta:deps:install` | Install the 9 community skills globally for the default Claude Code + Codex path |
+| `npm run meta:deps:install:all-runtimes` | Explicitly install them into Claude Code, Codex, OpenClaw, and Cursor |
 | `npm run meta:deps:install:claude-plugins` | Install Claude Code marketplace plugins only |
 | `npm run discover:global` | Scan global capabilities |
 | `npm run meta:sync:global` | Sync meta-theory to the user-level runtime |
@@ -865,7 +865,7 @@ For plugin bundles without a native host plugin entry point, the installer still
 | Qoder CLI | Candidate probe only: generic bundle probing can look for `.qoder/` -> `skills/`, but ECC is not run for Qoder because upstream `ecc install --help` does not list `qoder` |
 | Trae, Kiro, Windsurf / Devin Desktop Cascade, Cline, Roo Code, Continue | Candidate probes only: compatible primitives are tracked in `config/runtime-compatibility-catalog.json`, but Meta_Kim does not install or project to them until an adapter, sync path, and validation suite exist |
 
-Sparse-checkout fallback trees land in `~/.<runtime>/skills/<id>/`; native ECC installs do not. Run `npm run meta:deps:install:claude-plugins` for the Claude marketplace path only, or `npm run meta:deps:install:all-runtimes` to cover every supported home runtime at once. Upgrading from an older install? Legacy full-repo clones are auto-detected by the `.claude-plugin/` marker at the target root and re-extracted on the next run; old Codex/Cursor `skills/superpowers`, `skills/ecc`, and `skills/everything-claude-code` fallbacks are removed or replaced with native-install instructions.
+Sparse-checkout fallback trees land in `~/.<runtime>/skills/<id>/`; native ECC installs do not. The default install/update path selects Claude Code + Codex when the user presses Enter; run `npm run meta:deps:install:claude-plugins` for the Claude marketplace path only, or `npm run meta:deps:install:all-runtimes` to cover Claude Code, Codex, OpenClaw, and Cursor explicitly. Upgrading from an older install? Legacy full-repo clones are auto-detected by the `.claude-plugin/` marker at the target root and re-extracted on the next run; old Codex/Cursor `skills/superpowers`, `skills/ecc`, and `skills/everything-claude-code` fallbacks are removed or replaced with native-install instructions.
 
 ### Advanced ops
 

@@ -253,6 +253,13 @@ describe("Clarity Gate unified execution confirmation", async () => {
     assert.match(policyText, /deep research/i);
     assert.match(policyText, /decision impact/i);
     assert.match(policyText, /evidence owner|Conductor/i);
+    assert.match(policyText, /deepResearchPlanQualityGate/);
+    assert.match(policyText, /sourceQualityLadder/);
+    assert.match(policyText, /deepReadTargets/);
+    assert.match(policyText, /claimAttributionRules/);
+    assert.match(policyText, /originalSynthesisRules/);
+    assert.match(policyText, /copying third-party prompt text/);
+    assert.match(policyText, /cosmetic rewrites/);
   });
 
   test("contentEvidencePacket requires capability-proof research discovery without platformSurface", () => {

@@ -8,10 +8,21 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.30] - 2026-06-13
+
 ### Changed
 
+- **Primary Install Defaults** - Changed direct-Enter install/update defaults to Claude Code + Codex while keeping OpenClaw and Cursor available through explicit all-runtime or `--targets` selection.
+- **Fetch Research Quality Gate** - Internalized ECC-style deep research as a Meta_Kim-native Fetch contract with source-quality ladders, key-source deep reading, claim attribution, cross-checking, and original synthesis boundaries.
 - **Compatibility Candidate Framework** - Added a source-backed primitive-surface framework for Qoder CLI, Trae, Kiro, Windsurf / Devin Desktop Cascade, Cline, Roo Code, and Continue while keeping them as candidate probes instead of formal runtime projections.
 - **Compatibility Evidence Boundary** - Split GitHub completion from all-tool compatibility evidence so generated reports keep Cursor in the compatibility follow-up lane, separate from primary release decisions.
+
+### Verification
+
+- `npm run meta:sync`
+- `npm run meta:release:smoke`
+- `git diff --check`
+- `node setup.mjs --update --lang zh --targets claude,codex --project-dir <dir>...`
 
 ## [2.8.29] - 2026-06-13
 

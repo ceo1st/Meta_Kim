@@ -121,7 +121,7 @@
         "inSyncManifest": true,
         "hasRuntimeProfile": true,
         "hasProjectionLayout": true,
-        "isDefaultTarget": true
+        "isDefaultTarget": false
       },
       "genericCompatibility": {
         "skillPath": "openclaw/skills/{skill-name}/SKILL.md",
@@ -141,7 +141,7 @@
         {
           "type": "local_file",
           "ref": "config/sync.json",
-          "claim": "OpenClaw is a supported and default sync target."
+          "claim": "OpenClaw is a supported compatibility sync target; it is not selected by the primary default."
         },
         {
           "type": "local_file",
@@ -170,7 +170,7 @@
         "inSyncManifest": true,
         "hasRuntimeProfile": true,
         "hasProjectionLayout": true,
-        "isDefaultTarget": true
+        "isDefaultTarget": false
       },
       "genericCompatibility": {
         "skillPath": ".cursor/skills/{skill-name}/SKILL.md",
@@ -190,7 +190,7 @@
         {
           "type": "local_file",
           "ref": "config/sync.json",
-          "claim": "Cursor is a supported and default sync target."
+          "claim": "Cursor is a supported compatibility sync target; it is not selected by the primary default."
         },
         {
           "type": "local_file",

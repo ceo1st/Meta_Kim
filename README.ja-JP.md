@@ -729,8 +729,8 @@ flowchart TB
 
 | コマンド | 役割 |
 | --- | --- |
-| `npm run meta:deps:install` | 9 個のコミュニティ skill を全体へインストール |
-| `npm run meta:deps:install:all-runtimes` | すべての runtime にインストール |
+| `npm run meta:deps:install` | デフォルトの Claude Code + Codex 経路へ 9 個のコミュニティ skill をインストール |
+| `npm run meta:deps:install:all-runtimes` | Claude Code、Codex、OpenClaw、Cursor へ明示的にインストール |
 | `npm run meta:deps:install:claude-plugins` | Claude Code marketplace plugin のみインストール |
 | `npm run discover:global` | グローバル能力をスキャン |
 | `npm run meta:sync:global` | meta-theory をユーザー級へ同期 |
@@ -751,7 +751,7 @@ flowchart TB
 | Qoder CLI | candidate probe のみです。`.qoder/` → `skills/` の探索は可能ですが、upstream ECC が `qoder` を列挙していないため ECC install は実行しません |
 | Trae、Kiro、Windsurf / Devin Desktop Cascade、Cline、Roo Code、Continue | candidate probe のみです。互換 primitive は `config/runtime-compatibility-catalog.json` で追跡しますが、adapter、sync path、validation suite が揃うまでは install / projection しません |
 
-抽出結果は `~/.<runtime>/skills/<id>/` に配置される。Claude marketplace plugin のみをインストールするには `npm run meta:deps:install:claude-plugins`、全 runtime を一括カバーするには `npm run meta:deps:install:all-runtimes`。**アップグレード時に手動クリーンアップは不要**：旧版の full-repo clone 残留はターゲットディレクトリ直下の `.claude-plugin/` マーカーで自動検出され、次回実行時に再抽出される。
+抽出結果は `~/.<runtime>/skills/<id>/` に配置される。インストール/更新で Enter を押すと、デフォルトは Claude Code + Codex になる。Claude marketplace plugin のみをインストールするには `npm run meta:deps:install:claude-plugins`、Claude Code、Codex、OpenClaw、Cursor を明示的にカバーするには `npm run meta:deps:install:all-runtimes`。**アップグレード時に手動クリーンアップは不要**：旧版の full-repo clone 残留はターゲットディレクトリ直下の `.claude-plugin/` マーカーで自動検出され、次回実行時に再抽出される。
 
 ### 上級運用
 

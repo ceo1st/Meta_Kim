@@ -652,6 +652,45 @@ async function validateWorkflowContract() {
     capabilityDiscovery.forbiddenFields?.includes("platformSurface"),
     "workflow-contract.json researchCapabilityDiscovery must forbid platformSurface guessing.",
   );
+  const researchQualityGate =
+    contract.protocols?.contentEvidencePacket?.deepResearchPlanQualityGate ?? {};
+  for (const field of [
+    "decisionUse",
+    "questions",
+    "sourceCategoriesPlanned",
+    "deepReadTargets",
+    "sourceQualityLadder",
+    "claimAttributionRules",
+    "crossCheckStrategy",
+    "originalSynthesisRules",
+    "decisionImpactCriteria",
+  ]) {
+    assert(
+      researchQualityGate.requiredPlanFields?.includes(field),
+      `workflow-contract.json deepResearchPlanQualityGate must require ${field}.`,
+    );
+  }
+  assert(
+    researchQualityGate.minimumSearchAngles >= 3,
+    "workflow-contract.json deepResearchPlanQualityGate must require at least 3 search angles.",
+  );
+  assert(
+    researchQualityGate.minimumKeySourcesToDeepRead >= 3,
+    "workflow-contract.json deepResearchPlanQualityGate must require key-source deep reading.",
+  );
+  assert(
+    researchQualityGate.minimumIndependentSourcesForRouteChangingClaim >= 2,
+    "workflow-contract.json deepResearchPlanQualityGate must require cross-source route evidence.",
+  );
+  assert(
+    researchQualityGate.originalSynthesisPolicy?.forbidden?.includes(
+      "copying third-party prompt text",
+    ) &&
+      researchQualityGate.originalSynthesisPolicy?.forbidden?.includes(
+        "using cosmetic rewrites to disguise copied wording",
+      ),
+    "workflow-contract.json deepResearchPlanQualityGate must forbid copied prompt text and cosmetic disguise.",
+  );
 
   const optionFrame = contract.protocols?.preDecisionOptionFrame ?? {};
   for (const field of [
@@ -1357,6 +1396,10 @@ async function validateSyncConfiguration() {
   assert(
     defaultTargets.every((target) => supportedTargets.includes(target)),
     "config/sync.json defaultTargets must be a subset of supportedTargets.",
+  );
+  assert(
+    JSON.stringify(defaultTargets) === JSON.stringify(["claude", "codex"]),
+    "config/sync.json defaultTargets must keep direct-Enter install/update on Claude Code and Codex only.",
   );
   assert(
     availableTargets.every((target) =>

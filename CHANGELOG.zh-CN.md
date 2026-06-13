@@ -8,10 +8,21 @@
 
 ## [Unreleased]
 
+## [2.8.30] - 2026-06-13
+
 ### 变更
 
+- **主链安装默认项** - 将安装/更新时直接回车的默认目标改为 Claude Code + Codex，同时保留 OpenClaw、Cursor 的显式 all-runtime 或 `--targets` 选择路径。
+- **Fetch 研究质量门** - 将 ECC 式 deep research 抽象内化为 Meta_Kim 原生 Fetch 合同，加入来源质量阶梯、关键来源深读、声明归因、交叉验证和原创综合边界。
 - **兼容候选框架** - 基于官方资料新增 Qoder CLI、Trae、Kiro、Windsurf / Devin Desktop Cascade、Cline、Roo Code、Continue 的原始能力表面框架，同时保持 candidate probe，不升级为正式工具端投影。
 - **兼容证据边界** - 将 GitHub 主完成判断与全工具端兼容证据拆开，Cursor 在 local-private PRD 与生成报告中保留为兼容后续项，并与主发布判断分离。
+
+### 验证
+
+- `npm run meta:sync`
+- `npm run meta:release:smoke`
+- `git diff --check`
+- `node setup.mjs --update --lang zh --targets claude,codex --project-dir <dir>...`
 
 ## [2.8.29] - 2026-06-13
 

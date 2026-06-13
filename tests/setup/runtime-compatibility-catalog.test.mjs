@@ -30,6 +30,16 @@ describe("runtime compatibility catalog", () => {
     assert.deepEqual(sorted(projectionIds), sorted(syncManifest.supportedTargets));
   });
 
+  test("direct-enter defaults select only the primary Claude Code and Codex path", () => {
+    assert.deepEqual(syncManifest.defaultTargets, ["claude", "codex"]);
+
+    const byId = new Map(catalog.products.map((product) => [product.id, product]));
+    assert.equal(byId.get("claude").formalProjection.isDefaultTarget, true);
+    assert.equal(byId.get("codex").formalProjection.isDefaultTarget, true);
+    assert.equal(byId.get("openclaw").formalProjection.isDefaultTarget, false);
+    assert.equal(byId.get("cursor").formalProjection.isDefaultTarget, false);
+  });
+
   test("non-projection products cannot claim sync/profile/layout support", () => {
     const supportedTargets = new Set(syncManifest.supportedTargets);
     const defaultTargets = new Set(syncManifest.defaultTargets);
