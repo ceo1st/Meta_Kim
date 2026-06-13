@@ -1,6 +1,6 @@
 {
   "name": "meta-kim",
-  "version": "2.8.28",
+  "version": "2.8.29",
   "description": "Governance layer for AI coding: meta agents, workflow contract, meta-theory; canonical in canonical/, with generated Claude/Codex/OpenClaw/Cursor projections.",
   "private": true,
   "type": "module",
@@ -35,6 +35,7 @@
     "meta:status:json": "node scripts/footprint.mjs --json",
     "meta:status:diff": "node scripts/footprint.mjs --diff",
     "meta:run-status": "node scripts/meta-run-status.mjs",
+    "meta:run-status:latest": "node scripts/meta-run-status.mjs --latest",
     "meta:uninstall": "node scripts/uninstall.mjs",
     "meta:uninstall:yes": "node scripts/uninstall.mjs --yes",
     "meta:uninstall:deep": "node scripts/uninstall.mjs --yes --deep",
@@ -77,6 +78,7 @@
     "meta:gap:score-candidates": "node scripts/score-capability-candidates.mjs",
     "meta:gap:complex-inputs": "node scripts/run-complex-capability-gap-inputs.mjs",
     "meta:theory:run": "node scripts/run-meta-theory-governed-execution.mjs",
+    "meta:theory:demo": "node scripts/run-meta-theory-governed-execution.mjs \"What should this project become as a product?\"",
     "meta:theory:report": "node scripts/run-meta-theory-governed-execution.mjs --read",
     "meta:theory:deliverables": "node scripts/generate-meta-theory-run-deliverables.mjs",
     "meta:github:gap": "node scripts/generate-github-gap-report.mjs",

@@ -53,7 +53,8 @@ This is not a new concept. Mature engineering teams already do this. Meta_Kim tu
 Meta_Kim is easiest to understand by watching one governed run, not by reading every rule.
 
 ```bash
-npm run meta:theory:run
+npm run meta:theory:demo
+npm run meta:run-status:latest
 npm run meta:theory:report -- --run-id latest
 npm run meta:delivery:bundle
 ```
@@ -66,7 +67,7 @@ The proof path shows five things:
 - review and verification produce artifacts, not just reassuring prose
 - blocked runtime evidence stays blocked, for example Cursor native live is not promoted from smoke evidence
 
-The executable core-loop contract is `config/contracts/core-loop-contract.json`; it binds the default path to `npm run meta:theory:run` and keeps Critical -> Fetch -> Thinking -> Execution -> Review -> Meta-Review -> Verification -> Evolution testable.
+The executable core-loop contract is `config/contracts/core-loop-contract.json`; it binds the default path to `npm run meta:theory:run -- "<task>"` and keeps Critical -> Fetch -> Thinking -> Execution -> Review -> Meta-Review -> Verification -> Evolution testable. `npm run meta:theory:demo` is the zero-argument replay entry for the 3-minute proof.
 
 For a guided walk-through, start with [examples/first-run/README.md](examples/first-run/README.md).
 

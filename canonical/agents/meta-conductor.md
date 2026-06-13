@@ -78,7 +78,9 @@ Conductor manages the `choiceSurfaceState` field lifecycle as part of pre-decisi
 2. Set to `critical_clarification_allowed` only when `intentFrameAssessment` marks a missing or conflicting dimension as execution-changing
 3. Set to `execution_confirmation_allowed` only after both `fetchRecord.capabilitySearchPerformed = true` AND `preDecisionOptionFrame` exists
 4. Set to `completed` after user responds via native question tool OR `solutionChoiceState` records a valid skip (`trivial`/`no_branching_choice`/`auto-proceed`)
-5. Reset to `not_allowed` if scope materially changes
+5. If the active runtime is Codex or Claude Code, Conductor must use the primary native choice surface (`request_user_input` or `AskUserQuestion`) for the allowed state; missing, empty, rejected, or stripped native UI blocks or returns to the responsible stage and must not be treated as a chat-card fallback
+6. For compatibility runtimes only, a verified conversation fallback may keep the run inspectable; it does not change the Codex / Claude Code no-downgrade rule
+7. Reset to `not_allowed` if scope materially changes
 
 **Synchronization with `solutionChoiceState`**:
 - `preDecisionOptionFrame.solutionChoiceState` records the user's decision: `pending` → `user_confirmed`/`auto_skipped`/`trivial_skip`
@@ -152,7 +154,7 @@ If Warden rejects the same board twice without new evidence, Conductor must trig
 4. **Resolve Team** — `resolveAgentDependencies(teamId)`
 5. **Validate Evidence Lane** — require `contentEvidencePacket` before asking broad execution-choice questions; if the intent frame is missing or conflicting, ask only minimal blocking Critical clarification
 6. **Generate Pre-decision Option Frame** — turn evidence into >=2 candidate paths, candidate lanes, trade-offs, risks, and a recommended default without finalizing dispatch
-7. **Resolve User Decision** — use native choice or conversation fallback for non-trivial executable work unless explicit auto-proceed / trivial / no-branching skip is recorded
+7. **Resolve User Decision** — for Codex / Claude Code, use the native interactive choice surface for non-trivial executable work unless explicit auto-proceed / trivial / no-branching skip is recorded; do not accept conversation fallback as completion in these primary runtimes
 8. **Generate Dispatch Board** — `generateWorkflowConfig({ workflowFamily, department, goal })` only after the user decision or allowed skip is recorded
 9. **Generate Business Flow Blueprint** — infer deliverable type, derive task-specific business lanes from outcome and scope, use dimensions like product / UX / UI / engineering / QA / release / feedback only when relevant, and record lane-level global scan evidence (`capabilitySearchQuery`, `candidateOwners`, `matchedCapabilities`, `capabilityBindings`, `selectedOwner`, `selectionReason`, `coverageStatus`)
 10. **Generate Agent Role Blueprint** — assign coarse English business role-family names such as `frontend`, `backend`, `test`, `review`, `analysis`, `verify`, or `docs`; map them to governance meta owner agents in the public repo; and record concrete work scope and run-scoped capability evidence in `roleInstanceId`, `shardScope`, `assignedResponsibilitySlice`, `ownerResponsibilityDelta`, `agentIterationPlan`, `ownerResolution`, `matchedCapabilities`, and `capabilityBindings`

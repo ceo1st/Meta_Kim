@@ -739,6 +739,7 @@ function buildCardPlanPacket({ runId, orchestrationReport, runtimeEvidence }) {
   const orderIndex = new Map(dealOrder.map((id, index) => [id, index]));
   const cards = CARD_DECK_TEMPLATE.map((card) => {
     const dealt = orderIndex.has(card.id);
+    const choiceSurfaceCard = card.id === "options" || card.id === "clarify";
     return {
       cardId: `${runId}-${card.id}`,
       cardKey: card.id,
@@ -759,9 +760,15 @@ function buildCardPlanPacket({ runId, orchestrationReport, runtimeEvidence }) {
       suppressionReason: null,
       deliveryShellId: card.deliveryShell,
       choiceSurface:
-        card.id === "options" || card.id === "clarify"
+        choiceSurfaceCard
           ? "native_choice_or_chat_card"
           : "status_or_artifact",
+      choiceSurfaceDelivery: choiceSurfaceCard
+        ? "adapter_required_not_triggered_by_artifact"
+        : "not_applicable",
+      choiceSurfaceTriggerProof: choiceSurfaceCard
+        ? "cardPlanPacket records the need for a runtime adapter choice surface; it is not a native popup, native tool call, or user answer."
+        : "status/artifact card only; no user decision surface required.",
       owner: card.id === "risk" || card.id === "rollback" ? "meta-sentinel" : "meta-conductor",
       mapsToSpine: card.mapsToSpine,
       dealIndex: dealt ? orderIndex.get(card.id) + 1 : null,

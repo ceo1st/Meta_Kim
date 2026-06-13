@@ -8,6 +8,27 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.29] - 2026-06-13
+
+### Added
+
+- **Native Choice Surface Guard** - Added regression coverage that prevents Codex and Claude Code branch-changing decisions from being completed by chat-card or artifact-only fallbacks.
+- **Run Status Surface** - Added localized run-status envelopes and commands so governed runs can expose reader-facing progress without leaking internal packet names.
+
+### Changed
+
+- **Codex and Claude Code No-Downgrade Rule** - Required Codex to use `request_user_input` and Claude Code to use `AskUserQuestion` or deferred `AskUserQuestion` for required execution decisions; unavailable or empty native surfaces now block before Execution instead of degrading silently.
+- **Runtime Mirror Mapping** - Synced the canonical meta-theory skill, meta agents, runtime references, and project-local runtime mirrors across Claude Code, Codex, Cursor, and OpenClaw.
+
+### Verification
+
+- `npm run meta:sync`
+- `npm run meta:governance:validate`
+- `npm run meta:prompt:validate`
+- `npm run meta:check:runtimes`
+- `npm run meta:test:meta-theory`
+- `git diff --check`
+
 ## [2.8.28] - 2026-06-13
 
 ### Added

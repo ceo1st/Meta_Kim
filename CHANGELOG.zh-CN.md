@@ -8,6 +8,27 @@
 
 ## [Unreleased]
 
+## [2.8.29] - 2026-06-13
+
+### 新增
+
+- **原生选择面守卫** - 新增回归测试，防止 Codex 和 Claude Code 的关键分支决策被聊天卡片或纯 artifact fallback 冒充完成。
+- **运行状态面** - 新增本地化 run-status envelope 和命令，让治理运行能展示用户可读进度，同时不泄漏内部 packet 名称。
+
+### 变更
+
+- **Codex 与 Claude Code 不降级规则** - Codex 必须用 `request_user_input`，Claude Code 必须用 `AskUserQuestion` 或 deferred `AskUserQuestion` 完成必需执行决策；原生交互面不可用或返回空时，会在 Execution 前阻断，而不是静默降级。
+- **Runtime 镜像映射** - 已把 canonical meta-theory skill、meta agents、runtime references 和项目内 runtime mirrors 同步到 Claude Code、Codex、Cursor、OpenClaw。
+
+### 验证
+
+- `npm run meta:sync`
+- `npm run meta:governance:validate`
+- `npm run meta:prompt:validate`
+- `npm run meta:check:runtimes`
+- `npm run meta:test:meta-theory`
+- `git diff --check`
+
 ## [2.8.28] - 2026-06-13
 
 ### 新增
