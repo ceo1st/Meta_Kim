@@ -198,6 +198,7 @@ export function extractCommandPath(command) {
       /[\\/]/.test(t) ||
       lower.endsWith(".mjs") ||
       lower.endsWith(".js") ||
+      lower.endsWith(".cjs") ||
       lower.endsWith(".py") ||
       lower.endsWith(".sh") ||
       lower.endsWith(".ts") ||
@@ -216,23 +217,36 @@ export function extractCommandPath(command) {
       continue;
     }
 
-    // 2. Skip known options that take a parameter (like -r, -m, --require, --loader, etc.)
+    // 2. Shell command payload: recursively parse that payload
+    if (
+      token.toLowerCase() === "-c" ||
+      token.toLowerCase() === "-command" ||
+      token.toLowerCase() === "--command"
+    ) {
+      if (i + 1 < tokens.length) {
+        return extractCommandPath(tokens[i + 1]);
+      }
+    }
+
+    // 3. Skip options that take an argument
     if (
       token === "-r" ||
       token === "--require" ||
-      token === "-m" ||
-      token === "--loader"
+      token === "--loader" ||
+      token === "--experimental-loader" ||
+      token === "--import" ||
+      token === "-m"
     ) {
-      i++; // Skip the option parameter token
+      i++; // Skip the option parameter/argument token
       continue;
     }
 
-    // 3. Skip other flags (e.g. -c, --inspect, -v)
+    // 4. Skip other flags (e.g. -c, --inspect, -v, /c)
     if (token.startsWith("-") || (token.startsWith("/") && token.length === 2)) {
       continue;
     }
 
-    // 4. Check if it's a script/path-like target
+    // 5. Check if it's a script/path-like target
     if (isScriptLike(token)) {
       return token;
     }
