@@ -162,6 +162,10 @@ function customBasename(p) {
   return p.slice(lastSlash + 1);
 }
 
+function trimShellPunctuation(token) {
+  return token.replace(/^[;&|]+|[;&|]+$/g, "");
+}
+
 export function extractCommandPath(command) {
   if (typeof command !== "string") return null;
   const tokens = parseCommandTokens(command.trim());
@@ -180,75 +184,98 @@ export function extractCommandPath(command) {
     "tsx",
     "ts-node",
     "bun",
-    "deno"
+    "deno",
   ];
 
   // Helper to check if token is a runner
-  const isRunnerToken = (token) => {
+  const runnerName = (token) => {
     const base = customBasename(token).toLowerCase();
     const withoutExe = base.endsWith(".exe") ? base.slice(0, -4) : base;
-    return runners.includes(withoutExe);
+    return runners.includes(withoutExe) ? withoutExe : null;
   };
 
   // Helper to check if token is script-like/path-like
   const isScriptLike = (t) => {
     if (!t) return false;
-    const lower = t.toLowerCase();
+    const token = trimShellPunctuation(t);
+    const lower = token.toLowerCase();
+    const scriptExtension = /\.(mjs|js|cjs|py|sh|ts|tsx|bat|cmd|ps1)$/i;
     return (
-      /[\\/]/.test(t) ||
-      lower.endsWith(".mjs") ||
-      lower.endsWith(".js") ||
-      lower.endsWith(".cjs") ||
-      lower.endsWith(".py") ||
-      lower.endsWith(".sh") ||
-      lower.endsWith(".ts") ||
-      lower.endsWith(".tsx") ||
-      lower.endsWith(".bat") ||
-      lower.endsWith(".cmd") ||
-      lower.endsWith(".ps1")
+      scriptExtension.test(lower) ||
+      (/^(?:\.{1,2}|~)[\\/]/.test(token) && scriptExtension.test(lower))
     );
   };
 
+  const isShellRunner = (runner) =>
+    ["bash", "sh", "pwsh", "powershell", "cmd"].includes(runner);
+
+  const isShellPayloadFlag = (token, runner) => {
+    const lower = token.toLowerCase();
+    if (!isShellRunner(runner)) return false;
+    if (runner === "bash" || runner === "sh") return /^-[a-z]*c[a-z]*$/.test(lower);
+    if (runner === "cmd") return lower === "/c" || lower === "/k";
+    return lower === "-command" || lower === "--command" || lower === "-c";
+  };
+
+  const isShellSeparator = (token) =>
+    ["&&", "||", ";", "|", "&"].includes(token);
+
+  let activeRunner = null;
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
+    const normalized = trimShellPunctuation(token);
+    const lower = normalized.toLowerCase();
 
     // 1. Skip known runners
-    if (isRunnerToken(token)) {
+    const currentRunner = runnerName(normalized);
+    if (currentRunner) {
+      activeRunner = currentRunner;
       continue;
     }
 
     // 2. Shell command payload: recursively parse that payload
-    if (
-      token.toLowerCase() === "-c" ||
-      token.toLowerCase() === "-command" ||
-      token.toLowerCase() === "--command"
-    ) {
+    if (isShellPayloadFlag(normalized, activeRunner)) {
       if (i + 1 < tokens.length) {
         return extractCommandPath(tokens[i + 1]);
       }
+      return null;
     }
 
     // 3. Skip options that take an argument
     if (
-      token === "-r" ||
-      token === "--require" ||
-      token === "--loader" ||
-      token === "--experimental-loader" ||
-      token === "--import" ||
-      token === "-m"
+      normalized === "-r" ||
+      normalized === "--require" ||
+      normalized === "--loader" ||
+      normalized === "--experimental-loader" ||
+      normalized === "--import" ||
+      normalized === "-m"
     ) {
       i++; // Skip the option parameter/argument token
       continue;
     }
 
-    // 4. Skip other flags (e.g. -c, --inspect, -v, /c)
-    if (token.startsWith("-") || (token.startsWith("/") && token.length === 2)) {
+    // 4. Skip shell flow control that commonly appears inside -c payloads.
+    if (isShellSeparator(normalized)) {
       continue;
     }
 
-    // 5. Check if it's a script/path-like target
-    if (isScriptLike(token)) {
-      return token;
+    // 5. Skip "cd <dir>" so the directory is not mistaken for a hook target.
+    if (lower === "cd" || lower === "pushd" || lower === "popd") {
+      if (lower !== "popd") i++;
+      continue;
+    }
+
+    // 6. Skip other flags (e.g. --inspect, -v).
+    if (
+      normalized.startsWith("-") ||
+      (normalized.startsWith("/") && normalized.length === 2)
+    ) {
+      continue;
+    }
+
+    // 7. Check if it's a script/path-like target
+    if (isScriptLike(normalized)) {
+      return normalized;
     }
   }
 

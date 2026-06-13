@@ -76,6 +76,26 @@ describe("doctor-hooks extractCommandPath", () => {
       extractCommandPath('pwsh -Command .claude/hooks/foo.ps1'),
       ".claude/hooks/foo.ps1"
     );
+    assert.strictEqual(
+      extractCommandPath('bash -lc "node .claude/hooks/foo.mjs"'),
+      ".claude/hooks/foo.mjs"
+    );
+    assert.strictEqual(
+      extractCommandPath('bash -lc "cd C:/repo && node .claude/hooks/foo.mjs"'),
+      ".claude/hooks/foo.mjs"
+    );
+    assert.strictEqual(
+      extractCommandPath('sh -c "cd C:/repo && node .claude/hooks/foo.mjs"'),
+      ".claude/hooks/foo.mjs"
+    );
+    assert.strictEqual(
+      extractCommandPath('sh -c "cd C:/repo; node .claude/hooks/foo.mjs"'),
+      ".claude/hooks/foo.mjs"
+    );
+    assert.strictEqual(
+      extractCommandPath("C:/repo"),
+      null
+    );
   });
 
   test("should handle node loader, import and experimental options", () => {

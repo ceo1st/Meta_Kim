@@ -78,7 +78,7 @@ Conductor manages the `choiceSurfaceState` field lifecycle as part of pre-decisi
 2. Set to `critical_clarification_allowed` only when `intentFrameAssessment` marks a missing or conflicting dimension as execution-changing
 3. Set to `execution_confirmation_allowed` only after both `fetchRecord.capabilitySearchPerformed = true` AND `preDecisionOptionFrame` exists
 4. Set to `completed` after user responds via native question tool OR `solutionChoiceState` records a valid skip (`trivial`/`no_branching_choice`/`auto-proceed`)
-5. If the active runtime is Codex or Claude Code, Conductor must use the primary native choice surface (`request_user_input` or `AskUserQuestion`) for the allowed state; missing, empty, rejected, or stripped native UI blocks or returns to the responsible stage and must not be treated as a chat-card fallback
+5. If the active runtime is Codex or Claude Code, Conductor must use that runtime's primary native choice surface named by its runtime reference for the allowed state; missing, empty, rejected, or stripped native UI blocks or returns to the responsible stage and must not be treated as a chat-card fallback
 6. For compatibility runtimes only, a verified conversation fallback may keep the run inspectable; it does not change the Codex / Claude Code no-downgrade rule
 7. Reset to `not_allowed` if scope materially changes
 
