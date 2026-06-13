@@ -8,6 +8,30 @@
 
 ## [Unreleased]
 
+## [2.8.31] - 2026-06-14
+
+### 新增
+
+- **Agent Teams Playbook 门禁** - 新增 P-110 支撑门和 `agentTeamsPlaybookPacket`，让默认治理路线在出现两条及以上独立可执行 worker lane 时选中 `agent-teams-playbook`，按最多 5 个 agent 分 wave；单 lane 任务记录为 `not_required`。
+- **能力调用真实性层** - 新增 `agent_teams_playbook` 调用状态，避免把 selected provider、live subagent 调用、MCP、skill、command、hook 或本地 worker 互相冒充。
+- **产品体验 Validator** - 新增 PRD/product validator，覆盖三大核心目标和支撑门，包括 LangGraph-style run packet、Dynamic Workflow 覆盖、用户可见运行面、能力调用真实性和 agent-teams 适配。
+
+### 变更
+
+- **Codex Meta-Theory Runtime** - 收紧 Codex `/meta-theory` 适配器和 meta-conductor prompt：`agent-teams-playbook` 只在真实并行 worker lane 中选中，不会套到所有非平凡任务上。
+- **依赖登记** - 将 `agent-teams-playbook` 从 external reference 提升为 installed skill candidate，并加入兼容验证与不得越级宣称 live 调用的边界。
+- **发布 Smoke 覆盖** - `meta:release:smoke` 现在包含 `agent-teams-playbook` 集成测试。
+
+### 验证
+
+- `npm run meta:deps:compat`
+- `npm run meta:prd:product-experience:validate`
+- `npm run meta:prd:default-execution:validate`
+- `npm run meta:prompt:validate`
+- `npm run meta:graphify:check`
+- `npm run meta:release:smoke`
+- Codex live probe 从线程 `019ec26d-8837-77b2-95c8-1361bcb91128` 创建 reviewer 子智能体 `019ec274-15a4-7603-9986-335dad22c699`；`wait_agent` 回流被中断，因此完整 Review 回流闭环仍只算 partial 证据。
+
 ## [2.8.30] - 2026-06-13
 
 ### 变更
