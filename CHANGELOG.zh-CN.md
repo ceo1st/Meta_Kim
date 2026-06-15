@@ -8,6 +8,27 @@
 
 ## [Unreleased]
 
+## [2.8.40] - 2026-06-16
+
+### 变更
+
+- **Prompt 入口治理激活** - Claude Code 和 Codex 的项目级 prompt 入口现在会运行 meta-theory spine hook；自然语言 durable work 和 `critical/fetch/thinking/review` 说法可以在执行前触发治理，不再只依赖显式 Skill 激活。
+- **Claude 全局项目就绪检测** - Claude Code 全局 hooks 现在会安装 prompt-entry bootstrap hook package，并带 package-root 证据；旧项目或未 bootstrap 项目会先收到精简的项目就绪原因，再决定是否应用项目文件。
+- **项目 Bootstrap 安全边界** - Project bootstrap 仍然坚持 dry-run first 和确认门；stale 或 equivalent 项目只显示 `status`、active targets、reason 和 native choice 要求，不会静默写入。
+- **Spine 死锁解除** - 即使 Fetch 正在等待 `fetchRecord`，spine-state 写入也会放行，避免 prompt-entry 实机测试后维护者无法写入 Fetch 证据或关闭运行态。
+- **全局能力证据刷新** - 安装新的 hook package 后刷新全局能力发现；库存现在能看到 Meta_Kim 全局 prompt-entry hook，以及 agents、skills、commands、MCP servers/tools、plugins 和 runtime hooks。
+
+### 验证
+
+- `node --test tests/setup/graphify-wiring-contract.test.mjs tests/meta-theory/11-eight-stage-spine.test.mjs tests/setup/sync-runtimes-manifest.test.mjs tests/setup/sync-global-hooks-policy.test.mjs tests/meta-theory/47-meta-theory-entry-classifier.test.mjs tests/governance/capability-routing.test.mjs`
+- `node --check canonical/runtime-assets/shared/hooks/activate-meta-theory-spine.mjs`
+- `node --check canonical/runtime-assets/claude/hooks/enforce-agent-dispatch.mjs`
+- `npm run meta:sync`
+- `npm run meta:sync:global -- --with-global-hooks`
+- `npm run discover:global`
+- 在 `D:/KimProject/游戏策划案` 中执行 Claude Code 全局 `UserPromptSubmit` 实机 smoke
+- 在 `D:/KimProject/Meta_Kim` 中执行 Codex 项目 `UserPromptSubmit` 实机 smoke
+
 ## [2.8.39] - 2026-06-16
 
 ### 变更

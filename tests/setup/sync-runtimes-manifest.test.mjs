@@ -347,7 +347,12 @@ describe("sync-runtimes / Codex project hooks", () => {
     const config = buildCodexProjectHooksJson();
 
     assert.equal(config.hooks.SessionStart, undefined);
-    assert.equal(config.hooks.UserPromptSubmit, undefined);
+    assert.ok(
+      config.hooks.UserPromptSubmit[0].hooks.some((hook) =>
+        hook.command.includes("activate-meta-theory-spine.mjs"),
+      ),
+      "Codex project prompt entry must run the meta-theory spine hook",
+    );
     assert.equal(config.hooks.Stop, undefined);
     const allCommands = JSON.stringify(config);
     assert.doesNotMatch(allCommands, /meta-kim-memory-save\.mjs/);
@@ -357,12 +362,17 @@ describe("sync-runtimes / Codex project hooks", () => {
 
   test("wires meta-theory Skill activation to the spine hook", () => {
     const config = buildCodexProjectHooksJson();
+    const promptEntry = config.hooks.UserPromptSubmit[0].hooks.find((hook) =>
+      hook.command.includes("activate-meta-theory-spine.mjs"),
+    );
     const skillEntry = config.hooks.Skill.find((entry) =>
       entry.hooks?.some((hook) =>
         hook.command?.includes("activate-meta-theory-spine.mjs"),
       ),
     );
 
+    assert(promptEntry, "prompt-entry spine hook should be registered");
+    assert.equal(promptEntry.timeout, 5);
     assert(skillEntry, "meta-theory spine hook should be registered");
     assert.equal(skillEntry.matcher, "meta-theory");
     assert.equal(skillEntry.hooks[0].timeout, 5);
@@ -384,9 +394,11 @@ describe("sync-runtimes / Codex project hooks", () => {
       hookPromptAdapterPath: ".codex/hooks/hookprompt-adapter.mjs",
     });
 
-    assert.match(
-      config.hooks.UserPromptSubmit[0].hooks[1].command,
-      /hookprompt-adapter\.mjs/,
+    assert.ok(
+      config.hooks.UserPromptSubmit[0].hooks.some((hook) =>
+        /hookprompt-adapter\.mjs/.test(hook.command),
+      ),
+      "Codex UserPromptSubmit should include HookPrompt adapter when configured",
     );
   });
 

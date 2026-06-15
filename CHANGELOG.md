@@ -8,6 +8,27 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.40] - 2026-06-16
+
+### Changed
+
+- **Prompt-Entry Governance Activation** - Claude Code and Codex project prompt entries now run the meta-theory spine hook, so natural-language durable work and `critical/fetch/thinking/review` wording can trigger governance before execution instead of relying only on explicit skill activation.
+- **Global Claude Project Readiness Detection** - Claude Code global hooks now install the prompt-entry bootstrap hook package with package-root evidence, allowing stale or unbootstrapped projects to receive a concise project readiness reason before any bootstrap write.
+- **Project Bootstrap Safety Boundary** - Project bootstrap remains dry-run first and confirmation-gated; stale or equivalent projects surface `status`, active targets, reason, and the native choice requirement without silently applying project files.
+- **Spine Deadlock Breaker** - Spine-state writes are now allowed even when Fetch is waiting for `fetchRecord`, preventing prompt-entry smoke runs from locking maintainers out of the state file needed to record Fetch evidence.
+- **Global Capability Evidence Refresh** - Refreshed global capability discovery after installing the new hook package; the inventory now includes the Meta_Kim global prompt-entry hook alongside agents, skills, commands, MCP servers/tools, plugins, and runtime hooks.
+
+### Verification
+
+- `node --test tests/setup/graphify-wiring-contract.test.mjs tests/meta-theory/11-eight-stage-spine.test.mjs tests/setup/sync-runtimes-manifest.test.mjs tests/setup/sync-global-hooks-policy.test.mjs tests/meta-theory/47-meta-theory-entry-classifier.test.mjs tests/governance/capability-routing.test.mjs`
+- `node --check canonical/runtime-assets/shared/hooks/activate-meta-theory-spine.mjs`
+- `node --check canonical/runtime-assets/claude/hooks/enforce-agent-dispatch.mjs`
+- `npm run meta:sync`
+- `npm run meta:sync:global -- --with-global-hooks`
+- `npm run discover:global`
+- Claude Code global `UserPromptSubmit` smoke in `D:/KimProject/游戏策划案`
+- Codex project `UserPromptSubmit` smoke in `D:/KimProject/Meta_Kim`
+
 ## [2.8.39] - 2026-06-16
 
 ### Changed
