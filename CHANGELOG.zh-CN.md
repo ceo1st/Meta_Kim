@@ -8,6 +8,27 @@
 
 ## [Unreleased]
 
+## [2.8.37] - 2026-06-16
+
+### 变更
+
+- **深度 Review 门禁** - Prompt-first live acceptance 现在要求 Review 证明已检查证据质量、反证、决策影响、可证伪性和上游阶段链路，不再只靠 packet 存在就通过。
+- **Meta-Review 深度审计** - 新增机械化深度审计：拒绝浅层 packet-only Review，检查对抗覆盖和审查盲区，并把 public-ready 证据与 live/runtime 证据分开。
+- **Evolution 策略证据** - Evolution 的 `none-with-reason` 现在必须证明已判断可复用模式、写回目标、scar 需求和下次复用 key。
+- **Strict Live Acceptance 回归** - 新增回归覆盖，确保缺失或浅层 Review / Meta-Review / Evolution packet 会失败，而不是被 fallback 数据补成通过。
+
+### 验证
+
+- `node --test tests/governance/prompt-first-live-acceptance.test.mjs`
+- `node --test tests/governance/decision-cross-validation.test.mjs tests/governance/prompt-first-live-acceptance.test.mjs`
+- `npm run meta:check`
+- `npm run meta:test:meta-theory`
+- `npm run meta:sync`
+- `npm run discover:global`
+- `npm run meta:check:global`
+- `npm run meta:prd:prompt-first-live:validate`
+- `git diff --check`
+
 ## [2.8.36] - 2026-06-16
 
 ### 变更

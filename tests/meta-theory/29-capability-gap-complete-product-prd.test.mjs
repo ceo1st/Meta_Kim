@@ -1159,6 +1159,22 @@ describe("29 — Capability Gap complete product PRD", () => {
     }
   });
 
+  test("records v0.68 strict live normalization correction for prompt-first acceptance", () => {
+    for (const marker of [
+      "v0.68 correction",
+      "strict live normalization",
+      "Codex P-088 live pass",
+      "Claude Code P-087 blocked",
+      "P-089 parity fail",
+      "P-091 fail",
+      "primaryRuntimePerfection = false",
+      "prompt-first live normalization does not synthesize Review Meta-Review or Evolution pass packets",
+      "harness fallback",
+    ]) {
+      assert.match(prd, new RegExp(marker), `missing v0.68 strict live correction marker ${marker}`);
+    }
+  });
+
   test("records v0.48 P-068 to P-070 default governance and execution evidence closure", () => {
     for (const marker of [
       "版本：v0.48",

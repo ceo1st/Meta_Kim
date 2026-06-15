@@ -8,6 +8,27 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.37] - 2026-06-16
+
+### Changed
+
+- **Deep Review Gates** - Upgraded prompt-first live acceptance so Review must prove evidence quality, counterevidence, decision impact, falsification checks, and upstream stage trace instead of passing on packet presence alone.
+- **Meta-Review Depth Audit** - Added a mechanical depth audit that rejects shallow packet-only Review, checks adversarial coverage and blind spots, and keeps public-ready evidence separate from live/runtime proof.
+- **Evolution Strategy Evidence** - Required Evolution to show reusable-pattern, writeback-target, scar-need, and next-run reuse-key assessment before a `none-with-reason` writeback decision can pass.
+- **Strict Live Acceptance Regression** - Added regression coverage so missing or shallow Review / Meta-Review / Evolution packets fail strict live normalization rather than being filled by fallback data.
+
+### Verification
+
+- `node --test tests/governance/prompt-first-live-acceptance.test.mjs`
+- `node --test tests/governance/decision-cross-validation.test.mjs tests/governance/prompt-first-live-acceptance.test.mjs`
+- `npm run meta:check`
+- `npm run meta:test:meta-theory`
+- `npm run meta:sync`
+- `npm run discover:global`
+- `npm run meta:check:global`
+- `npm run meta:prd:prompt-first-live:validate`
+- `git diff --check`
+
 ## [2.8.36] - 2026-06-16
 
 ### Changed
