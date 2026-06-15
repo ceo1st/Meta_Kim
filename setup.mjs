@@ -5233,6 +5233,19 @@ function runNodeScript(scriptRelative, extraArgs = [], envOverrides = {}) {
   return spawnSync(spawnConfig.command, spawnConfig.args, mergedOptions);
 }
 
+function refreshGlobalCapabilityInventory() {
+  info("Refreshing global capability inventory (discover:global)...");
+  const result = runNodeScript("scripts/discover-global-capabilities.mjs");
+  if (result.status === 0) {
+    ok("Global capability inventory refreshed");
+    return true;
+  }
+  warn(
+    "Global capability discovery failed; run `npm run discover:global` after setup/update.",
+  );
+  return false;
+}
+
 function metaTheoryGlobalSyncArgs(targets, options = {}) {
   const targetList = Array.isArray(targets) ? targets.join(",") : String(targets);
   const syncArgs = ["--targets", targetList];
@@ -7108,6 +7121,12 @@ async function runInstall() {
     });
   }
 
+  stepNum++;
+  await withProgress(
+    t.stepLabel(stepNum, "Refresh global capability inventory"),
+    async () => refreshGlobalCapabilityInventory(),
+  );
+
   // [Optional] Python tools (graphify)
   stepNum++;
   await withProgress(
@@ -7274,6 +7293,10 @@ async function runUpdate() {
       skip(`${C.dim}${t.metaTheorySkipped}${C.reset}`);
     }
   }
+
+  // ── 5.5. Refresh global capability inventory ───────────────────────
+  console.log("");
+  refreshGlobalCapabilityInventory();
 
   // ── 6. checkSync (repo-local, project scope) ───────────────────────
   const { supportedTargets } = await resolveTargetContext(args);

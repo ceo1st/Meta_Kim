@@ -8,6 +8,28 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.36] - 2026-06-16
+
+### Changed
+
+- **Professional Provider-First Routing** - Made governed routes prefer existing global/project professional providers before creating or upgrading execution agents, with explicit coverage for agents, skills, commands, MCP providers/tools, runtime tools, hooks, plugins, memory/graph providers, and dependency providers.
+- **WorkerTask Identity Boundary** - Clarified and validated that `workerTaskPacket` is a run-scoped work order for a selected owner/loadout, not a temporary small agent, subagent definition, or durable provider identity.
+- **Automatic Global Capability Refresh** - Updated setup/update and global dependency install/update flows to refresh the local global capability inventory automatically after runtime homes change, while keeping machine-specific inventory out of GitHub source.
+- **Capability Gap Evidence** - Added `fetch.global_professional_providers_checked` evidence and regression coverage so `create_agent` decisions must prove existing professional providers were checked first.
+- **Setup Regression Coverage** - Added release tests for automatic global inventory refresh and fixed the project-deploy protected JSON merge test to match the current planning/write split.
+
+### Verification
+
+- `npm run meta:release:smoke`
+- `npm run meta:test:setup`
+- `npm run meta:validate`
+- `npm run discover:global`
+- `npm run meta:gap:real-input-replay`
+- `npm run meta:prd:smooth-capability:validate`
+- `npm run meta:runtime:validate`
+- `npm run meta:graphify:rebuild`
+- `git diff --check`
+
 ## [2.8.35] - 2026-06-16
 
 ### Changed

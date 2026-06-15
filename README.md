@@ -791,7 +791,7 @@ The three memory layers work together toward two core goals:
 | --- | --- |
 | `node setup.mjs` | Interactive install / update / check wizard |
 | `git pull --ff-only` | For clone installs, pull the latest Meta_Kim source from GitHub |
-| `node setup.mjs --update` | Refresh the current installation projections, skills, and dependencies; it does not pull Meta_Kim source code |
+| `node setup.mjs --update` | Refresh the current installation projections, skills, dependencies, and local global capability inventory; it does not pull Meta_Kim source code |
 | `node setup.mjs --update --project-dir <dir> --project-dir <dir>` | Refresh project-level runtime files in explicit project directories |
 | `node setup.mjs --update --all-projects` | Refresh project-level runtime files in saved project directories |
 | `node setup.mjs --check` | Environment check without writing |
@@ -851,8 +851,10 @@ Start with `package.json` scripts. The supported maintenance paths are the `meta
 | `npm run meta:deps:install` | Install the 9 community skills globally for the default Claude Code + Codex path |
 | `npm run meta:deps:install:all-runtimes` | Explicitly install them into Claude Code, Codex, OpenClaw, and Cursor |
 | `npm run meta:deps:install:claude-plugins` | Install Claude Code marketplace plugins only |
-| `npm run discover:global` | Scan global capabilities |
+| `npm run discover:global` | Manually refresh the local global capability inventory; setup/update and dependency install/update run this automatically after global capability changes |
 | `npm run meta:sync:global` | Sync meta-theory to the user-level runtime |
+
+Global dependency install/update commands refresh `.meta-kim/state/{profile}/capability-index/global-capabilities.json` after they modify runtime homes, so newly installed agents, skills, commands, MCP providers, hooks, plugins, and runtime tools are available to capability-first routing without a separate manual scan.
 
 `planning-with-files` is a core external dependency, not a project-local `.agents/skills/` mirror. After dependency install, check runtime home directories such as `~/.codex/skills/planning-with-files/`, `~/.claude/skills/planning-with-files/`, `~/.cursor/skills/planning-with-files/`, or `~/.openclaw/skills/planning-with-files/`. Do not conclude it is missing from the absence of `.agents/skills/planning-with-files/` alone.
 

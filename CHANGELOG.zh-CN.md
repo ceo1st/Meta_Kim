@@ -8,6 +8,28 @@
 
 ## [Unreleased]
 
+## [2.8.36] - 2026-06-16
+
+### 变更
+
+- **专业 Provider 优先路由** - 治理路线现在必须先查已有的全局/项目专业 provider，再考虑创建或升级 execution agent；覆盖 agents、skills、commands、MCP providers/tools、runtime tools、hooks、plugins、memory/graph providers 和 dependency providers。
+- **WorkerTask 身份边界** - 明确并验证 `workerTaskPacket` 只是绑定到已选 owner/loadout 的单次运行工作单，不是临时小 agent、subagent definition 或长期 provider 身份。
+- **全局能力库存自动刷新** - 安装/更新和全局依赖安装/更新流程会在 runtime home 变化后自动刷新本地 global capability inventory，同时仍然不把机器私有库存提交到 GitHub 源码。
+- **能力缺口证据** - 新增 `fetch.global_professional_providers_checked` 证据和回归覆盖，要求 `create_agent` 决策先证明已有专业 provider 已经查过且不足。
+- **Setup 回归覆盖** - 新增自动刷新全局库存的发布测试，并修正 project deploy 保护式 JSON merge 测试，使其匹配当前“先规划、再写入”的实现结构。
+
+### 验证
+
+- `npm run meta:release:smoke`
+- `npm run meta:test:setup`
+- `npm run meta:validate`
+- `npm run discover:global`
+- `npm run meta:gap:real-input-replay`
+- `npm run meta:prd:smooth-capability:validate`
+- `npm run meta:runtime:validate`
+- `npm run meta:graphify:rebuild`
+- `git diff --check`
+
 ## [2.8.35] - 2026-06-16
 
 ### 变更
