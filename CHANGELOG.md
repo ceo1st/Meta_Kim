@@ -8,6 +8,23 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.35] - 2026-06-16
+
+### Changed
+
+- **Decision-Grade Deep Research** - Upgraded Fetch evidence from source collection to key-information targeting, iterative query/read/update logs, explicit stop conditions, and decision-update rules before Thinking.
+- **Claim Evidence Cards** - Added `claimEvidenceCards` and stricter run-artifact validation so route-changing claims must cite resolvable evidence refs, counterevidence, confidence, falsification status, and decision impact.
+- **Research Execution Proof** - Extended live research execution packets with query iteration counts, evidence-gap closure, confidence-before/after updates, and falsification attempts, keeping blocked evidence out of Thinking.
+- **Canonical Governance Alignment** - Updated Scout, Conductor, Prism, and the meta-theory dispatcher so deep research quality is enforced by role responsibilities, generated packets, validators, fixtures, and regression tests rather than prompt wording alone.
+
+### Verification
+
+- `node scripts/run-node-tests.mjs "tests/meta-theory/02-clarity-gate.test.mjs" "tests/meta-theory/37-research-preparation-layer.test.mjs" "tests/meta-theory/44-research-execution-and-innovation.test.mjs" "tests/meta-theory/09-run-artifact-validator.test.mjs"`
+- `npm run meta:check`
+- `npm run meta:release:smoke`
+- `node scripts/run-node-tests.mjs "tests/meta-theory/09-run-artifact-validator.test.mjs"`
+- `git diff --check`
+
 ## [2.8.34] - 2026-06-16
 
 ### Changed

@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+## [2.8.35] - 2026-06-16
+
+### 变更
+
+- **决策级 Deep Research** - 将 Fetch 证据从“收集来源”升级为“锁定关键信息目标、记录多轮 query/read/update、声明停止条件、写入决策更新规则”，再进入 Thinking。
+- **Claim Evidence Cards** - 新增 `claimEvidenceCards` 和更严格的 run artifact 校验；会改变路线的 claim 必须绑定可解析 evidence refs、反证记录、置信度、falsification 状态和决策影响。
+- **研究执行证据** - 扩展 live research execution packet，记录 query 迭代次数、证据 gap 是否关闭、confidence 前后变化和反证尝试，避免 blocked evidence 被带入 Thinking。
+- **Canonical 治理对齐** - 更新 Scout、Conductor、Prism 和 meta-theory dispatcher，让 deep research 质量由角色责任、生成 packet、validator、fixtures 和回归测试共同约束，而不是只靠提示词描述。
+
+### 验证
+
+- `node scripts/run-node-tests.mjs "tests/meta-theory/02-clarity-gate.test.mjs" "tests/meta-theory/37-research-preparation-layer.test.mjs" "tests/meta-theory/44-research-execution-and-innovation.test.mjs" "tests/meta-theory/09-run-artifact-validator.test.mjs"`
+- `npm run meta:check`
+- `npm run meta:release:smoke`
+- `node scripts/run-node-tests.mjs "tests/meta-theory/09-run-artifact-validator.test.mjs"`
+- `git diff --check`
+
 ## [2.8.34] - 2026-06-16
 
 ### 变更

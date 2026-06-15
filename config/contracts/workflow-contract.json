@@ -1700,6 +1700,8 @@
         "contradictionLog",
         "assumptionLedger",
         "decisionImpactMap",
+        "iterationLog",
+        "claimEvidenceCards",
         "researchRequired",
         "researchSkipReason",
         "evidenceLaneValidatedBy",
@@ -1724,7 +1726,11 @@
           "claimAttributionRules",
           "crossCheckStrategy",
           "originalSynthesisRules",
-          "decisionImpactCriteria"
+          "decisionImpactCriteria",
+          "keyInformationTargets",
+          "iterationPlan",
+          "stopCondition",
+          "decisionUpdateRule"
         ],
         "sourceQualityLadder": [
           "primary_official_docs",
@@ -1756,6 +1762,41 @@
           ]
         }
       },
+      "iterationLogQualityGate": {
+        "minimumIterationLogEntries": 1,
+        "requiredFields": [
+          "iteration",
+          "trigger",
+          "queryOrAction",
+          "observation",
+          "gapClosed",
+          "nextStepDecision",
+          "stopCheck"
+        ]
+      },
+      "claimEvidenceCardQualityGate": {
+        "minimumClaimEvidenceCards": 1,
+        "requiredFields": [
+          "claim",
+          "sourceRefs",
+          "evidenceAnchor",
+          "confidence",
+          "counterevidence",
+          "decisionImpact",
+          "falsificationStatus"
+        ],
+        "confidenceEnum": [
+          "low",
+          "moderate",
+          "high"
+        ],
+        "falsificationStatusEnum": [
+          "tested_survived",
+          "tested_refuted",
+          "unverified",
+          "blocked"
+        ]
+      },
       "evidenceScopeEnum": [
         "local_project",
         "external_research",
@@ -1777,7 +1818,9 @@
         "crossReferenceMatrix",
         "contradictionLog",
         "assumptionLedger",
-        "decisionImpactMap"
+        "decisionImpactMap",
+        "iterationLog",
+        "claimEvidenceCards"
       ],
       "decisionImpactMapRequiredFields": [
         "finding",
