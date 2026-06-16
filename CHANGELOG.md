@@ -8,6 +8,25 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## [Unreleased]
 
+## [2.8.43] - 2026-06-16
+
+### Solved Problem
+
+This release addresses confusing and overly broad project skill projection. Project runtime mirrors were syncing every canonical skill file, so users saw "17 files updated" and could reasonably suspect non-meta assets had been installed as project skills. Project mirrors now expose only the runtime-approved `meta-theory` skill, while internal canonical skills remain available through the canonical source tree and capability index.
+
+### Changed
+
+- **Project Skill Allowlist** - Runtime project skill mirrors now sync only `meta-theory` instead of the full `canonical/skills` tree.
+- **Stale Mirror Cleanup** - Repo-local runtime mirrors prune canonical skills that are not approved for project projection, so old `same-set-reusable-flow-for-project-file-inventor` mirrors do not continue leaking into project bootstrap sources.
+- **Regression Coverage** - Setup tests now assert that project bootstrap never plans `same-set-reusable-flow-for-project-file-inventor` as a runtime skill file.
+
+### Verification
+
+- `npm run meta:sync`
+- `node --test tests/setup/capability-index-inheritance-chain.test.mjs tests/setup/lazy-project-bootstrap.test.mjs`
+- `npm run meta:check`
+- `npm run meta:test:setup`
+
 ## [2.8.42] - 2026-06-16
 
 ### Solved Problem

@@ -8,6 +8,25 @@
 
 ## [Unreleased]
 
+## [2.8.43] - 2026-06-16
+
+### 解决的问题
+
+本次解决的是项目级 skill 投射范围过宽、输出容易误导的问题。之前项目 runtime mirror 会同步所有 canonical skill 文件，所以用户看到“已更新 17 个文件”时，很容易判断为非 meta 能力被装进了项目级 skills。现在项目 mirror 只暴露 runtime 批准的 `meta-theory` skill；内部辅助 canonical skill 仍保留在主源和 capability index 中。
+
+### 变更
+
+- **项目 Skill 白名单** - 项目级 runtime skill mirror 现在只同步 `meta-theory`，不再全量同步 `canonical/skills`。
+- **陈旧镜像清理** - Repo-local runtime mirror 会清理不允许项目投射的 canonical skill，避免旧的 `same-set-reusable-flow-for-project-file-inventor` 继续进入 project bootstrap 来源。
+- **回归测试** - Setup 测试新增断言，确保 project bootstrap 不会把 `same-set-reusable-flow-for-project-file-inventor` 规划成 runtime skill 文件。
+
+### 验证
+
+- `npm run meta:sync`
+- `node --test tests/setup/capability-index-inheritance-chain.test.mjs tests/setup/lazy-project-bootstrap.test.mjs`
+- `npm run meta:check`
+- `npm run meta:test:setup`
+
 ## [2.8.42] - 2026-06-16
 
 ### 解决的问题

@@ -121,6 +121,13 @@ test("lazy project bootstrap dry-run exposes source chain and writes nothing", (
     }
 
     const byRel = new Map(plan.files.map((file) => [file.relPath, file]));
+    assert.equal(
+      plan.files.some((file) =>
+        file.relPath.includes("same-set-reusable-flow-for-project-file-inventor"),
+      ),
+      false,
+      "project bootstrap must not project internal canonical skills into runtime skill mirrors",
+    );
     assert.equal(byRel.get("AGENTS.md")?.mergePolicy, "generated_projection_create");
     assert.equal(
       byRel.get(".agents/skills/meta-theory/SKILL.md")?.mergePolicy,
