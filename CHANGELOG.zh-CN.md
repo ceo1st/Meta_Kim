@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+## [2.8.44] - 2026-06-16
+
+### 解决的问题
+
+本次解决的是项目更新提醒被错误跳过的问题。之前 prompt-entry 的每日探测缓存是跨项目生效的：如果当天某个临时项目或其他项目已经留下“无需确认”的缓存，Claude Code 再进入当前项目时，可能就不再跑 project bootstrap dry-run。结果就是像 `D:/KimProject/游戏策划案` 这种仍停在旧 Meta_Kim 版本的项目，没有看到应该出现的 stale/update 提醒。
+
+### 变更
+
+- **按项目隔离每日探测缓存** - Prompt-entry bootstrap 缓存现在只有在同一项目路径、同一 package version、同一天，并且上次结果无需确认时才算 fresh。
+- **禁止跨项目压制检查** - 其他项目留下的缓存不能再阻止 `activate-meta-theory-spine.mjs` 对当前项目重新执行 project bootstrap dry-run。
+- **需要确认的结果不再被当作通过** - 只要 dry-run 结果需要用户确认，就不会被当成可跳过后续检查的 pass-through cache。
+- **测试状态隔离** - Setup 测试改用临时 global state 目录写每日探测缓存，避免回归测试污染用户真实的全局 Meta_Kim 状态。
+
+### 验证
+
+- `node --test tests/setup/graphify-wiring-contract.test.mjs`
+
 ## [2.8.43] - 2026-06-16
 
 ### 解决的问题

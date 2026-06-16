@@ -288,12 +288,21 @@ function writeDailyProbeCache(summary, status = "checked", packageUpdateReminder
   }
 }
 
-function dailyProbeCacheFresh() {
+function normalizePathKey(value) {
+  return String(value ?? "").replace(/\\/g, "/").toLowerCase();
+}
+
+function dailyProbeCacheFreshForCurrentProject() {
   const cache = readDailyProbeCache();
   if (!cache || cache.dateKey !== dayKey) return false;
   const root = candidatePackageRoot();
   const version = readPackageVersionAt(root);
-  return Boolean(cache.updateFlag) && cache.packageVersion === version;
+  return (
+    cache.updateFlag === "current_or_no_confirmation" &&
+    cache.requiresConfirmation !== true &&
+    normalizePathKey(cache.projectDir) === normalizePathKey(cwd) &&
+    cache.packageVersion === version
+  );
 }
 
 function projectBootstrapProbeCommands() {
@@ -453,7 +462,7 @@ if (!activation.triggered) {
 
 startPostCopyAutoInit();
 const canonicalPackageRoot = isCanonicalPackageRoot();
-const dailyCacheFresh = dailyProbeCacheFresh();
+const dailyCacheFresh = dailyProbeCacheFreshForCurrentProject();
 const packageUpdateReminder = dailyCacheFresh ? null : buildPackageUpdateReminder();
 const packageUpdateReminderContext = formatPackageUpdateReminder(packageUpdateReminder);
 const projectBootstrapProbe =

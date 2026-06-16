@@ -352,7 +352,7 @@ describe("graphify idempotent wiring (contract)", () => {
     }
   });
 
-  test("project bootstrap prompt-entry probe is throttled once per day across projects", () => {
+  test("project bootstrap prompt-entry ready cache is scoped to the same project", () => {
     const firstProject = mkdtempSync(path.join(os.tmpdir(), "meta-kim-daily-probe-a-"));
     const secondProject = mkdtempSync(path.join(os.tmpdir(), "meta-kim-daily-probe-b-"));
     const globalStateDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-global-state-"));
@@ -377,18 +377,24 @@ describe("graphify idempotent wiring (contract)", () => {
         encoding: "utf8",
         timeout: 120_000,
         windowsHide: true,
-        env,
+        env: {
+          ...env,
+          META_KIM_PROJECT_BOOTSTRAP_PROBE: "off",
+        },
       });
       assert.equal(first.status, 0, first.stderr || first.stdout);
-      const firstOutput = JSON.parse(first.stdout);
-      assert.equal(firstOutput.decision, "block");
-      assert.match(firstOutput.reason, /status=missing/);
+      assert.equal(first.stdout.trim(), "");
+      assert.equal(
+        existsSync(path.join(firstProject, ".meta-kim", "state", "default", "spine", "spine-state.json")),
+        true,
+      );
 
       const cachePath = path.join(globalStateDir, "project-bootstrap-daily-probe.json");
       const cache = JSON.parse(readFileSync(cachePath, "utf8"));
-      assert.equal(cache.status, "needs_confirmation");
-      assert.equal(cache.updateFlag, "needs_confirmation");
-      assert.equal(cache.projectStatus, "missing");
+      assert.equal(cache.status, "ready_or_no_confirmation");
+      assert.equal(cache.updateFlag, "current_or_no_confirmation");
+      assert.equal(cache.projectDir, firstProject);
+      assert.equal(cache.requiresConfirmation, false);
       assert.equal(cache.packageVersion, JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version);
 
       const second = spawnSync(process.execPath, [hookPath, "--package-root", root], {
@@ -400,15 +406,72 @@ describe("graphify idempotent wiring (contract)", () => {
         env,
       });
       assert.equal(second.status, 0, second.stderr || second.stdout);
-      assert.equal(second.stdout.trim(), "");
-      assert.equal(
-        existsSync(path.join(secondProject, ".meta-kim", "state", "default", "spine", "spine-state.json")),
-        true,
-      );
+      const secondOutput = JSON.parse(second.stdout);
+      assert.equal(secondOutput.decision, "block");
+      assert.match(secondOutput.reason, /status=missing/);
+      assert.equal(existsSync(path.join(secondProject, ".meta-kim")), false);
       assert.equal(existsSync(path.join(secondProject, ".meta-kim", "state", "default", "project-bootstrap.json")), false);
     } finally {
       rmSync(firstProject, { recursive: true, force: true });
       rmSync(secondProject, { recursive: true, force: true });
+      rmSync(globalStateDir, { recursive: true, force: true });
+    }
+  });
+
+  test("project bootstrap prompt-entry ready cache can throttle the same project once per day", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-daily-probe-same-project-"));
+    const globalStateDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-global-state-"));
+    try {
+      const hookPath = path.join(
+        root,
+        "canonical/runtime-assets/shared/hooks/activate-meta-theory-spine.mjs",
+      );
+      const hookInput = JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        prompt:
+          "critical and fetch thinking and review 帮我修复项目入口，完成后实机测试",
+      });
+      const env = {
+        ...process.env,
+        META_KIM_GLOBAL_STATE_DIR: globalStateDir,
+      };
+
+      const first = spawnSync(process.execPath, [hookPath, "--package-root", root], {
+        cwd: tempDir,
+        input: hookInput,
+        encoding: "utf8",
+        timeout: 120_000,
+        windowsHide: true,
+        env: {
+          ...env,
+          META_KIM_PROJECT_BOOTSTRAP_PROBE: "off",
+        },
+      });
+      assert.equal(first.status, 0, first.stderr || first.stdout);
+      assert.equal(first.stdout.trim(), "");
+
+      rmSync(path.join(tempDir, ".meta-kim", "state", "default", "spine"), {
+        recursive: true,
+        force: true,
+      });
+
+      const second = spawnSync(process.execPath, [hookPath, "--package-root", root], {
+        cwd: tempDir,
+        input: hookInput,
+        encoding: "utf8",
+        timeout: 120_000,
+        windowsHide: true,
+        env,
+      });
+      assert.equal(second.status, 0, second.stderr || second.stdout);
+      assert.equal(second.stdout.trim(), "");
+      assert.equal(
+        existsSync(path.join(tempDir, ".meta-kim", "state", "default", "spine", "spine-state.json")),
+        true,
+      );
+      assert.equal(existsSync(path.join(tempDir, ".meta-kim", "state", "default", "project-bootstrap.json")), false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
       rmSync(globalStateDir, { recursive: true, force: true });
     }
   });
@@ -474,6 +537,7 @@ describe("graphify idempotent wiring (contract)", () => {
 
   test("bootstrap probe off still allows prompt-entry spine activation", () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-probe-off-spine-"));
+    const globalStateDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-probe-off-state-"));
     try {
       const hookPath = path.join(
         root,
@@ -492,6 +556,7 @@ describe("graphify idempotent wiring (contract)", () => {
         env: {
           ...process.env,
           META_KIM_PROJECT_BOOTSTRAP_PROBE: "off",
+          META_KIM_GLOBAL_STATE_DIR: globalStateDir,
         },
       });
 
@@ -500,6 +565,7 @@ describe("graphify idempotent wiring (contract)", () => {
       assert.equal(existsSync(path.join(tempDir, ".meta-kim", "state", "default", "spine", "spine-state.json")), true);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
+      rmSync(globalStateDir, { recursive: true, force: true });
     }
   });
 

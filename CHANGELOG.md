@@ -8,6 +8,23 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## [Unreleased]
 
+## [2.8.44] - 2026-06-16
+
+### Solved Problem
+
+This release fixes a project-update visibility failure where one day's successful prompt-entry probe in a different project could suppress the project bootstrap dry-run for the project the user actually opened. In practice, a temporary or unrelated project could make Claude Code skip the stale-project warning, leaving an older project such as `D:/KimProject/游戏策划案` on a previous Meta_Kim version without a clear update prompt.
+
+### Changed
+
+- **Project-Scoped Daily Probe Cache** - The prompt-entry bootstrap cache is now fresh only for the same project path, the same package version, the same date, and a prior result that required no confirmation.
+- **No Cross-Project Suppression** - A cache from another project no longer prevents `activate-meta-theory-spine.mjs` from running a fresh project bootstrap dry-run.
+- **Confirmation Results Stay Active** - Results that require user confirmation are never treated as a pass-through cache; they continue to surface the native choice requirement.
+- **Test-State Isolation** - Setup tests now write daily probe cache into temporary state directories so regression tests do not pollute the user's real global Meta_Kim state.
+
+### Verification
+
+- `node --test tests/setup/graphify-wiring-contract.test.mjs`
+
 ## [2.8.43] - 2026-06-16
 
 ### Solved Problem
