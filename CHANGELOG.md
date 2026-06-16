@@ -8,6 +8,23 @@ The changelog explains what changed and why it matters. It intentionally avoids 
 
 ## [Unreleased]
 
+## [2.8.41] - 2026-06-16
+
+### Changed
+
+- **Host Invocation Request Contract** - Added `hostInvocationRequestPacket` so selected Agent, Skill, MCP, command/script, runtime-tool, and `agent-teams-playbook` families expose the exact Claude Code or Codex host action still required instead of hiding missing live calls behind partial reports.
+- **Trusted Evidence Boundary** - Tightened governed execution so host requests, CLI/env claims, markdown reports, and app-visible badges remain non-proof until a trusted host adapter returns fresh evidence with accepted state, provider/surface, evidence kind, and evidence ref.
+- **Durable Agent Lifecycle Proof** - Added `durableAgentLifecyclePacket` so long-lived agents must pass definition candidate, Warden approval/writeback, host reload/discovery, and live invocation proof before completion is claimed.
+- **Runtime Adapter Guidance** - Updated Claude Code and Codex references to distinguish runner handoff, real host provider calls, and durable project agent discovery for future adapter implementations.
+- **Product Evidence Propagation** - Extended run reports, product delivery bundles, validators, and support gates to carry host invocation requests and durable-agent lifecycle status.
+
+### Verification
+
+- `node --test tests/governance/core-loop-contract.test.mjs tests/meta-theory/32-meta-theory-four-product-targets.test.mjs tests/meta-theory/34-run-deliverables.test.mjs tests/meta-theory/43-product-delivery-bundle.test.mjs`
+- `npm run meta:test:meta-theory`
+- `npm run meta:check`
+- `git diff --check`
+
 ## [2.8.40] - 2026-06-16
 
 ### Changed

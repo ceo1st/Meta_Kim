@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+## [2.8.41] - 2026-06-16
+
+### 变更
+
+- **宿主调用请求契约** - 新增 `hostInvocationRequestPacket`；当 Agent、Skill、MCP、command/script、runtime tool、`agent-teams-playbook` 被选中但还没有 live 调用证据时，会明确列出 Claude Code 或 Codex 宿主下一步必须执行的动作，不再把缺失调用藏在 partial 报告里。
+- **可信证据边界** - 收紧 governed execution：host request、CLI/env claim、markdown report、app 可见 badge 都不能当执行证明；只有 trusted host adapter 返回带 state、provider/surface、evidence kind、evidence ref 的新鲜证据才能计入通过。
+- **长期 Agent 生命周期证明** - 新增 `durableAgentLifecyclePacket`；长期智能体必须经过 definition candidate、Warden approval/writeback、host reload/discovery、live invocation proof 四关，才能宣称完成。
+- **Runtime Adapter 指南** - 更新 Claude Code 和 Codex runtime reference，区分 runner handoff、真实宿主 provider 调用、长期项目 agent 发现机制，为后续 adapter 实现留出清晰接口。
+- **产品证据贯通** - 扩展 run report、product delivery bundle、validators 和 support gates，使宿主调用请求和长期 agent 生命周期状态进入产品验收证据链。
+
+### 验证
+
+- `node --test tests/governance/core-loop-contract.test.mjs tests/meta-theory/32-meta-theory-four-product-targets.test.mjs tests/meta-theory/34-run-deliverables.test.mjs tests/meta-theory/43-product-delivery-bundle.test.mjs`
+- `npm run meta:test:meta-theory`
+- `npm run meta:check`
+- `git diff --check`
+
 ## [2.8.40] - 2026-06-16
 
 ### 变更
