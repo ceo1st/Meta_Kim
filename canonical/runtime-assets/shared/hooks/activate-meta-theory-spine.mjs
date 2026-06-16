@@ -1,8 +1,7 @@
 import process from "node:process";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { readJsonFromStdin } from "./utils.mjs";
 import {
   readSpineState,
@@ -14,10 +13,6 @@ const cwd = process.cwd();
 const payload = await readJsonFromStdin();
 const toolName = payload?.tool_name ?? "";
 const toolInput = payload?.tool_input ?? {};
-const packageRootArgIndex = process.argv.indexOf("--package-root");
-const packageRootArg =
-  packageRootArgIndex >= 0 ? process.argv[packageRootArgIndex + 1] : null;
-const dayKey = new Date().toISOString().slice(0, 10);
 
 const EXPLICIT_META_THEORY_RE =
   /(?:^|\b)(?:\/?meta-theory|meta theory|run meta theory|execute meta theory)(?:\b|$)|元理论/u;
@@ -36,16 +31,6 @@ const PROJECT_UNDERSTANDING_RE =
 const SUBJECTIVE_QUALITY_RE =
   /\b(?:good|bad|beautiful|ugly|smooth|professional|premium|advanced|clean|simple|fast|slow|feels off|hard to use)\b|(?:好看|不好看|顺畅|不顺|高级|专业|简洁|太慢|太快|难用|怪|不对劲)/iu;
 
-const PROJECT_BOOTSTRAP_PROBE_DISABLED = {
-  disabled: true,
-  results: [],
-};
-const UPDATE_REMINDER_DAYS = Number.parseInt(
-  process.env.META_KIM_UPDATE_REMINDER_DAYS || "14",
-  10,
-);
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 function getPromptText() {
   const candidates = [
     payload?.prompt,
@@ -60,20 +45,6 @@ function getPromptText() {
     if (typeof value === "string" && value.trim()) return value.toLowerCase();
   }
   return "";
-}
-
-function resolvePromptLanguage() {
-  const envLang = String(process.env.META_KIM_LANG || "").trim().toLowerCase();
-  if (envLang === "zh" || envLang.startsWith("zh-")) return "zh-CN";
-  if (envLang === "ja" || envLang.startsWith("ja-")) return "ja-JP";
-  if (envLang === "ko" || envLang.startsWith("ko-")) return "ko-KR";
-  if (envLang === "en" || envLang.startsWith("en-")) return "en";
-
-  const promptText = getPromptText();
-  if (/[\u3040-\u30ff]/u.test(promptText)) return "ja-JP";
-  if (/[\uac00-\ud7af]/u.test(promptText)) return "ko-KR";
-  if (/[\u3400-\u9fff]/u.test(promptText)) return "zh-CN";
-  return "en";
 }
 
 function getSkillName() {
@@ -153,8 +124,7 @@ function isMetaTheoryTrigger() {
     };
   }
 
-  const promptText = getPromptText();
-  return classifyPromptActivation(promptText);
+  return classifyPromptActivation(getPromptText());
 }
 
 function startPostCopyAutoInit() {
@@ -180,369 +150,15 @@ function startPostCopyAutoInit() {
   }
 }
 
-function candidatePackageRoot() {
-  const envRoot = packageRootArg || process.env.META_KIM_PACKAGE_ROOT;
-  if (envRoot && existsSync(join(envRoot, "package.json"))) return envRoot;
-  if (existsSync(join(cwd, "package.json")) && existsSync(join(cwd, "setup.mjs"))) return cwd;
-  return null;
-}
-
-function readPackageVersionAt(root) {
-  if (!root) return "unknown";
-  try {
-    return JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version ?? "unknown";
-  } catch {
-    return "unknown";
-  }
-}
-
-function readPackageUpdateTimestamp(root) {
-  if (!root) return null;
-  const manifestPath = join(root, ".meta-kim", "install-manifest.json");
-  try {
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    const timestamp = manifest.updatedAt || manifest.createdAt;
-    if (timestamp && !Number.isNaN(new Date(timestamp).getTime())) return timestamp;
-  } catch {
-    // Fall back to package.json mtime when the install manifest is unavailable.
-  }
-  try {
-    return statSync(join(root, "package.json")).mtime.toISOString();
-  } catch {
-    return null;
-  }
-}
-
-function buildPackageUpdateReminder() {
-  const root = candidatePackageRoot();
-  const lastUpdatedAt = readPackageUpdateTimestamp(root);
-  if (!root || !lastUpdatedAt || !Number.isFinite(UPDATE_REMINDER_DAYS)) {
-    return {
-      flag: "unknown",
-      packageRoot: root,
-      packageVersion: readPackageVersionAt(root),
-      lastUpdatedAt,
-      thresholdDays: UPDATE_REMINDER_DAYS,
-    };
-  }
-  const ageDays = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(lastUpdatedAt).getTime()) / MS_PER_DAY),
-  );
-  const flag = ageDays >= UPDATE_REMINDER_DAYS ? "stale_14d" : "fresh";
-  return {
-    flag,
-    packageRoot: root,
-    packageVersion: readPackageVersionAt(root),
-    lastUpdatedAt,
-    ageDays,
-    thresholdDays: UPDATE_REMINDER_DAYS,
-  };
-}
-
-function formatPackageUpdateReminder(reminder, language = resolvePromptLanguage()) {
-  if (reminder?.flag !== "stale_14d") return null;
-  if (language === "zh-CN") {
-    return [
-      `提醒：本机安装的 Meta_Kim 源包已经 ${reminder.ageDays} 天没有更新。`,
-      "GitHub 上的 package.json 版本是公开最新基准；当前项目只能先和本机已安装源包比较。",
-      "如果你用 git clone 安装，请在 Meta_Kim 源包里运行 `git pull --ff-only`，再运行 `npm run meta:setup:update` 或 `node setup.mjs --update`。",
-      "如果你用 npx 安装，请重新运行 npx 安装/更新命令，再对当前项目执行 project bootstrap dry-run/apply。",
-    ].join("\n");
-  }
-  return [
-    `Meta_Kim installed package has not been updated for ${reminder.ageDays} days.`,
-    "GitHub package.json version is the public latest baseline, but this project can only compare against the locally installed package until you update it.",
-    "If you installed with git clone, run `git pull --ff-only` in the Meta_Kim source package, then `npm run meta:setup:update` or `node setup.mjs --update`.",
-    "If you installed with npx, rerun the npx install/update command, then run project bootstrap dry-run before applying project files.",
-  ].join("\n");
-}
-
-function projectBootstrapReasonLabel(status, confirmationReason, language) {
-  if (language !== "zh-CN") {
-    if (status === "stale") return "This project has an older Meta_Kim project setup.";
-    if (status === "missing") return "This project has not been initialized with Meta_Kim project files yet.";
-    if (status === "conflict") return "This project has files that need review before Meta_Kim can update them.";
-    return confirmationReason || "Project setup needs your confirmation.";
-  }
-  if (status === "stale") return "这个项目里的 Meta_Kim 项目级文件是旧版本。";
-  if (status === "missing") return "这个项目还没有初始化 Meta_Kim 项目级文件。";
-  if (status === "conflict") return "这个项目里有需要先检查的已有文件，不能直接覆盖。";
-  return "这个项目的 Meta_Kim 项目级文件需要你先确认。";
-}
-
-function formatProjectBootstrapContext(result, packageUpdateReminder = null) {
-  const language = resolvePromptLanguage();
-  const state = result?.state ?? {};
-  const status = state.status ?? "unknown";
-  const targets = (state.activeTargets ?? []).join(", ") || "default";
-  const installedVersion = state.metaKimVersion || readPackageVersionAt(candidatePackageRoot());
-  const projectVersion = state.previousManifest?.metaKimVersion || "unknown";
-  const reason = projectBootstrapReasonLabel(status, state.confirmationReason, language);
-
-  const lines =
-    language === "zh-CN"
-      ? [
-          "Meta_Kim 检测到当前项目需要更新项目级配置。",
-          `原因：${reason}`,
-          `版本：当前安装的 Meta_Kim 是 ${installedVersion}；这个项目记录的是 ${projectVersion}。`,
-          `范围：只涉及项目级 Meta_Kim 配置，目标运行时：${targets}。`,
-          "我不会自动写入项目文件。请先让助手展示更新预览；你确认后，才执行项目级更新。",
-        ]
-      : [
-          "Meta_Kim found that this project needs a project-level setup update.",
-          `Reason: ${reason}`,
-          `Versions: installed Meta_Kim is ${installedVersion}; this project records ${projectVersion}.`,
-          `Scope: project-level Meta_Kim configuration only, target runtimes: ${targets}.`,
-          "No project files were written. Ask the assistant to show the update preview first; apply only after you confirm.",
-        ];
-
-  const reminderContext = formatPackageUpdateReminder(packageUpdateReminder, language);
-  if (reminderContext) lines.push("", reminderContext);
-  return lines.join("\n");
-}
-
-function dailyProbeCachePath() {
-  const stateDir =
-    process.env.META_KIM_GLOBAL_STATE_DIR || join(homedir(), ".meta-kim", "state");
-  return join(stateDir, "project-bootstrap-daily-probe.json");
-}
-
-function readDailyProbeCache() {
-  if (process.env.META_KIM_PROJECT_BOOTSTRAP_DAILY_CACHE === "off") return null;
-  try {
-    return JSON.parse(readFileSync(dailyProbeCachePath(), "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-function writeDailyProbeCache(summary, status = "checked", packageUpdateReminder = null) {
-  if (process.env.META_KIM_PROJECT_BOOTSTRAP_DAILY_CACHE === "off") return;
-  const root = candidatePackageRoot();
-  const filePath = dailyProbeCachePath();
-  const result = summary?.results?.[0] ?? null;
-  const reminder = packageUpdateReminder || buildPackageUpdateReminder();
-  const updateFlag = result?.state?.requiresConfirmation
-    ? "needs_confirmation"
-    : status === "unavailable"
-      ? "unknown"
-      : "current_or_no_confirmation";
-  const record = {
-    schemaVersion: "meta-kim-project-bootstrap-daily-probe-v0.1",
-    dateKey: dayKey,
-    checkedAt: new Date().toISOString(),
-    status,
-    updateFlag,
-    packageRoot: root,
-    packageVersion: readPackageVersionAt(root),
-    packageLastUpdatedAt: reminder.lastUpdatedAt,
-    packageUpdateAgeDays: reminder.ageDays ?? null,
-    packageUpdateReminderFlag: reminder.flag,
-    packageUpdateReminderThresholdDays: reminder.thresholdDays,
-    projectDir: cwd,
-    projectStatus: result?.state?.status ?? null,
-    activeTargets: result?.state?.activeTargets ?? [],
-    requiresConfirmation: result?.state?.requiresConfirmation ?? false,
-  };
-  try {
-    mkdirSync(dirname(filePath), { recursive: true });
-    writeFileSync(filePath, `${JSON.stringify(record, null, 2)}\n`, "utf8");
-  } catch {
-    // Daily probe cache is only a UX throttle. Cache write failures must not
-    // prevent a real dry-run probe or governed execution.
-  }
-}
-
-function normalizePathKey(value) {
-  return String(value ?? "").replace(/\\/g, "/").toLowerCase();
-}
-
-function dailyProbeCacheFreshForCurrentProject() {
-  const cache = readDailyProbeCache();
-  if (!cache || cache.dateKey !== dayKey) return false;
-  const root = candidatePackageRoot();
-  const version = readPackageVersionAt(root);
-  return (
-    cache.updateFlag === "current_or_no_confirmation" &&
-    cache.requiresConfirmation !== true &&
-    normalizePathKey(cache.projectDir) === normalizePathKey(cwd) &&
-    cache.packageVersion === version
-  );
-}
-
-function projectBootstrapProbeCommands() {
-  const args = ["--project-bootstrap", "--dry-run", "--project-dir", cwd, "--json"];
-  const commands = [];
-  const envRoot = packageRootArg || process.env.META_KIM_PACKAGE_ROOT;
-  if (envRoot && existsSync(join(envRoot, "setup.mjs"))) {
-    commands.push({
-      command: process.execPath,
-      args: [join(envRoot, "setup.mjs"), ...args],
-      cwd: envRoot,
-    });
-  }
-
-  if (existsSync(join(cwd, "setup.mjs"))) {
-    commands.push({
-      command: process.execPath,
-      args: [join(cwd, "setup.mjs"), ...args],
-      cwd,
-    });
-  }
-
-  commands.push({
-    command: "meta-kim",
-    args: ["project", "bootstrap", "--dry-run", "--project-dir", cwd, "--json"],
-    cwd,
-    shell: process.platform === "win32",
-  });
-  return commands;
-}
-
-function isCanonicalPackageRoot() {
-  try {
-    const packageJson = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8"));
-    return (
-      packageJson?.name === "meta-kim" &&
-      existsSync(join(cwd, "setup.mjs")) &&
-      existsSync(join(cwd, "canonical", "skills", "meta-theory", "SKILL.md"))
-    );
-  } catch {
-    return false;
-  }
-}
-
-function projectBootstrapProbeUnavailable(summary) {
-  return !summary || !Array.isArray(summary.results);
-}
-
-function projectBootstrapManifestExists() {
-  return existsSync(join(cwd, ".meta-kim", "state", "default", "project-bootstrap.json"));
-}
-
-function emitProjectBootstrapProbeUnavailable() {
-  const language = resolvePromptLanguage();
-  const context =
-    language === "zh-CN"
-      ? [
-          "Meta_Kim 这次没能完成项目级更新检查。",
-          "原因：project bootstrap dry-run 没有成功运行，所以当前版本状态未知；没有写入任何项目文件。",
-          "下一步：先从已安装的 Meta_Kim 源包运行 `meta-kim project bootstrap --dry-run --project-dir . --json`，确认预览后再更新。",
-        ].join("\n")
-      : [
-          "Meta_Kim could not complete the project setup check from this prompt.",
-          "Reason: project bootstrap dry-run was unavailable, so version status is unknown; no project files were written.",
-          "Next: run `meta-kim project bootstrap --dry-run --project-dir . --json` from the installed Meta_Kim package, then apply only after confirmation.",
-        ].join("\n");
-  const hookEventName = payload?.hook_event_name ?? "UserPromptSubmit";
-  process.stdout.write(
-    `${JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName,
-        additionalContext: context,
-      },
-    })}\n`,
-  );
-}
-
-function emitAdditionalContext(context) {
-  const hookEventName = payload?.hook_event_name ?? "UserPromptSubmit";
-  process.stdout.write(
-    `${JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName,
-        additionalContext: context,
-      },
-    })}\n`,
-  );
-}
-
-function runProjectBootstrapProbe() {
-  if (process.env.META_KIM_PROJECT_BOOTSTRAP_PROBE === "off") {
-    return PROJECT_BOOTSTRAP_PROBE_DISABLED;
-  }
-
-  for (const candidate of projectBootstrapProbeCommands()) {
-    try {
-      const result = spawnSync(candidate.command, candidate.args, {
-        cwd: candidate.cwd,
-        encoding: "utf8",
-        windowsHide: true,
-        timeout: 4000,
-        shell: Boolean(candidate.shell),
-        env: {
-          ...process.env,
-          META_KIM_PROJECT_BOOTSTRAP_PROBE: "1",
-        },
-      });
-      if (result.status !== 0 || !result.stdout?.trim()) continue;
-      return JSON.parse(result.stdout);
-    } catch {
-      // The probe is evidence gathering only. Missing global CLI or permission
-      // errors must not prevent the meta-theory spine from starting.
-    }
-  }
-  return null;
-}
-
-function projectBootstrapNeedsConfirmation(summary) {
-  return (summary?.results ?? []).some(
-    (result) => result?.state?.requiresConfirmation === true,
-  );
-}
-
-function emitProjectBootstrapContext(summary, packageUpdateReminder = null) {
-  const result = summary?.results?.[0];
-  if (!result) return;
-  const hookEventName = payload?.hook_event_name ?? "Skill";
-  const context = formatProjectBootstrapContext(result, packageUpdateReminder);
-  process.stdout.write(
-    `${JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName,
-        additionalContext: context,
-      },
-    })}\n`,
-  );
-}
-
 const activation = isMetaTheoryTrigger();
 if (!activation.triggered) {
   process.exit(0);
 }
 
 startPostCopyAutoInit();
-const canonicalPackageRoot = isCanonicalPackageRoot();
-const dailyCacheFresh = dailyProbeCacheFreshForCurrentProject();
-const packageUpdateReminder = dailyCacheFresh ? null : buildPackageUpdateReminder();
-const packageUpdateReminderContext = formatPackageUpdateReminder(packageUpdateReminder);
-const projectBootstrapProbe =
-  canonicalPackageRoot || dailyCacheFresh ? null : runProjectBootstrapProbe();
-if (
-  projectBootstrapProbeUnavailable(projectBootstrapProbe) &&
-  !canonicalPackageRoot &&
-  !dailyCacheFresh &&
-  !projectBootstrapManifestExists()
-) {
-  writeDailyProbeCache(null, "unavailable", packageUpdateReminder);
-  emitProjectBootstrapProbeUnavailable();
-  process.exit(0);
-}
-if (projectBootstrapNeedsConfirmation(projectBootstrapProbe)) {
-  writeDailyProbeCache(projectBootstrapProbe, "needs_confirmation", packageUpdateReminder);
-  emitProjectBootstrapContext(projectBootstrapProbe, packageUpdateReminder);
-  process.exit(0);
-}
-if (!projectBootstrapProbeUnavailable(projectBootstrapProbe)) {
-  writeDailyProbeCache(projectBootstrapProbe, "ready_or_no_confirmation", packageUpdateReminder);
-}
 
 const existing = await readSpineState(cwd);
 if (existing && existing.active) {
-  if (packageUpdateReminderContext) {
-    emitAdditionalContext(packageUpdateReminderContext);
-  }
   process.exit(0);
 }
 
@@ -552,7 +168,4 @@ const state = createInitialState({
 });
 
 await writeSpineState(cwd, state);
-if (packageUpdateReminderContext) {
-  emitAdditionalContext(packageUpdateReminderContext);
-}
 process.exit(0);

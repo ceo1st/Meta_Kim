@@ -8,61 +8,6 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## [Unreleased]
 
-## [2.8.44] - 2026-06-16
-
-### Solved Problem
-
-This release fixes a project-update visibility failure where one day's successful prompt-entry probe in a different project could suppress the project bootstrap dry-run for the project the user actually opened. In practice, a temporary or unrelated project could make Claude Code skip the stale-project warning, leaving an older project such as `D:/KimProject/游戏策划案` on a previous Meta_Kim version without a clear update prompt.
-
-### Changed
-
-- **Project-Scoped Daily Probe Cache** - The prompt-entry bootstrap cache is now fresh only for the same project path, the same package version, the same date, and a prior result that required no confirmation.
-- **No Cross-Project Suppression** - A cache from another project no longer prevents `activate-meta-theory-spine.mjs` from running a fresh project bootstrap dry-run.
-- **Confirmation Results Stay Active** - Results that require user confirmation are never treated as a pass-through cache; they continue to surface the native choice requirement.
-- **Test-State Isolation** - Setup tests now write daily probe cache into temporary state directories so regression tests do not pollute the user's real global Meta_Kim state.
-
-### Verification
-
-- `node --test tests/setup/graphify-wiring-contract.test.mjs`
-
-## [2.8.43] - 2026-06-16
-
-### Solved Problem
-
-This release addresses confusing and overly broad project skill projection. Project runtime mirrors were syncing every canonical skill file, so users saw "17 files updated" and could reasonably suspect non-meta assets had been installed as project skills. Project mirrors now expose only the runtime-approved `meta-theory` skill, while internal canonical skills remain available through the canonical source tree and capability index.
-
-### Changed
-
-- **Project Skill Allowlist** - Runtime project skill mirrors now sync only `meta-theory` instead of the full `canonical/skills` tree.
-- **Stale Mirror Cleanup** - Repo-local runtime mirrors prune canonical skills that are not approved for project projection, so old `same-set-reusable-flow-for-project-file-inventor` mirrors do not continue leaking into project bootstrap sources.
-- **Regression Coverage** - Setup tests now assert that project bootstrap never plans `same-set-reusable-flow-for-project-file-inventor` as a runtime skill file.
-
-### Verification
-
-- `npm run meta:sync`
-- `node --test tests/setup/capability-index-inheritance-chain.test.mjs tests/setup/lazy-project-bootstrap.test.mjs`
-- `npm run meta:check`
-- `npm run meta:test:setup`
-
-## [2.8.42] - 2026-06-16
-
-### Solved Problem
-
-This release addresses the project-bootstrap risk where Meta_Kim could treat every generated path as safely replaceable, while also leaving users unsure whether GitHub, the installed source package, or the project manifest was the update baseline. Existing projects may already have their own hooks, commands, agents, skills, MCP config, rules, or local runtime state. Project updates now separate "is a new Meta_Kim version available?" from "is this file safe to write?", so version comparison stays simple while user-owned files are not overwritten by projection sync.
-
-### Changed
-
-- **Claude Project Bootstrap Visibility** - `activate-meta-theory-spine.mjs` now returns `decision: "block"` for Claude Code `UserPromptSubmit` project-bootstrap confirmation cases, while keeping non-prompt hook events on context injection. The hook still performs only a dry-run and never writes project files before confirmation.
-- **Ownership-Safe Project Writes** - Project bootstrap now treats shared configs as merge-only, local state as never-touch, Meta_Kim namespaced or manifest-managed files as replaceable, and unknown existing files as conflicts that block `--apply`.
-- **Version-Only Update Status** - A different `metaKimVersion` is the only stale/update signal. Target-scope changes and same-version file drift are reported separately as `target_scope_changed` or `repair_required`.
-- **Conflict-Aware Choice Surface** - Dry-runs now expose `writePreview.projectConflicts` separately from `projectWrites`, recommend inspection when conflicts exist, and keep source-probe failures as "version status unknown" rather than a forced update block.
-- **Daily Probe Standard** - Prompt-entry project bootstrap probes are throttled by `dateKey + updateFlag + packageVersion`. This reduces repeated cross-window/project prompts after the update-needed flag is known while keeping explicit dry-run/apply checks fresh.
-- **Installed Source Reminder** - Prompt-entry activation records `packageLastUpdatedAt`, `packageUpdateAgeDays`, and `packageUpdateReminderFlag`; when the installed source package has not been updated for 14 days, Meta_Kim gives a non-blocking reminder to refresh the npx/git-clone source before applying project files.
-
-### Verification
-
-- `node --test tests/setup/graphify-wiring-contract.test.mjs`
-
 ## [2.8.41] - 2026-06-16
 
 ### Solved Problem

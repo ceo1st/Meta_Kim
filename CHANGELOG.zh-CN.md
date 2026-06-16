@@ -8,61 +8,6 @@
 
 ## [Unreleased]
 
-## [2.8.44] - 2026-06-16
-
-### 解决的问题
-
-本次解决的是项目更新提醒被错误跳过的问题。之前 prompt-entry 的每日探测缓存是跨项目生效的：如果当天某个临时项目或其他项目已经留下“无需确认”的缓存，Claude Code 再进入当前项目时，可能就不再跑 project bootstrap dry-run。结果就是像 `D:/KimProject/游戏策划案` 这种仍停在旧 Meta_Kim 版本的项目，没有看到应该出现的 stale/update 提醒。
-
-### 变更
-
-- **按项目隔离每日探测缓存** - Prompt-entry bootstrap 缓存现在只有在同一项目路径、同一 package version、同一天，并且上次结果无需确认时才算 fresh。
-- **禁止跨项目压制检查** - 其他项目留下的缓存不能再阻止 `activate-meta-theory-spine.mjs` 对当前项目重新执行 project bootstrap dry-run。
-- **需要确认的结果不再被当作通过** - 只要 dry-run 结果需要用户确认，就不会被当成可跳过后续检查的 pass-through cache。
-- **测试状态隔离** - Setup 测试改用临时 global state 目录写每日探测缓存，避免回归测试污染用户真实的全局 Meta_Kim 状态。
-
-### 验证
-
-- `node --test tests/setup/graphify-wiring-contract.test.mjs`
-
-## [2.8.43] - 2026-06-16
-
-### 解决的问题
-
-本次解决的是项目级 skill 投射范围过宽、输出容易误导的问题。之前项目 runtime mirror 会同步所有 canonical skill 文件，所以用户看到“已更新 17 个文件”时，很容易判断为非 meta 能力被装进了项目级 skills。现在项目 mirror 只暴露 runtime 批准的 `meta-theory` skill；内部辅助 canonical skill 仍保留在主源和 capability index 中。
-
-### 变更
-
-- **项目 Skill 白名单** - 项目级 runtime skill mirror 现在只同步 `meta-theory`，不再全量同步 `canonical/skills`。
-- **陈旧镜像清理** - Repo-local runtime mirror 会清理不允许项目投射的 canonical skill，避免旧的 `same-set-reusable-flow-for-project-file-inventor` 继续进入 project bootstrap 来源。
-- **回归测试** - Setup 测试新增断言，确保 project bootstrap 不会把 `same-set-reusable-flow-for-project-file-inventor` 规划成 runtime skill 文件。
-
-### 验证
-
-- `npm run meta:sync`
-- `node --test tests/setup/capability-index-inheritance-chain.test.mjs tests/setup/lazy-project-bootstrap.test.mjs`
-- `npm run meta:check`
-- `npm run meta:test:setup`
-
-## [2.8.42] - 2026-06-16
-
-### 解决的问题
-
-本次解决的是：项目 bootstrap 不能把所有生成路径都当成可替换文件，同时用户也需要分清 GitHub、已安装源包、项目 manifest 到底谁是更新基准。真实项目里可能已经有用户自己的 hooks、commands、agents、skills、MCP 配置、rules 或本地运行状态。现在项目更新会把“是否有新 Meta_Kim 版本”和“这个文件能不能安全写入”拆开，版本比较保持简单，同时避免投射同步覆盖用户自有文件。
-
-### 变更
-
-- **Claude 项目 Bootstrap 可见性** - `activate-meta-theory-spine.mjs` 现在会在 Claude Code `UserPromptSubmit` 的项目 bootstrap 确认场景返回 `decision: "block"`；非 prompt hook 事件仍保持上下文注入。该 hook 仍然只做 dry-run，确认前不会写项目文件。
-- **项目写入所有权边界** - Project bootstrap 现在把共享配置视为只 merge，本地状态永不触碰，Meta_Kim 命名空间或 manifest 已管理文件才可替换，未知既有文件会进入 conflict 并阻断 `--apply`。
-- **版本号作为唯一更新状态** - 只有 `metaKimVersion` 不同才算 stale/update；目标 runtime 改变和同版本文件漂移会分别显示为 `target_scope_changed` 或 `repair_required`。
-- **冲突可见的选择面板** - Dry-run 现在把 `writePreview.projectConflicts` 和 `projectWrites` 分开；有冲突时默认建议先检查，并把 source probe 失败表达为“版本状态未知”，而不是强行当成更新阻断。
-- **每日探测判断标准** - Prompt-entry 项目 bootstrap 探测现在按 `dateKey + updateFlag + packageVersion` 节流；也就是当天已经知道“是否需要更新/确认”后减少跨窗口/跨项目重复提醒，但显式 dry-run/apply 仍保持实时检查。
-- **已安装源包提醒** - Prompt-entry activation 会记录 `packageLastUpdatedAt`、`packageUpdateAgeDays`、`packageUpdateReminderFlag`；如果已安装源包 14 天没有更新，会给非阻塞提醒，让用户先刷新 npx/git-clone 源包，再对项目文件执行 dry-run/apply。
-
-### 验证
-
-- `node --test tests/setup/graphify-wiring-contract.test.mjs`
-
 ## [2.8.41] - 2026-06-16
 
 ### 解决的问题
