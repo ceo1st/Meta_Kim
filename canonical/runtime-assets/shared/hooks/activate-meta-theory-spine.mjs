@@ -62,6 +62,20 @@ function getPromptText() {
   return "";
 }
 
+function resolvePromptLanguage() {
+  const envLang = String(process.env.META_KIM_LANG || "").trim().toLowerCase();
+  if (envLang === "zh" || envLang.startsWith("zh-")) return "zh-CN";
+  if (envLang === "ja" || envLang.startsWith("ja-")) return "ja-JP";
+  if (envLang === "ko" || envLang.startsWith("ko-")) return "ko-KR";
+  if (envLang === "en" || envLang.startsWith("en-")) return "en";
+
+  const promptText = getPromptText();
+  if (/[\u3040-\u30ff]/u.test(promptText)) return "ja-JP";
+  if (/[\uac00-\ud7af]/u.test(promptText)) return "ko-KR";
+  if (/[\u3400-\u9fff]/u.test(promptText)) return "zh-CN";
+  return "en";
+}
+
 function getSkillName() {
   return (
     toolInput?.skill_name ||
@@ -226,14 +240,66 @@ function buildPackageUpdateReminder() {
   };
 }
 
-function formatPackageUpdateReminder(reminder) {
+function formatPackageUpdateReminder(reminder, language = resolvePromptLanguage()) {
   if (reminder?.flag !== "stale_14d") return null;
+  if (language === "zh-CN") {
+    return [
+      `提醒：本机安装的 Meta_Kim 源包已经 ${reminder.ageDays} 天没有更新。`,
+      "GitHub 上的 package.json 版本是公开最新基准；当前项目只能先和本机已安装源包比较。",
+      "如果你用 git clone 安装，请在 Meta_Kim 源包里运行 `git pull --ff-only`，再运行 `npm run meta:setup:update` 或 `node setup.mjs --update`。",
+      "如果你用 npx 安装，请重新运行 npx 安装/更新命令，再对当前项目执行 project bootstrap dry-run/apply。",
+    ].join("\n");
+  }
   return [
     `Meta_Kim installed package has not been updated for ${reminder.ageDays} days.`,
     "GitHub package.json version is the public latest baseline, but this project can only compare against the locally installed package until you update it.",
     "If you installed with git clone, run `git pull --ff-only` in the Meta_Kim source package, then `npm run meta:setup:update` or `node setup.mjs --update`.",
     "If you installed with npx, rerun the npx install/update command, then run project bootstrap dry-run before applying project files.",
   ].join("\n");
+}
+
+function projectBootstrapReasonLabel(status, confirmationReason, language) {
+  if (language !== "zh-CN") {
+    if (status === "stale") return "This project has an older Meta_Kim project setup.";
+    if (status === "missing") return "This project has not been initialized with Meta_Kim project files yet.";
+    if (status === "conflict") return "This project has files that need review before Meta_Kim can update them.";
+    return confirmationReason || "Project setup needs your confirmation.";
+  }
+  if (status === "stale") return "这个项目里的 Meta_Kim 项目级文件是旧版本。";
+  if (status === "missing") return "这个项目还没有初始化 Meta_Kim 项目级文件。";
+  if (status === "conflict") return "这个项目里有需要先检查的已有文件，不能直接覆盖。";
+  return "这个项目的 Meta_Kim 项目级文件需要你先确认。";
+}
+
+function formatProjectBootstrapContext(result, packageUpdateReminder = null) {
+  const language = resolvePromptLanguage();
+  const state = result?.state ?? {};
+  const status = state.status ?? "unknown";
+  const targets = (state.activeTargets ?? []).join(", ") || "default";
+  const installedVersion = state.metaKimVersion || readPackageVersionAt(candidatePackageRoot());
+  const projectVersion = state.previousManifest?.metaKimVersion || "unknown";
+  const reason = projectBootstrapReasonLabel(status, state.confirmationReason, language);
+
+  const lines =
+    language === "zh-CN"
+      ? [
+          "Meta_Kim 检测到当前项目需要更新项目级配置。",
+          `原因：${reason}`,
+          `版本：当前安装的 Meta_Kim 是 ${installedVersion}；这个项目记录的是 ${projectVersion}。`,
+          `范围：只涉及项目级 Meta_Kim 配置，目标运行时：${targets}。`,
+          "我不会自动写入项目文件。请先让助手展示更新预览；你确认后，才执行项目级更新。",
+        ]
+      : [
+          "Meta_Kim found that this project needs a project-level setup update.",
+          `Reason: ${reason}`,
+          `Versions: installed Meta_Kim is ${installedVersion}; this project records ${projectVersion}.`,
+          `Scope: project-level Meta_Kim configuration only, target runtimes: ${targets}.`,
+          "No project files were written. Ask the assistant to show the update preview first; apply only after you confirm.",
+        ];
+
+  const reminderContext = formatPackageUpdateReminder(packageUpdateReminder, language);
+  if (reminderContext) lines.push("", reminderContext);
+  return lines.join("\n");
 }
 
 function dailyProbeCachePath() {
@@ -356,11 +422,19 @@ function projectBootstrapManifestExists() {
 }
 
 function emitProjectBootstrapProbeUnavailable() {
-  const context = [
-    "Meta_Kim project bootstrap could not run from this prompt entry.",
-    "reason=project bootstrap dry-run unavailable; version status is unknown and no project files were written.",
-    "Run `meta-kim project bootstrap --dry-run --project-dir . --json` from the installed package, or reinstall/update through npx/git clone before applying project files.",
-  ].join("\n");
+  const language = resolvePromptLanguage();
+  const context =
+    language === "zh-CN"
+      ? [
+          "Meta_Kim 这次没能完成项目级更新检查。",
+          "原因：project bootstrap dry-run 没有成功运行，所以当前版本状态未知；没有写入任何项目文件。",
+          "下一步：先从已安装的 Meta_Kim 源包运行 `meta-kim project bootstrap --dry-run --project-dir . --json`，确认预览后再更新。",
+        ].join("\n")
+      : [
+          "Meta_Kim could not complete the project setup check from this prompt.",
+          "Reason: project bootstrap dry-run was unavailable, so version status is unknown; no project files were written.",
+          "Next: run `meta-kim project bootstrap --dry-run --project-dir . --json` from the installed Meta_Kim package, then apply only after confirmation.",
+        ].join("\n");
   const hookEventName = payload?.hook_event_name ?? "UserPromptSubmit";
   process.stdout.write(
     `${JSON.stringify({
@@ -422,29 +496,7 @@ function emitProjectBootstrapContext(summary, packageUpdateReminder = null) {
   const result = summary?.results?.[0];
   if (!result) return;
   const hookEventName = payload?.hook_event_name ?? "Skill";
-  const contextParts = [
-    "Meta_Kim project bootstrap dry-run found this directory is not ready for project governance.",
-    `status=${result.state?.status ?? "unknown"} targets=${(result.state?.activeTargets ?? []).join(",")}`,
-    `reason=${result.state?.confirmationReason ?? "project bootstrap confirmation required"}`,
-    "Before applying project files, use the dry-run choiceSurface with Claude Code AskUserQuestion or Codex request_user_input; do not write project bootstrap files without confirmation.",
-  ];
-  const reminderContext = formatPackageUpdateReminder(packageUpdateReminder);
-  if (reminderContext) contextParts.push(reminderContext);
-  const context = contextParts.join("\n");
-  if (hookEventName === "UserPromptSubmit") {
-    process.stdout.write(
-      `${JSON.stringify({
-        decision: "block",
-        reason: context,
-        suppressOriginalPrompt: false,
-        hookSpecificOutput: {
-          hookEventName,
-          additionalContext: context,
-        },
-      })}\n`,
-    );
-    return;
-  }
+  const context = formatProjectBootstrapContext(result, packageUpdateReminder);
   process.stdout.write(
     `${JSON.stringify({
       hookSpecificOutput: {

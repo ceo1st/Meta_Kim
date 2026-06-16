@@ -261,8 +261,8 @@ describe("graphify idempotent wiring (contract)", () => {
     assert.match(src, /runProjectBootstrapProbe/);
     assert.match(src, /projectBootstrapNeedsConfirmation/);
     assert.match(src, /additionalContext/);
-    assert.match(src, /decision: "block"/);
-    assert.match(src, /suppressOriginalPrompt: false/);
+    assert.doesNotMatch(src, /decision: "block"/);
+    assert.doesNotMatch(src, /suppressOriginalPrompt: false/);
     assert.match(src, /critical_fetch_thinking_review_requested/);
     assert.match(src, /natural_language_durable_work/);
     assert.match(claudeSettings, /"UserPromptSubmit"/);
@@ -304,15 +304,15 @@ describe("graphify idempotent wiring (contract)", () => {
       assert.equal(output.decision, undefined);
       assert.match(
         output.hookSpecificOutput.additionalContext,
-        /project bootstrap dry-run found this directory is not ready/,
+        /Meta_Kim found that this project needs a project-level setup update/,
       );
-      assert.match(output.hookSpecificOutput.additionalContext, /request_user_input/);
+      assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /choiceSurface|AskUserQuestion|request_user_input/);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
-  test("Claude UserPromptSubmit durable work triggers project bootstrap dry-run without writing state", () => {
+  test("Claude UserPromptSubmit durable work injects localized project bootstrap context without blocking", () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-user-prompt-bootstrap-"));
     try {
       const hookPath = path.join(
@@ -338,15 +338,53 @@ describe("graphify idempotent wiring (contract)", () => {
       assert.equal(result.status, 0, result.stderr || result.stdout);
       assert.equal(existsSync(path.join(tempDir, ".meta-kim")), false);
       const output = JSON.parse(result.stdout);
-      assert.equal(output.decision, "block");
-      assert.match(output.reason, /project bootstrap dry-run found this directory is not ready/);
-      assert.match(output.reason, /status=missing/);
+      assert.equal(output.decision, undefined);
+      assert.equal(output.reason, undefined);
       assert.match(
         output.hookSpecificOutput.additionalContext,
-        /project bootstrap dry-run found this directory is not ready/,
+        /Meta_Kim 检测到当前项目需要更新项目级配置/,
       );
-      assert.match(output.hookSpecificOutput.additionalContext, /status=missing/);
-      assert.match(output.hookSpecificOutput.additionalContext, /request_user_input/);
+      assert.match(output.hookSpecificOutput.additionalContext, /这个项目还没有初始化 Meta_Kim 项目级文件/);
+      assert.match(output.hookSpecificOutput.additionalContext, /我不会自动写入项目文件/);
+      assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /choiceSurface|AskUserQuestion|request_user_input/);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("Claude UserPromptSubmit project bootstrap context follows English prompts", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-user-prompt-bootstrap-en-"));
+    try {
+      const hookPath = path.join(
+        root,
+        "canonical/runtime-assets/shared/hooks/activate-meta-theory-spine.mjs",
+      );
+      const result = spawnSync(process.execPath, [hookPath, "--package-root", root], {
+        cwd: tempDir,
+        input: JSON.stringify({
+          hook_event_name: "UserPromptSubmit",
+          prompt:
+            "run meta-theory and check this project before updating anything",
+        }),
+        encoding: "utf8",
+        timeout: 120_000,
+        windowsHide: true,
+        env: {
+          ...process.env,
+          META_KIM_PROJECT_BOOTSTRAP_DAILY_CACHE: "off",
+        },
+      });
+
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.equal(existsSync(path.join(tempDir, ".meta-kim")), false);
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.decision, undefined);
+      assert.match(
+        output.hookSpecificOutput.additionalContext,
+        /Meta_Kim found that this project needs a project-level setup update/,
+      );
+      assert.match(output.hookSpecificOutput.additionalContext, /No project files were written/);
+      assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /当前项目|我不会自动写入|choiceSurface|AskUserQuestion|request_user_input/);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -407,8 +445,8 @@ describe("graphify idempotent wiring (contract)", () => {
       });
       assert.equal(second.status, 0, second.stderr || second.stdout);
       const secondOutput = JSON.parse(second.stdout);
-      assert.equal(secondOutput.decision, "block");
-      assert.match(secondOutput.reason, /status=missing/);
+      assert.equal(secondOutput.decision, undefined);
+      assert.match(secondOutput.hookSpecificOutput.additionalContext, /Meta_Kim 检测到当前项目需要更新项目级配置/);
       assert.equal(existsSync(path.join(secondProject, ".meta-kim")), false);
       assert.equal(existsSync(path.join(secondProject, ".meta-kim", "state", "default", "project-bootstrap.json")), false);
     } finally {
@@ -509,6 +547,7 @@ describe("graphify idempotent wiring (contract)", () => {
           ...process.env,
           META_KIM_PROJECT_BOOTSTRAP_PROBE: "off",
           META_KIM_GLOBAL_STATE_DIR: globalStateDir,
+          META_KIM_LANG: "en",
         },
       });
 
