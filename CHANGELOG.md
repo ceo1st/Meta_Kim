@@ -8,9 +8,11 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## [Unreleased]
 
+## [2.8.42] - 2026-06-18
+
 ### Solved Problem
 
-This unreleased change addresses confusion between global reusable installs and project-local generated state. A global `meta-theory` install can now be verified end to end without copying the reusable Codex skill into every project, while project cache and Graphify outputs remain project-local.
+This release addresses confusion between global reusable installs and project-local generated state. A global `meta-theory` install can now be verified end to end without copying the reusable Codex skill into every project, while project cache and Graphify outputs remain project-local.
 
 ### Changed
 
