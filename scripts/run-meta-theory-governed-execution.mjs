@@ -567,10 +567,10 @@ function buildPhaseTriggerEvaluation({
         status === "skipped" ? reviewStatus === "pass" : reviewStatus !== "pass",
       ),
       businessPhaseSignal(
-        "autofix loop not opened without finding",
-        orchestrationReport.reviewResult.findings?.length ?? 0,
-        "0 when skipped",
-        status !== "skipped" || (orchestrationReport.reviewResult.findings?.length ?? 0) === 0,
+        "autofix loop follows review status",
+        { status, reviewStatus },
+        "skip when review pass, wait when review not pass",
+        status === "skipped" ? reviewStatus === "pass" : reviewStatus !== "pass",
       ),
     ],
     verify: [
@@ -675,6 +675,81 @@ function buildPhaseTriggerEvaluation({
     quantitativeSignals: signals,
     evidenceRefs: evidenceRefs[phase] ?? [],
     falsificationChecks: falsificationChecks[phase] ?? [],
+  };
+}
+
+function failedBusinessPhaseSignals(triggerEvaluation) {
+  return (triggerEvaluation?.quantitativeSignals ?? []).filter((signal) => signal.pass !== true);
+}
+
+function businessPhaseStatusReason({ phase, status, triggerEvaluation, skipReason }) {
+  const signals = triggerEvaluation?.quantitativeSignals ?? [];
+  const passed = signals.filter((signal) => signal.pass === true).length;
+  const failed = failedBusinessPhaseSignals(triggerEvaluation);
+  if (status === "done") {
+    return `已完成：${passed}/${signals.length} 个阶段信号成立，状态可由证据复查。`;
+  }
+  if (status === "skipped") {
+    return `已跳过：${skipReason ?? "本次没有需要执行的业务动作"}。`;
+  }
+  if (status === "blocked") {
+    const failedNames = failed.map((signal) => signal.signal).join("、") || "关键证据";
+    return `已阻塞：${failedNames} 未达标，不能把阶段完成说成闭环完成。`;
+  }
+  if (phase === "feedback") {
+    return "等待：需要用户验收或反馈，不能用命令通过替代用户接受。";
+  }
+  return "等待：需要上游阶段、外部输入或人工验收后才能继续。";
+}
+
+function businessPhaseNextAction({ phase, status }) {
+  if (status === "done") return "继续推进后续阶段或保留为完成证据。";
+  if (status === "skipped") return "无需执行；保留跳过原因供 Review 复查。";
+  if (status === "blocked") {
+    if (phase === "verify") return "补 fresh verification/runtime evidence 后重新判断。";
+    if (phase === "mirror") return "补 projection/mirror evidence 后重新判断。";
+    return "回到对应上游阶段补证据或修状态语义。";
+  }
+  if (phase === "feedback") return "等待用户确认、反馈或接受风险。";
+  return "等待缺失输入出现后继续。";
+}
+
+function determineCurrentBusinessPhase(phases) {
+  return (
+    phases.find((phase) => phase.status === "blocked") ??
+    phases.find((phase) => phase.status === "pending") ??
+    phases.find((phase) => phase.status === "done") ??
+    phases[0] ??
+    null
+  );
+}
+
+function summarizeBusinessPhaseStatuses(businessPhasePlanPacket) {
+  const phases = businessPhasePlanPacket?.phases ?? [];
+  const byStatus = new Map(["done", "skipped", "blocked", "pending"].map((status) => [status, []]));
+  for (const phase of phases) {
+    const group = byStatus.get(phase.status) ?? [];
+    group.push(phase.phase);
+    byStatus.set(phase.status, group);
+  }
+  const groupLine = ["done", "skipped", "blocked", "pending"]
+    .map((status) => `${status}=${(byStatus.get(status) ?? []).join("/") || "none"}`)
+    .join("; ");
+  const currentPhaseId = businessPhasePlanPacket?.closure?.currentPhase;
+  const currentPhase =
+    phases.find((phase) => phase.phase === currentPhaseId) ?? determineCurrentBusinessPhase(phases);
+  return {
+    groupLine,
+    currentLine: currentPhase
+      ? `${currentPhase.phase}=${currentPhase.status}；${currentPhase.statusReason}`
+      : "missing；没有生成业务阶段状态。",
+    blockedLine:
+      (byStatus.get("blocked") ?? []).length > 0
+        ? phases
+            .filter((phase) => phase.status === "blocked")
+            .map((phase) => `${phase.phase}: ${phase.statusReason}`)
+            .join(" | ")
+        : "none",
   };
 }
 
@@ -1446,12 +1521,13 @@ function buildBusinessPhasePlanPacket({ runId, orchestrationReport, runtimeEvide
     ["mirror", runtimeEvidence.status === "pass" ? "done" : "blocked"],
   ]);
   const skipReasons = new Map([
-    ["execution", "No worker task was needed."],
-    ["revision", "Review passed, so no revision loop was opened."],
-    ["evolve", writebackFlow.noneWithReason ?? "No durable writeback candidate was produced."],
+    ["execution", "本次没有需要派发的 worker 任务"],
+    ["revision", "Review 已通过，没有未解决修复项，所以不打开 revision loop"],
+    ["evolve", writebackFlow.noneWithReason ?? "本次没有产生可写回的长期候选"],
   ]);
   const phases = BUSINESS_PHASES.map(([phase, label, mapsToSpine, owner], index) => {
     const status = phaseStatuses.get(phase) ?? "pending";
+    const skipReason = status === "skipped" ? skipReasons.get(phase) ?? "Not needed for this run." : null;
     const triggerEvaluation = buildPhaseTriggerEvaluation({
       phase,
       status,
@@ -1474,10 +1550,13 @@ function buildBusinessPhasePlanPacket({ runId, orchestrationReport, runtimeEvide
             : phase === "evolve"
               ? "wardenWritebackFlow"
               : "run artifact and markdown report",
-      skipReason: status === "skipped" ? skipReasons.get(phase) ?? "Not needed for this run." : null,
+      skipReason,
       triggerEvaluation,
+      statusReason: businessPhaseStatusReason({ phase, status, triggerEvaluation, skipReason }),
+      nextAction: businessPhaseNextAction({ phase, status }),
     };
   });
+  const currentPhase = determineCurrentBusinessPhase(phases);
   const triggerScores = phases.map((phase) => phase.triggerEvaluation.triggerScore);
   const triggerCoveragePass = phases.every(
     (phase) =>
@@ -1510,7 +1589,10 @@ function buildBusinessPhasePlanPacket({ runId, orchestrationReport, runtimeEvide
     phaseCount: phases.length,
     phases,
     closure: {
-      currentPhase: "feedback",
+      currentPhase: currentPhase?.phase ?? "unknown",
+      currentStatus: currentPhase?.status ?? "unknown",
+      currentReason: currentPhase?.statusReason ?? "No business phase status was generated.",
+      currentNextAction: currentPhase?.nextAction ?? "Return to business phase producer.",
       userAcceptanceRequired: true,
       publicReadyClaimAllowed: false,
       reason:
@@ -1649,6 +1731,7 @@ function buildConversationNotice({
   runtimeEvidence,
   labels,
   governanceStartReasonPacket,
+  businessPhasePlanPacket,
   emitConversationNotice = false,
   conversationNoticeChannel = "stdout",
   conversationNoticeAdapter = CONVERSATION_NOTICE_ADAPTER,
@@ -1663,11 +1746,15 @@ function buildConversationNotice({
         .filter(Boolean)
     ),
   ].join("、");
+  const phaseSummary = summarizeBusinessPhaseStatuses(businessPhasePlanPacket);
   const lines = [
     `${labels.conversationNotice.title}: ${labels.plainLanguageSummary}`,
     `- 开始原因: ${governanceStartReasonPacket.summary}`,
     `- 8 阶段: ${governanceStartReasonPacket.spineReason}`,
     `- 11 阶段: ${governanceStartReasonPacket.workflowReason}`,
+    `- 11阶段状态: ${phaseSummary.groupLine}`,
+    `- 当前阶段: ${phaseSummary.currentLine}`,
+    `- 阻塞阶段: ${phaseSummary.blockedLine}`,
     `- 发牌: ${governanceStartReasonPacket.cardReason}`,
     `- ${labels.conversationNotice.stageProgress}: ${labels.conversationNotice.stageProgressDetail}`,
     `- ${labels.conversationNotice.route}: ${labels.conversationNotice.routeDetail(capabilityCount)}`,
@@ -1704,6 +1791,7 @@ function buildConversationNotice({
       workerTaskCount,
       synthesisOwner,
       runtimeEvidenceStatus: runtimeEvidence.status,
+      businessPhaseSummary: phaseSummary,
     },
   };
 }
@@ -2097,11 +2185,11 @@ function buildUserReadableRunReport({
     `- ${labels.businessPhaseSummary(businessPhasePlanPacket.phaseCount)}`,
     `- Trigger standard: minimum ${businessPhasePlanPacket.triggerStandard.minimumScore}/${businessPhasePlanPacket.triggerStandard.passThreshold}, coverage=${businessPhasePlanPacket.triggerStandard.coveragePass ? "pass" : "fail"}`,
     `- ${labels.spineRelationship}: ${businessPhasePlanPacket.spineRelationship}`,
-    `| ${labels.phase} | ${labels.status} | Trigger | Score | ${labels.owner} | ${labels.mapsToSpine} | ${labels.evidence} |`,
-    "|---|---|---|---|---|---|---|",
+    `| ${labels.phase} | ${labels.status} | Trigger | Score | ${labels.owner} | ${labels.mapsToSpine} | ${labels.evidence} | Reason | Next |`,
+    "|---|---|---|---|---|---|---|---|---|",
     ...businessPhasePlanPacket.phases.map(
       (phase) =>
-        `| ${phase.phaseIndex}. ${phase.label} | ${phase.status} | ${phase.triggerEvaluation.activationState} | ${phase.triggerEvaluation.triggerScore}/${phase.triggerEvaluation.passThreshold} | ${phase.owner} | ${phase.mapsToSpine.join("+")} | ${String(phase.evidence).replaceAll("|", "\\|")} |`
+        `| ${phase.phaseIndex}. ${phase.label} | ${phase.status} | ${phase.triggerEvaluation.activationState} | ${phase.triggerEvaluation.triggerScore}/${phase.triggerEvaluation.passThreshold} | ${phase.owner} | ${phase.mapsToSpine.join("+")} | ${String(phase.evidence).replaceAll("|", "\\|")} | ${String(phase.statusReason).replaceAll("|", "\\|")} | ${String(phase.nextAction).replaceAll("|", "\\|")} |`
     ),
     "",
     `## ${labels.capabilityRouteTitle}`,
@@ -7721,6 +7809,7 @@ export async function runMetaTheoryGovernedExecution({
     runtimeEvidence,
     labels,
     governanceStartReasonPacket,
+    businessPhasePlanPacket,
     emitConversationNotice,
     conversationNoticeChannel,
     conversationNoticeAdapter,
@@ -8108,7 +8197,7 @@ async function main() {
     approvalPacket,
     applyWriteback: process.argv.includes("--apply-writeback"),
     canonicalRoot: path.resolve(argValue("--canonical-root", path.join(REPO_ROOT, "canonical"))),
-    emitConversationNotice: process.argv.includes("--emit-conversation-notice"),
+    emitConversationNotice: !process.argv.includes("--no-emit-conversation-notice"),
     conversationNoticeChannel: "stdout",
     conversationNoticeAdapter: CONVERSATION_NOTICE_ADAPTER,
     hostVisibleSubagents: argValue(
