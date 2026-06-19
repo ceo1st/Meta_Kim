@@ -70,7 +70,7 @@ The proof path shows five things:
 
 The executable core-loop contract is `config/contracts/core-loop-contract.json`; it binds the default path to `npm run meta:theory:run -- "<task>"` and keeps Critical -> Fetch -> Thinking -> Execution -> Review -> Meta-Review -> Verification -> Evolution testable. `npm run meta:theory:demo` is the zero-argument replay entry for the 3-minute proof.
 
-For a guided walk-through, start with [examples/first-run/README.md](examples/first-run/README.md).
+For a guided walk-through, start with [examples/first-run/README.md](examples/first-run/README.md). For a product-level manual, read [docs/meta-kim-project-manual.md](docs/meta-kim-project-manual.md) or the [Chinese manual](docs/meta-kim-project-manual.zh-CN.md).
 
 ## Quick Start
 

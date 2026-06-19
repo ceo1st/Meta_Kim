@@ -18,6 +18,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..", "..");
 
 function runSyncCheck(targets) {
+  const result = runSyncCheckResult(targets);
+  return (result.stdout || "") + (result.stderr || "");
+}
+
+function runSyncCheckResult(targets) {
   const result = spawnSync(
     process.execPath,
     [
@@ -34,7 +39,7 @@ function runSyncCheck(targets) {
     },
   );
 
-  return (result.stdout || "") + (result.stderr || "");
+  return result;
 }
 
 function runSyncGlobal(targets, extraEnv = {}) {
@@ -57,6 +62,45 @@ function runSyncGlobal(targets, extraEnv = {}) {
 }
 
 describe("runtime hook sync contract", () => {
+  test("source repo project check treats absent runtime projections as expected", () => {
+    const result = runSyncCheckResult("claude,codex,cursor,openclaw");
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+
+    const summary = JSON.parse(result.stdout);
+    assert.equal(summary.status, "source_repo_project_projections_absent");
+    assert.equal(summary.total, 0);
+    assert.equal(summary.sourceRepoProjectProjections.expectedAbsent, true);
+    assert.equal(summary.staleFiles.length, 0);
+    assert.ok(summary.sourceRepoProjectProjections.skippedStaleFiles > 0);
+  });
+
+  test("source repo project check ignores empty projection directories", () => {
+    const claudeRoot = join(repoRoot, ".claude");
+    const emptyHooksDir = join(claudeRoot, "hooks");
+    const rootExisted = existsSync(claudeRoot);
+    const hooksExisted = existsSync(emptyHooksDir);
+
+    try {
+      if (!hooksExisted) {
+        mkdirSync(emptyHooksDir, { recursive: true });
+      }
+
+      const result = runSyncCheckResult("claude");
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+
+      const summary = JSON.parse(result.stdout);
+      assert.equal(summary.status, "source_repo_project_projections_absent");
+      assert.equal(summary.total, 0);
+    } finally {
+      if (!hooksExisted) {
+        rmSync(emptyHooksDir, { recursive: true, force: true });
+      }
+      if (!rootExisted) {
+        rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    }
+  });
+
   test("project sync does not generate repo-local hook files", () => {
     const output = runSyncCheck("claude").replace(/\\/g, "/");
     assert.doesNotMatch(output, /\.claude\/hooks\//);

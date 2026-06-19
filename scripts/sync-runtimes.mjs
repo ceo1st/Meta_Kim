@@ -46,6 +46,134 @@ const PROJECT_RUNTIME_SKILL_IDS = new Set(["meta-theory"]);
 // planning data; consumers just ignore it when they do not need it.
 const staleFiles = [];
 
+const SOURCE_REPO_PROJECT_PROJECTION_MARKERS = [
+  ".claude/agents",
+  ".claude/capability-index",
+  ".claude/commands",
+  ".claude/hooks",
+  ".claude/settings.json",
+  ".claude/skills",
+  ".mcp.json",
+  ".agents/skills",
+  ".codex/agents",
+  ".codex/capability-index",
+  ".codex/commands",
+  ".codex/config.toml",
+  ".codex/hooks",
+  ".codex/hooks.json",
+  ".codex/skills",
+  ".cursor/agents",
+  ".cursor/capability-index",
+  ".cursor/hooks",
+  ".cursor/hooks.json",
+  ".cursor/mcp.json",
+  ".cursor/rules",
+  ".cursor/skills",
+  "codex/config.toml.example",
+  "openclaw/capability-index",
+  "openclaw/hooks",
+  "openclaw/openclaw.template.json",
+  "openclaw/skills",
+  "openclaw/workspaces",
+];
+
+function normalizeRepoRelativePath(filePath) {
+  const absolutePath = path.isAbsolute(filePath)
+    ? filePath
+    : path.join(repoRoot, filePath);
+  const rel = path.relative(repoRoot, absolutePath).replace(/\\/g, "/");
+  if (rel.startsWith("../") || rel === ".." || path.isAbsolute(rel)) {
+    return null;
+  }
+  return rel;
+}
+
+function isSourceRepoProjectProjectionPath(filePath) {
+  const rel = normalizeRepoRelativePath(filePath);
+  if (!rel) return false;
+  return SOURCE_REPO_PROJECT_PROJECTION_MARKERS.some(
+    (marker) => rel === marker || rel.startsWith(`${marker}/`),
+  );
+}
+
+async function existsAtRepoPath(relativePath) {
+  try {
+    await fs.access(path.join(repoRoot, relativePath));
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function hasMaterialFileUnder(dirPath) {
+  let entries;
+  try {
+    entries = await fs.readdir(dirPath, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+
+  for (const entry of entries) {
+    const childPath = path.join(dirPath, entry.name);
+    if (entry.isFile()) return true;
+    if (entry.isDirectory() && (await hasMaterialFileUnder(childPath))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function hasMaterialProjectionAtRepoPath(relativePath) {
+  const absolutePath = path.join(repoRoot, relativePath);
+  let stat;
+  try {
+    stat = await fs.stat(absolutePath);
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+  if (stat.isFile()) return true;
+  if (stat.isDirectory()) return hasMaterialFileUnder(absolutePath);
+  return false;
+}
+
+async function isMetaKimSourceRepo() {
+  try {
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(repoRoot, "package.json"), "utf8"),
+    );
+    return (
+      pkg.name === "meta-kim" &&
+      (await existsAtRepoPath("canonical")) &&
+      (await existsAtRepoPath("config/sync.json"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function hasMaterialProjectProjection() {
+  for (const marker of SOURCE_REPO_PROJECT_PROJECTION_MARKERS) {
+    if (await hasMaterialProjectionAtRepoPath(marker)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function expectedSourceRepoProjectProjectionAbsence(scope, staleRecords) {
+  if (scope !== "project" || staleRecords.length === 0) return false;
+  if (!(await isMetaKimSourceRepo())) return false;
+  if (await hasMaterialProjectProjection()) return false;
+  return staleRecords.every(
+    (record) =>
+      record.action === "create" &&
+      isSourceRepoProjectProjectionPath(record.path),
+  );
+}
+
 // Recorder is lazily opened in main() when scope includes "project" so every
 // write point (writeGeneratedFile / writeGeneratedJson) can record through
 // this shared holder without plumbing a recorder arg through every build fn.
@@ -3385,7 +3513,14 @@ Examples:
     }
   }
 
+  const sourceRepoProjectProjectionAbsent = checkOnly
+    ? await expectedSourceRepoProjectProjectionAbsence(scope, staleFiles)
+    : false;
+
   if (checkOnly && jsonMode) {
+    const effectiveStaleFiles = sourceRepoProjectProjectionAbsent
+      ? []
+      : staleFiles;
     const byCategory = staleFiles.reduce((acc, f) => {
       const k = f.category || "unknown";
       acc[k] = (acc[k] || 0) + 1;
@@ -3400,20 +3535,45 @@ Examples:
         {
           scope,
           targets: selectedTargets,
-          total: staleFiles.length,
-          byCategory,
-          byAction,
-          staleFiles,
+          status: sourceRepoProjectProjectionAbsent
+            ? "source_repo_project_projections_absent"
+            : staleFiles.length > 0
+              ? "stale"
+              : "ok",
+          total: effectiveStaleFiles.length,
+          byCategory: sourceRepoProjectProjectionAbsent ? {} : byCategory,
+          byAction: sourceRepoProjectProjectionAbsent ? {} : byAction,
+          sourceRepoProjectProjections: sourceRepoProjectProjectionAbsent
+            ? {
+                expectedAbsent: true,
+                skippedStaleFiles: staleFiles.length,
+                message: t.syncRuntimesCheckSourceRepoProjectionAbsent(
+                  staleFiles.length,
+                ),
+              }
+            : {
+                expectedAbsent: false,
+                skippedStaleFiles: 0,
+              },
+          staleFiles: effectiveStaleFiles,
         },
         null,
         2,
       )}\n`,
     );
-    if (staleFiles.length > 0) process.exitCode = 1;
+    if (!sourceRepoProjectProjectionAbsent && staleFiles.length > 0) {
+      process.exitCode = 1;
+    }
     return;
   }
 
   if (checkOnly && changedFiles.length > 0) {
+    if (sourceRepoProjectProjectionAbsent) {
+      console.log(
+        t.syncRuntimesCheckSourceRepoProjectionAbsent(staleFiles.length),
+      );
+      return;
+    }
     console.error(t.syncRuntimesCheckStale);
     for (const file of changedFiles) {
       console.error(t.syncRuntimesCheckStaleLine(file));

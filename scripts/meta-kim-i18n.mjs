@@ -168,6 +168,8 @@ const STRINGS = {
     syncRuntimesCheckStale: "Generated runtime assets are out of date:",
     syncRuntimesCheckStaleLine: (file) => `- ${file}`,
     syncRuntimesCheckOk: "Runtime assets are up to date.",
+    syncRuntimesCheckSourceRepoProjectionAbsent: (count) =>
+      `Source repository check passed: project runtime projections are intentionally absent here (${count} generated project file(s) skipped). Run project bootstrap in a target project to materialize project-local assets.`,
     // Reverse mode strings
     reverseModeIntro: "Scanning runtime projections for evolution signals...",
     reverseModeNoSignals: "No evolution signals detected. Runtime projections match canonical sources.",
@@ -436,6 +438,8 @@ const STRINGS = {
     syncRuntimesCheckStale: "生成的工具端镜像已过期：",
     syncRuntimesCheckStaleLine: (file) => `- ${file}`,
     syncRuntimesCheckOk: "工具端镜像已是最新。",
+    syncRuntimesCheckSourceRepoProjectionAbsent: (count) =>
+      `源仓库自检通过：项目级工具端投影在这里按预期保持未生成（已跳过 ${count} 个应生成的项目文件）。需要项目本地资产时，请在目标项目中运行 project bootstrap。`,
     // Reverse mode strings
     reverseModeIntro: "扫描工具端镜像以检测演进信号...",
     reverseModeNoSignals: "未检测到演进信号。工具端镜像与 canonical 源一致。",
@@ -685,6 +689,8 @@ const STRINGS = {
     syncRuntimesCheckStale: "生成されたランタイム資産が古くなっています:",
     syncRuntimesCheckStaleLine: (file) => `- ${file}`,
     syncRuntimesCheckOk: "ランタイム資産は最新です。",
+    syncRuntimesCheckSourceRepoProjectionAbsent: (count) =>
+      `Source repository check passed: project runtime projections are intentionally absent here (${count} generated project file(s) skipped). Run project bootstrap in a target project to materialize project-local assets.`,
     // Reverse mode strings
     reverseModeIntro: "ランタイム投影から進化信号をスキャン中...",
     reverseModeNoSignals: "進化信号は検出されませんでした。ランタイム投影は canonical ソースと一致しています。",
@@ -946,6 +952,8 @@ const STRINGS = {
     syncRuntimesCheckStale: "생성된 런타임 자산이 오래되었습니다:",
     syncRuntimesCheckStaleLine: (file) => `- ${file}`,
     syncRuntimesCheckOk: "런타임 자산이 최신입니다.",
+    syncRuntimesCheckSourceRepoProjectionAbsent: (count) =>
+      `Source repository check passed: project runtime projections are intentionally absent here (${count} generated project file(s) skipped). Run project bootstrap in a target project to materialize project-local assets.`,
     // Reverse mode strings
     reverseModeIntro: "런타임 프로젝션에서 진화 신호 스캔 중...",
     reverseModeNoSignals: "진화 신호가 감지되지 않았습니다. 런타임 프로젝션이 canonical 소스와 일치합니다.",
