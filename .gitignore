@@ -88,8 +88,6 @@ docs/**
 !docs/
 !docs/images/
 !docs/images/**
-!docs/meta-kim-project-manual.md
-!docs/meta-kim-project-manual.zh-CN.md
 
 # ========== Generated reports ==========
 docs/agent-design-quality-eval-report.zh-CN.md
