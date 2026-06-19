@@ -310,9 +310,7 @@ function runEnforceHook(state, payload, options = {}) {
   const cwd = mkdtempSync(join(tmpdir(), "meta-kim-hook-"));
   try {
     const hookDir = join(cwd, "canonical", "runtime-assets", "claude", "hooks");
-    const sharedHookDir = join(cwd, "canonical", "runtime-assets", "shared", "hooks");
     mkdirSync(hookDir, { recursive: true });
-    mkdirSync(sharedHookDir, { recursive: true });
     for (const fileName of [
       "enforce-agent-dispatch.mjs",
       "bash-readonly-whitelist.mjs",
@@ -327,7 +325,7 @@ function runEnforceHook(state, payload, options = {}) {
     for (const fileName of ["utils.mjs", "skip-reminder.mjs", "spine-state.mjs"]) {
       copyFileSync(
         join(REPO_ROOT, "canonical/runtime-assets/shared/hooks", fileName),
-        join(sharedHookDir, fileName),
+        join(hookDir, fileName),
       );
     }
     const spineDir = join(cwd, ".meta-kim", "state", "test", "spine");
@@ -362,9 +360,7 @@ function runEnforceHookWithState(state, payload, options = {}) {
   const cwd = mkdtempSync(join(tmpdir(), "meta-kim-hook-"));
   try {
     const hookDir = join(cwd, "canonical", "runtime-assets", "claude", "hooks");
-    const sharedHookDir = join(cwd, "canonical", "runtime-assets", "shared", "hooks");
     mkdirSync(hookDir, { recursive: true });
-    mkdirSync(sharedHookDir, { recursive: true });
     for (const fileName of [
       "enforce-agent-dispatch.mjs",
       "bash-readonly-whitelist.mjs",
@@ -379,7 +375,7 @@ function runEnforceHookWithState(state, payload, options = {}) {
     for (const fileName of ["utils.mjs", "skip-reminder.mjs", "spine-state.mjs"]) {
       copyFileSync(
         join(REPO_ROOT, "canonical/runtime-assets/shared/hooks", fileName),
-        join(sharedHookDir, fileName),
+        join(hookDir, fileName),
       );
     }
     const spineDir = join(cwd, ".meta-kim", "state", "test", "spine");
@@ -1721,9 +1717,7 @@ describe("Part F2: choice surface runtime gate", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "meta-kim-hook-stage-"));
     try {
       const hookDir = join(cwd, "canonical", "runtime-assets", "claude", "hooks");
-      const sharedHookDir = join(cwd, "canonical", "runtime-assets", "shared", "hooks");
       mkdirSync(hookDir, { recursive: true });
-      mkdirSync(sharedHookDir, { recursive: true });
       for (const fileName of [
         "enforce-agent-dispatch.mjs",
         "bash-readonly-whitelist.mjs",
@@ -1738,7 +1732,7 @@ describe("Part F2: choice surface runtime gate", async () => {
       for (const fileName of ["utils.mjs", "skip-reminder.mjs", "spine-state.mjs"]) {
         copyFileSync(
           join(REPO_ROOT, "canonical/runtime-assets/shared/hooks", fileName),
-          join(sharedHookDir, fileName),
+          join(hookDir, fileName),
         );
       }
       const spineDir = join(cwd, ".meta-kim", "state", "test", "spine");
@@ -1797,9 +1791,7 @@ describe("Part F2: choice surface runtime gate", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "meta-kim-hook-fetch-"));
     try {
       const hookDir = join(cwd, "canonical", "runtime-assets", "claude", "hooks");
-      const sharedHookDir = join(cwd, "canonical", "runtime-assets", "shared", "hooks");
       mkdirSync(hookDir, { recursive: true });
-      mkdirSync(sharedHookDir, { recursive: true });
       for (const fileName of [
         "enforce-agent-dispatch.mjs",
         "bash-readonly-whitelist.mjs",
@@ -1814,7 +1806,7 @@ describe("Part F2: choice surface runtime gate", async () => {
       for (const fileName of ["utils.mjs", "skip-reminder.mjs", "spine-state.mjs"]) {
         copyFileSync(
           join(REPO_ROOT, "canonical/runtime-assets/shared/hooks", fileName),
-          join(sharedHookDir, fileName),
+          join(hookDir, fileName),
         );
       }
       const spineDir = join(cwd, ".meta-kim", "state", "test", "spine");
@@ -1873,9 +1865,7 @@ describe("Part F2: choice surface runtime gate", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "meta-kim-hook-sequence-"));
     try {
       const hookDir = join(cwd, "canonical", "runtime-assets", "claude", "hooks");
-      const sharedHookDir = join(cwd, "canonical", "runtime-assets", "shared", "hooks");
       mkdirSync(hookDir, { recursive: true });
-      mkdirSync(sharedHookDir, { recursive: true });
       for (const fileName of [
         "enforce-agent-dispatch.mjs",
         "bash-readonly-whitelist.mjs",
@@ -1890,7 +1880,7 @@ describe("Part F2: choice surface runtime gate", async () => {
       for (const fileName of ["utils.mjs", "skip-reminder.mjs", "spine-state.mjs"]) {
         copyFileSync(
           join(REPO_ROOT, "canonical/runtime-assets/shared/hooks", fileName),
-          join(sharedHookDir, fileName),
+          join(hookDir, fileName),
         );
       }
       const spineDir = join(cwd, ".meta-kim", "state", "test", "spine");

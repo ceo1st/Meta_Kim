@@ -105,7 +105,7 @@ import {
   extractMetaAgentName,
   recordSkippedHook,
   getGovernanceFlow,
-} from "../../shared/hooks/spine-state.mjs";
+} from "./spine-state.mjs";
 import {
   getSkipRule,
   hasSimpleKeyword,
@@ -113,7 +113,7 @@ import {
   formatSkipReason,
   getHookImpact,
   SKIP_DECISION,
-} from "../../shared/hooks/skip-reminder.mjs";
+} from "./skip-reminder.mjs";
 
 const cwd = process.cwd();
 const payload = await readJsonFromStdin();
