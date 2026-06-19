@@ -6083,10 +6083,12 @@ async function cleanupProjectRedundancyDirs(activeTargets, targetDirs) {
   const dirs = uniqueProjectDeployDirs(targetDirs);
   if (dirs.length === 0) return [];
 
-  heading(t.projectCleanupBatchHeading(dirs.length));
-  console.log(`${C.dim}${t.projectCleanupProtectionNote}${C.reset}`);
-  info(t.projectAssetsCleanupIntro);
-  info(t.projectAssetsCleanupScope);
+  if (!jsonOutputMode) {
+    heading(t.projectCleanupBatchHeading(dirs.length));
+    console.log(`${C.dim}${t.projectCleanupProtectionNote}${C.reset}`);
+    info(t.projectAssetsCleanupIntro);
+    info(t.projectAssetsCleanupScope);
+  }
 
   const results = [];
   for (const targetDir of dirs) {
@@ -6128,15 +6130,21 @@ async function cleanupProjectRedundancyDirs(activeTargets, targetDirs) {
         localStateCleanup,
         emptyDirCleanup,
       );
-      reportProjectAssetCleanup(cleanup, { reason: "global_redundancy" });
+      if (!jsonOutputMode) {
+        reportProjectAssetCleanup(cleanup, { reason: "global_redundancy" });
+      }
       results.push({ dir: targetDir, status: "ok", cleanup, strippedHookConfigs });
     } catch (error) {
       const msg = error?.message || String(error);
-      warn(t.projectDeployFailed(targetDir, msg));
+      if (!jsonOutputMode) {
+        warn(t.projectDeployFailed(targetDir, msg));
+      }
       results.push({ dir: targetDir, status: "failed", message: msg });
     }
   }
-  printProjectCleanupSummary(results);
+  if (!jsonOutputMode) {
+    printProjectCleanupSummary(results);
+  }
   return results;
 }
 
@@ -6841,8 +6849,8 @@ function refreshGlobalCapabilityInventory(activeTargets = []) {
   info(t.refreshGlobalCapabilityInventory);
   const targetArgs =
     Array.isArray(activeTargets) && activeTargets.length > 0
-      ? ["--targets", activeTargets.join(",")]
-      : [];
+      ? ["--runtime-inventory-only", "--targets", activeTargets.join(",")]
+      : ["--runtime-inventory-only"];
   const result = runNodeScript("scripts/discover-global-capabilities.mjs", targetArgs, {
     META_KIM_LANG: currentLangCode,
   });
@@ -6874,7 +6882,7 @@ function nonClaudeGlobalRuntimeHookTargets(targets) {
         .split(",")
         .filter(Boolean);
   return targetList.filter((target) =>
-    ["codex", "cursor", "openclaw"].includes(target),
+    ["cursor", "openclaw"].includes(target),
   );
 }
 
