@@ -934,7 +934,7 @@ describe("34 — Meta-theory run deliverables", () => {
     }
   });
 
-  test("CLI emits card dealing summary by default for governed runs", async () => {
+  test("CLI emits card dealing summary when explicitly requested for governed runs", async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), "meta-kim-default-conversation-notice-"));
     try {
       const result = spawnSync(
@@ -949,6 +949,7 @@ describe("34 — Meta-theory run deliverables", () => {
           tempDir,
           "--db",
           path.join(tempDir, "runs.sqlite"),
+          "--emit-conversation-notice",
         ],
         { cwd: process.cwd(), encoding: "utf8" }
       );

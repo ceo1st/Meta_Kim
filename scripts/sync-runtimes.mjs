@@ -10,6 +10,7 @@ import {
   buildCodexHooksJson,
   buildCursorHooksJson,
   buildHookPromptAdapterSource,
+  hookCommand,
   nodeHookCommand,
 } from "./runtime-hook-mapping.mjs";
 import { ensureCodexAppNativeControls } from "./codex-config-merge.mjs";
@@ -819,6 +820,12 @@ const canonicalOpenClawMemoryHookDir = path.join(
   "openclaw",
   "hooks",
   "mcp-memory-service",
+);
+const canonicalOpenClawStopSaveProgressHookPath = path.join(
+  canonicalRuntimeAssetsDir,
+  "claude",
+  "hooks",
+  "stop-save-progress.mjs",
 );
 const canonicalSharedMemorySaveHookPath = path.join(
   canonicalRuntimeAssetsDir,
@@ -1971,7 +1978,7 @@ export function buildCodexProjectHooksJson({
   hookPromptAdapterPath = null,
   packageRoot = null,
 } = {}) {
-  return buildCodexHooksJson({
+  const config = buildCodexHooksJson({
     graphifyHookPath,
     memoryHookPath,
     spineHookPath,
@@ -1979,6 +1986,35 @@ export function buildCodexProjectHooksJson({
     hookPromptAdapterPath,
     packageRoot,
   });
+  config.hooks.PostToolUse = [
+    {
+      matcher: "Edit|Write",
+      hooks: [
+        hookCommand(nodeHookCommand(".codex/hooks/post-format.mjs")),
+        hookCommand(nodeHookCommand(".codex/hooks/post-typecheck.mjs")),
+        hookCommand(nodeHookCommand(".codex/hooks/post-console-log-warn.mjs")),
+      ],
+    },
+  ];
+  config.hooks.SubagentStart = [
+    {
+      matcher: "*",
+      hooks: [hookCommand(nodeHookCommand(".codex/hooks/subagent-context.mjs"))],
+    },
+  ];
+  config.hooks.Stop = [
+    ...(config.hooks.Stop ?? []),
+    {
+      matcher: "*",
+      hooks: [
+        hookCommand(nodeHookCommand(".codex/hooks/stop-compaction.mjs")),
+        hookCommand(nodeHookCommand(".codex/hooks/stop-console-log-audit.mjs")),
+        hookCommand(nodeHookCommand(".codex/hooks/stop-completion-guard.mjs")),
+        hookCommand(nodeHookCommand(".codex/hooks/stop-spine-cleanup.mjs")),
+      ],
+    },
+  ];
+  return config;
 }
 
 export function buildCursorProjectHooksJson({
@@ -1989,7 +2025,7 @@ export function buildCursorProjectHooksJson({
   hookPromptAdapterPath = null,
   packageRoot = null,
 } = {}) {
-  return buildCursorHooksJson({
+  const config = buildCursorHooksJson({
     graphifyHookPath,
     memoryHookPath,
     spineHookPath,
@@ -1997,6 +2033,29 @@ export function buildCursorProjectHooksJson({
     hookPromptAdapterPath,
     packageRoot,
   });
+  config.hooks.postToolUse = [
+    {
+      matcher: "Edit|Write",
+      hooks: [
+        { command: nodeHookCommand(".cursor/hooks/post-format.mjs") },
+        { command: nodeHookCommand(".cursor/hooks/post-typecheck.mjs") },
+        { command: nodeHookCommand(".cursor/hooks/post-console-log-warn.mjs") },
+      ],
+    },
+  ];
+  config.hooks.subagentStart = [
+    {
+      command: nodeHookCommand(".cursor/hooks/subagent-context.mjs"),
+    },
+  ];
+  config.hooks.stop = [
+    ...(config.hooks.stop ?? []),
+    { command: nodeHookCommand(".cursor/hooks/stop-compaction.mjs") },
+    { command: nodeHookCommand(".cursor/hooks/stop-console-log-audit.mjs") },
+    { command: nodeHookCommand(".cursor/hooks/stop-completion-guard.mjs") },
+    { command: nodeHookCommand(".cursor/hooks/stop-spine-cleanup.mjs") },
+  ];
+  return config;
 }
 
 async function syncRuntimeSkills(
@@ -2136,8 +2195,16 @@ const CODEX_ACTIVE_PROJECT_HOOK_FILES = new Set([
   "bash-readonly-whitelist.mjs",
   "enforce-agent-dispatch.mjs",
   "graphify-context.mjs",
+  "post-console-log-warn.mjs",
+  "post-format.mjs",
+  "post-typecheck.mjs",
   "skip-reminder.mjs",
   "spine-state.mjs",
+  "stop-compaction.mjs",
+  "stop-completion-guard.mjs",
+  "stop-console-log-audit.mjs",
+  "stop-spine-cleanup.mjs",
+  "subagent-context.mjs",
   "utils.mjs",
 ]);
 
@@ -2169,12 +2236,24 @@ const CURSOR_ACTIVE_PROJECT_HOOK_FILES = new Set([
   "bash-readonly-whitelist.mjs",
   "enforce-agent-dispatch.mjs",
   "graphify-context.mjs",
+  "post-console-log-warn.mjs",
+  "post-format.mjs",
+  "post-typecheck.mjs",
   "skip-reminder.mjs",
   "spine-state.mjs",
+  "stop-compaction.mjs",
+  "stop-completion-guard.mjs",
+  "stop-console-log-audit.mjs",
+  "stop-spine-cleanup.mjs",
+  "subagent-context.mjs",
   "utils.mjs",
 ]);
 
-const OPENCLAW_PROJECT_HOOK_FILES = new Set(["HOOK.md", "handler.ts"]);
+const OPENCLAW_PROJECT_HOOK_FILES = new Set([
+  "HOOK.md",
+  "handler.ts",
+  "stop-save-progress.mjs",
+]);
 
 // Map from platform id to whitelist for project-level hook cleanup.
 const PROJECT_HOOK_FILES_BY_PLATFORM = {
@@ -2593,6 +2672,13 @@ Examples:
     const openclawInRepoRoot =
       dirs.openclawTemplateConfigPath?.includes(repoRoot);
     if (openclawInRepoRoot) {
+      const removedOpenclawRootHooks = await removeProjectMetaKimHooks(
+        dirs.openclawHooksDir,
+        "openclaw",
+      );
+      for (const hookName of removedOpenclawRootHooks) {
+        changedFiles.push(`${dp.openclawHooks}/${hookName}`);
+      }
       const removedOpenclawHooks = await removeProjectMetaKimHooks(
         path.join(dirs.openclawHooksDir, "mcp-memory-service"),
         "openclaw",
@@ -2640,6 +2726,20 @@ Examples:
             `${dp.openclawHooks}/mcp-memory-service/${hookEntry.name}`,
           );
         }
+      }
+      const stopSaveProgressHook = await tryReadCanonical(
+        canonicalOpenClawStopSaveProgressHookPath,
+      );
+      if (
+        stopSaveProgressHook &&
+        (
+          await writeGeneratedFile(
+            path.join(dirs.openclawHooksDir, "stop-save-progress.mjs"),
+            stopSaveProgressHook,
+          )
+        ).changed
+      ) {
+        changedFiles.push(`${dp.openclawHooks}/stop-save-progress.mjs`);
       }
     }
 

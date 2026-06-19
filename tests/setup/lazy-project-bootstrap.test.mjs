@@ -476,7 +476,10 @@ test("global cleanup removes signed Meta_Kim residue but preserves unknown local
     mkdirSync(path.join(projectDir, ".meta-kim", "state", "default"), { recursive: true });
     writeFileSync(
       path.join(projectDir, ".claude", "settings.json"),
-      readFileSync(path.join(REPO_ROOT, ".claude", "settings.json"), "utf8"),
+      readFileSync(
+        path.join(REPO_ROOT, "canonical", "runtime-assets", "claude", "settings.json"),
+        "utf8",
+      ),
       "utf8",
     );
     writeFileSync(
@@ -501,7 +504,16 @@ test("global cleanup removes signed Meta_Kim residue but preserves unknown local
     );
     writeFileSync(
       path.join(projectDir, "openclaw", "openclaw.template.json"),
-      readFileSync(path.join(REPO_ROOT, "openclaw", "openclaw.template.json"), "utf8"),
+      readFileSync(
+        path.join(
+          REPO_ROOT,
+          "canonical",
+          "runtime-assets",
+          "openclaw",
+          "openclaw.template.json",
+        ),
+        "utf8",
+      ),
       "utf8",
     );
     writeFileSync(

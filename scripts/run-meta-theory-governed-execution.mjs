@@ -8308,7 +8308,9 @@ async function main() {
     approvalPacket,
     applyWriteback: process.argv.includes("--apply-writeback"),
     canonicalRoot: path.resolve(argValue("--canonical-root", path.join(REPO_ROOT, "canonical"))),
-    emitConversationNotice: !process.argv.includes("--no-emit-conversation-notice"),
+    emitConversationNotice:
+      process.argv.includes("--emit-conversation-notice") &&
+      !process.argv.includes("--no-emit-conversation-notice"),
     conversationNoticeChannel: "stdout",
     conversationNoticeAdapter: CONVERSATION_NOTICE_ADAPTER,
     hostVisibleSubagents: argValue(

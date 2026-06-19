@@ -3327,6 +3327,7 @@ const GLOBAL_HOOK_PACKAGE_FILES_LIST = [
   "stop-compaction.mjs",
   "stop-completion-guard.mjs",
   "stop-console-log-audit.mjs",
+  "stop-save-progress.mjs",
   "stop-spine-cleanup.mjs",
   "subagent-context.mjs",
   "utils.mjs",
@@ -3378,6 +3379,7 @@ const PROJECT_HOOK_REL_DIRS_BY_PLATFORM = {
   claude: ".claude/hooks",
   codex: ".codex/hooks",
   cursor: ".cursor/hooks",
+  openclaw: "openclaw/hooks",
 };
 
 const PROJECT_HOOK_SOURCE_CANDIDATES = {
@@ -3390,8 +3392,16 @@ const PROJECT_HOOK_SOURCE_CANDIDATES = {
     "bash-readonly-whitelist.mjs",
     "enforce-agent-dispatch.mjs",
     "graphify-context.mjs",
+    "post-console-log-warn.mjs",
+    "post-format.mjs",
+    "post-typecheck.mjs",
     "skip-reminder.mjs",
     "spine-state.mjs",
+    "stop-compaction.mjs",
+    "stop-completion-guard.mjs",
+    "stop-console-log-audit.mjs",
+    "stop-spine-cleanup.mjs",
+    "subagent-context.mjs",
     "utils.mjs",
   ],
   cursor: [
@@ -3399,9 +3409,20 @@ const PROJECT_HOOK_SOURCE_CANDIDATES = {
     "bash-readonly-whitelist.mjs",
     "enforce-agent-dispatch.mjs",
     "graphify-context.mjs",
+    "post-console-log-warn.mjs",
+    "post-format.mjs",
+    "post-typecheck.mjs",
     "skip-reminder.mjs",
     "spine-state.mjs",
+    "stop-compaction.mjs",
+    "stop-completion-guard.mjs",
+    "stop-console-log-audit.mjs",
+    "stop-spine-cleanup.mjs",
+    "subagent-context.mjs",
     "utils.mjs",
+  ],
+  openclaw: [
+    "stop-save-progress.mjs",
   ],
 };
 
@@ -3638,6 +3659,7 @@ function rewriteProjectDirRefs(raw, targetDir) {
   const sourceForward = PROJECT_DIR.replace(/\\/g, "/");
   const targetForward = targetDir.replace(/\\/g, "/");
   return String(raw)
+    .replaceAll("__REPO_ROOT__", targetForward)
     .replaceAll(sourceForward, targetForward)
     .replaceAll(PROJECT_DIR, targetDir);
 }
@@ -3792,12 +3814,6 @@ function prepareProjectDeployJson(relPath, srcPath, targetDir) {
   if (rel === ".mcp.json" || rel === ".cursor/mcp.json") {
     return { mcpServers: {} };
   }
-  if (rel === ".codex/hooks.json") {
-    return buildCodexHooksJson({ memoryHookPath: null, packageRoot: PROJECT_DIR });
-  }
-  if (rel === ".cursor/hooks.json") {
-    return buildCursorHooksJson({ memoryHookPath: null, packageRoot: PROJECT_DIR });
-  }
 
   const raw = readFileSync(srcPath, "utf8");
   const parsed = parseJsonText(rewriteProjectDirRefs(raw, targetDir), srcPath);
@@ -3910,21 +3926,24 @@ function projectDeployRootsForPlatform(platformId) {
     add(".claude/skills");
     add(".claude/capability-index");
     add(".claude/commands");
-    add(".claude/settings.json");
+    add("canonical/runtime-assets/claude/settings.json", ".claude/settings.json");
     if (existsSync(join(PROJECT_DIR, ".mcp.json"))) add(".mcp.json");
   }
   if (platformId === "openclaw" || platformId === "all") {
     add("openclaw/workspaces");
     add("openclaw/skills");
     add("openclaw/capability-index");
-    add("openclaw/openclaw.template.json");
+    add(
+      "canonical/runtime-assets/openclaw/openclaw.template.json",
+      "openclaw/openclaw.template.json",
+    );
   }
   if (platformId === "codex" || platformId === "all") {
     add(".codex/agents");
     add(".agents/skills");
     add(".codex/capability-index");
     add(".codex/commands");
-    add(".codex/hooks.json");
+    add("canonical/runtime-assets/codex/hooks.json", ".codex/hooks.json");
     add(".codex/config.toml");
   }
   if (platformId === "cursor" || platformId === "all") {
@@ -3932,7 +3951,7 @@ function projectDeployRootsForPlatform(platformId) {
     add(".cursor/skills");
     add(".cursor/capability-index");
     add(".cursor/rules");
-    add(".cursor/hooks.json");
+    add("canonical/runtime-assets/cursor/hooks.json", ".cursor/hooks.json");
     add(".cursor/mcp.json");
   }
   return roots;
@@ -3944,7 +3963,9 @@ function collectDeployFilePlansFromRoot(srcRoot, destRoot, context = {}) {
   const targetDir = context.targetDir || destRoot;
   const plans = [];
   if (!statSync(srcRoot).isDirectory()) {
-    const relPath = normalizeDeployRelPath(relative(sourceRoot, srcRoot));
+    const relPath = normalizeDeployRelPath(
+      context.destRelBase || relative(sourceRoot, srcRoot),
+    );
     const destPath = join(targetDir, relPath);
     plans.push(projectDeployFilePlan(srcRoot, destPath, relPath, targetDir, context));
     return plans;
@@ -4103,6 +4124,7 @@ function collectProjectDeployPlan(activeTargets, targetDir) {
         sourceRoot: PROJECT_DIR,
         targetDir,
         managedRelPaths,
+        destRelBase: root.destRel !== root.srcRel ? root.destRel : null,
       })) {
         if (seen.has(plan.relPath)) continue;
         seen.add(plan.relPath);
@@ -4651,12 +4673,23 @@ function stripMetaKimProjectConfig(relPath, config = {}) {
   return next;
 }
 
-function generatedProjectConfigForRel(targetDir, relPath) {
+function generatedProjectConfigVariantsForRel(targetDir, relPath, currentFilePlans = []) {
   const rel = normalizeDeployRelPath(relPath);
-  const sourcePath = join(PROJECT_DIR, rel);
+  const plan = currentFilePlans.find(
+    (file) => normalizeDeployRelPath(file.relPath) === rel,
+  );
+  const sourcePath = join(PROJECT_DIR, plan?.source ?? rel);
   if (!existsSync(sourcePath)) return null;
-  const raw = rewriteProjectDirRefs(readFileSync(sourcePath, "utf8"), targetDir);
-  return parseJsonText(raw, sourcePath);
+  const raw = readFileSync(sourcePath, "utf8");
+  const candidates = [raw, rewriteProjectDirRefs(raw, targetDir)];
+  const variants = [];
+  const seen = new Set();
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+    variants.push(parseJsonText(candidate, sourcePath));
+  }
+  return variants;
 }
 
 function isEmptyProjectConfigShell(config = {}) {
@@ -4678,10 +4711,16 @@ function isGeneratedOnlyProjectConfig(targetDir, relPath, config, currentFilePla
     plan?.ownership === "shared_config_merge" ||
     plan?.mergePolicy === "additive_preserve_user_state_json";
   if (!hasMetaKimManagementEvidence) return false;
-  const generated = generatedProjectConfigForRel(targetDir, rel);
-  if (!generated) return false;
-  const strippedGenerated = stripMetaKimProjectConfig(rel, generated);
-  return jsonEquivalent(config, generated) || jsonEquivalent(config, strippedGenerated);
+  const generatedVariants = generatedProjectConfigVariantsForRel(
+    targetDir,
+    rel,
+    currentFilePlans,
+  );
+  if (!generatedVariants) return false;
+  return generatedVariants.some((generated) => {
+    const strippedGenerated = stripMetaKimProjectConfig(rel, generated);
+    return jsonEquivalent(config, generated) || jsonEquivalent(config, strippedGenerated);
+  });
 }
 
 function cleanupRedundantProjectConfigs(targetDir, activeTargets, currentFilePlans = []) {
@@ -5165,7 +5204,7 @@ const PROJECT_HOOK_DIRS_BY_PLATFORM = {
   claude: ".claude/hooks",
   codex: ".codex/hooks",
   cursor: ".cursor/hooks",
-  // openclaw has no hook concept.
+  openclaw: "openclaw/hooks",
 };
 
 // Per-platform whitelist of Meta_Kim-managed hook files. Files NOT on the
@@ -5207,6 +5246,9 @@ const PROJECT_HOOK_FILE_WHITELIST_BY_PLATFORM = {
     "planning-with-files-adapter.mjs",
     "post_tool_use.py",
     "post-tool-use.sh",
+    "post-console-log-warn.mjs",
+    "post-format.mjs",
+    "post-typecheck.mjs",
     "pre_tool_use.py",
     "pre-tool-use.sh",
     "pre-compact.sh",
@@ -5220,6 +5262,11 @@ const PROJECT_HOOK_FILE_WHITELIST_BY_PLATFORM = {
     "resolve-plan-dir.sh",
     "skip-reminder.mjs",
     "spine-state.mjs",
+    "stop-compaction.mjs",
+    "stop-console-log-audit.mjs",
+    "stop-completion-guard.mjs",
+    "stop-spine-cleanup.mjs",
+    "subagent-context.mjs",
     "utils.mjs",
   ]),
   cursor: new Set([
@@ -5233,6 +5280,9 @@ const PROJECT_HOOK_FILE_WHITELIST_BY_PLATFORM = {
     "planning-with-files-adapter.mjs",
     "post-tool-use.ps1",
     "post-tool-use.sh",
+    "post-console-log-warn.mjs",
+    "post-format.mjs",
+    "post-typecheck.mjs",
     "pre-tool-use.ps1",
     "pre-tool-use.sh",
     "stop.ps1",
@@ -5241,7 +5291,15 @@ const PROJECT_HOOK_FILE_WHITELIST_BY_PLATFORM = {
     "user-prompt-submit.sh",
     "skip-reminder.mjs",
     "spine-state.mjs",
+    "stop-compaction.mjs",
+    "stop-console-log-audit.mjs",
+    "stop-completion-guard.mjs",
+    "stop-spine-cleanup.mjs",
+    "subagent-context.mjs",
     "utils.mjs",
+  ]),
+  openclaw: new Set([
+    "stop-save-progress.mjs",
   ]),
 };
 
