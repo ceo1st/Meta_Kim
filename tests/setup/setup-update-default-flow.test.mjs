@@ -346,7 +346,12 @@ describe("setup update default flow", () => {
     );
     assert.match(source, /metaTheoryGlobalSyncArgs\(activeTargets\)/);
     assert.match(source, /syncNonClaudeGlobalRuntimeHooks\(activeTargets\)/);
-    assert.match(source, /\["codex", "cursor", "openclaw"\]\.includes\(target\)/);
+    assert.match(source, /\["cursor", "openclaw"\]\.includes\(target\)/);
+    assert.doesNotMatch(
+      source,
+      /\["codex", "cursor", "openclaw"\]\.includes\(target\)/,
+      "Codex global hooks are already owned by sync-global-meta-theory and must not be overwritten by sync-runtimes global sync",
+    );
   });
 
   test("global update runs global skill and governance updates without extra yes/no prompts", () => {
