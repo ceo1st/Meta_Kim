@@ -65,18 +65,26 @@ const RUNTIME_SMOKE_PROJECTIONS = {
   claude: {
     entry: ".claude/skills/meta-theory/SKILL.md",
     extra: [".claude/agents/meta-conductor.md"],
+    sourceEntry: "canonical/skills/meta-theory/SKILL.md",
+    sourceExtra: ["canonical/agents/meta-conductor.md"],
   },
   codex: {
     entry: ".agents/skills/meta-theory/SKILL.md",
     extra: [".codex/commands/meta-theory.md"],
+    sourceEntry: "canonical/skills/meta-theory/SKILL.md",
+    sourceExtra: ["canonical/runtime-assets/codex/commands/meta-theory.md"],
   },
   cursor: {
     entry: ".cursor/skills/meta-theory/SKILL.md",
     extra: [".cursor/rules/meta-enforcement.mdc"],
+    sourceEntry: "canonical/skills/meta-theory/SKILL.md",
+    sourceExtra: ["canonical/runtime-assets/cursor/rules/meta-enforcement.mdc"],
   },
   openclaw: {
     entry: "openclaw/skills/meta-theory/SKILL.md",
     extra: ["openclaw/openclaw.template.json"],
+    sourceEntry: "canonical/skills/meta-theory/SKILL.md",
+    sourceExtra: ["canonical/runtime-assets/openclaw/openclaw.template.json"],
   },
 };
 
@@ -716,8 +724,9 @@ function businessPhaseNextAction({ phase, status }) {
 
 function determineCurrentBusinessPhase(phases) {
   return (
-    phases.find((phase) => phase.status === "blocked") ??
+    phases.find((phase) => phase.phase === "feedback" && phase.status === "pending") ??
     phases.find((phase) => phase.status === "pending") ??
+    phases.find((phase) => phase.status === "blocked") ??
     phases.find((phase) => phase.status === "done") ??
     phases[0] ??
     null
@@ -1071,17 +1080,47 @@ export async function buildRuntimeProjectionEvidence({
           /meta-theory|meta-warden|meta-conductor|orchestration|capability/i.test(raw),
       });
     }
-    const naturalRoute =
+    const runtimeProjectionMaterialized =
+      entryRaw !== null || extraChecks.some((item) => item.present === true);
+    const runtimeNaturalRoute =
       entryRaw !== null &&
       /meta-warden/i.test(entryRaw) &&
       /meta-conductor/i.test(entryRaw) &&
       /orchestration|workerTaskPackets|multi-type capability inventory/i.test(entryRaw);
+    const sourceEntryPath = path.join(repoRoot, projection.sourceEntry);
+    const sourceEntryRaw = await readTextIfExists(sourceEntryPath);
+    const sourceChecks = [];
+    for (const extra of projection.sourceExtra) {
+      const extraPath = path.join(repoRoot, extra);
+      const raw = await readTextIfExists(extraPath);
+      sourceChecks.push({
+        path: extra,
+        present: raw !== null,
+        routeMentioned:
+          raw !== null &&
+          /meta-theory|meta-warden|meta-conductor|orchestration|capability/i.test(raw),
+      });
+    }
+    const sourceNaturalRoute =
+      sourceEntryRaw !== null &&
+      /meta-warden/i.test(sourceEntryRaw) &&
+      /meta-conductor/i.test(sourceEntryRaw) &&
+      /orchestration|workerTaskPackets|multi-type capability inventory/i.test(sourceEntryRaw);
+    const effectiveExtraChecks = runtimeProjectionMaterialized ? extraChecks : sourceChecks;
+    const naturalRoute = runtimeProjectionMaterialized ? runtimeNaturalRoute : sourceNaturalRoute;
+    const evidenceSource = runtimeProjectionMaterialized
+      ? "runtime_projection"
+      : "canonical_source_projection";
     const status =
-      naturalRoute && extraChecks.every((item) => item.present) ? "smoke_pass" : "partial";
+      naturalRoute && effectiveExtraChecks.every((item) => item.present) ? "smoke_pass" : "partial";
     const unsupportedWithReason =
       status === "partial"
-        ? "Projection smoke did not prove all required files; do not mark live pass."
-        : "Projection smoke is not native/live evidence; release-grade runtime proof still needs live evaluation.";
+        ? runtimeProjectionMaterialized
+          ? "Projection smoke did not prove all required files; do not mark live pass."
+          : "Canonical source projection smoke did not prove all required files; do not mark live pass."
+        : runtimeProjectionMaterialized
+          ? "Projection smoke is not native/live evidence; release-grade runtime proof still needs live evaluation."
+          : "Canonical source projection smoke is not native/live evidence; project install/update must materialize runtime files before live release evidence.";
     const failureClass = classifyProjectionFailure({
       runtime,
       status,
@@ -1092,15 +1131,21 @@ export async function buildRuntimeProjectionEvidence({
       status,
       evidenceType: "projection_smoke",
       evidenceKind: "smoke",
+      evidenceSource,
       failureClass,
       triggerInput: "meta-theory governed execution",
       runtimeEntry: projection.entry,
+      runtimeProjectionMaterialized,
+      runtimeEntryPresent: entryRaw !== null,
+      sourceEntry: projection.sourceEntry,
+      sourceEntryPresent: sourceEntryRaw !== null,
       orchestrationBoard:
         orchestrationReport.orchestrationTaskBoardPacket.dispatchBoardId,
       workerTaskPackets: orchestrationReport.workerTaskPackets.length,
       verificationOwner: "verify",
       naturalRoute,
       extraChecks,
+      sourceChecks,
       command: `node scripts/eval-meta-agents.mjs --runtime=${runtime}`,
       artifact: `runtimeProjectionEvidence.results.${runtime}`,
       remainingAction: remainingActionForProjection(runtime, failureClass),
@@ -8058,6 +8103,7 @@ export async function runMetaTheoryGovernedExecution({
   });
   artifactStatus =
     artifactStatus === "pass" &&
+    runtimeEvidence.status === "pass" &&
     coreLoop.capabilityInvocationTruthPacket.status === "pass" &&
     coreLoop.productExperiencePacket.status === "product_experience_pass"
       ? "pass"
