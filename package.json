@@ -153,8 +153,6 @@
     "bin/",
     "config/",
     "docs/images/",
-    "docs/meta-kim-project-manual.md",
-    "docs/meta-kim-project-manual.zh-CN.md",
     "llms.txt",
     "setup.mjs",
     "install-deps.sh",

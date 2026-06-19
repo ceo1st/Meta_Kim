@@ -123,27 +123,64 @@ const toolInput = payload?.tool_input ?? {};
 const SPINE_STATE_DIR =
   process.env.META_KIM_SPINE_STATE_DIR || ".meta-kim/state/default/spine";
 const targetPath = extractFilePath(payload) || "";
+const PLANNING_FILES = ["task_plan.md", "findings.md", "progress.md"];
+
+function normalizeHookPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return normalize(raw.replace(/^["']|["']$/g, ""))
+    .replace(/\\/g, "/")
+    .toLowerCase();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function touchesSpineStatePath(value) {
+  const normalized = normalizeHookPath(value);
+  if (!normalized) return false;
+  const stateDir = normalizeHookPath(SPINE_STATE_DIR);
+  return (
+    normalized.endsWith("spine-state.json") ||
+    normalized.includes(`${stateDir}/`) ||
+    /(^|\/)spine\//.test(normalized)
+  );
+}
 
 function isSpineStateWrite() {
   // Windows paths are case-insensitive: comparing the lowercased, normalized
   // suffix prevents a meta-agent from sneaking writes via mixed case such as
   // "Spine-State.JSON".
-  const normalized = normalize(targetPath || "").toLowerCase();
-  const spineFile = normalize("spine-state.json").toLowerCase();
-  if (normalized.endsWith(spineFile)) return true;
-  // Also reject anything under a ".../spine/..." segment so adjacent ledger
+  if (touchesSpineStatePath(targetPath)) return true;
+  // Also allow anything under a ".../spine/..." segment so adjacent ledger
   // files do not become a back door.
-  return /[\\/]spine[\\/]/.test(normalized) || isBashSpineStateWrite();
+  return isApplyPatchSpineStateWrite() || isBashSpineStateWrite();
+}
+
+function isApplyPatchSpineStateWrite() {
+  if (String(toolName).toLowerCase() !== "apply_patch") return false;
+  const patch = String(toolInput?.patch || payload?.patch || "");
+  if (!patch.trim()) return false;
+
+  const touchedPaths = [];
+  const pathHeaderPattern =
+    /^\*\*\* (?:Add File|Update File|Delete File|Move to):\s+(.+)$/gm;
+  for (const match of patch.matchAll(pathHeaderPattern)) {
+    touchedPaths.push(match[1].trim());
+  }
+
+  return (
+    touchedPaths.length > 0 && touchedPaths.every(touchesSpineStatePath)
+  );
 }
 
 function isBashSpineStateWrite() {
   if (toolName !== "Bash") return false;
   const command = String(toolInput?.command || "");
   if (!command.trim()) return false;
-  if (isLegacyShellSpineStateWrite(command)) {
-    return true;
-  }
 
+  const spinePathVariables = collectSpinePathVariables(command);
   const segments = bashReadonlyInternals
     .splitSegments(command)
     .map((segment) => segment.trim())
@@ -155,7 +192,10 @@ function isBashSpineStateWrite() {
     if (isReadOnlyBash(segment)) {
       continue;
     }
-    if (!isSpineStateWriteSegment(segment)) {
+    if (isSafeSpineStatePrepSegment(segment, spinePathVariables)) {
+      continue;
+    }
+    if (!isSpineStateWriteSegment(segment, spinePathVariables)) {
       return false;
     }
     sawSpineWrite = true;
@@ -164,36 +204,106 @@ function isBashSpineStateWrite() {
   return sawSpineWrite;
 }
 
-function isLegacyShellSpineStateWrite(command) {
-  const normalized = command.replace(/\\/g, "/").toLowerCase();
-  const stateDir = SPINE_STATE_DIR.replace(/\\/g, "/").toLowerCase();
-  const touchesSpine =
-    normalized.includes(`${stateDir}/`) ||
-    normalized.includes(".meta-kim/state/default/spine/") ||
-    normalized.includes("spine-state.json");
-  if (!touchesSpine) return false;
+function collectSpinePathVariables(command) {
+  const variables = new Set();
+  const normalized = String(command || "").replace(/\\/g, "/");
+  const psAssignment =
+    /\$([A-Za-z_][\w]*)\s*=\s*["']([^"']*(?:spine-state\.json|\/spine\/)[^"']*)["']/gi;
+  for (const match of normalized.matchAll(psAssignment)) {
+    if (touchesSpineStatePath(match[2])) variables.add(match[1]);
+  }
 
-  return /(^|[\s|;&])(?:set-content|out-file|add-content|new-item|remove-item|move-item|copy-item)\b|[>]{1,2}/i.test(command);
+  const jsAssignment =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*["']([^"']*(?:spine-state\.json|\/spine\/)[^"']*)["']/gi;
+  for (const match of normalized.matchAll(jsAssignment)) {
+    if (touchesSpineStatePath(match[2])) variables.add(match[1]);
+  }
+
+  const jsPathJoinAssignment =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:path\.)?(?:join|resolve)\s*\([^;]*spine-state\.json[^;]*\)/gi;
+  for (const match of normalized.matchAll(jsPathJoinAssignment)) {
+    variables.add(match[1]);
+  }
+
+  return variables;
 }
 
-function isSpineStateWriteSegment(segment) {
-  const normalized = segment.replace(/\\/g, "/").toLowerCase();
-  const stateDir = SPINE_STATE_DIR.replace(/\\/g, "/").toLowerCase();
-  const touchesSpine =
-    normalized.includes(`${stateDir}/`) ||
-    normalized.includes(".meta-kim/state/default/spine/") ||
-    normalized.includes("spine-state.json");
-  if (!touchesSpine) return false;
+function hasShellWritePrimitive(segment) {
+  return /(^|[\s|;&])(?:set-content|out-file|add-content|new-item|remove-item|move-item|copy-item)\b|[>]{1,2}/i.test(
+    segment,
+  );
+}
 
-  const hasShellWritePrimitive =
-    /(^|[\s|;&])(?:set-content|out-file|add-content|new-item|remove-item|move-item|copy-item)\b|[>]{1,2}/i.test(
-      segment,
-    );
-  if (hasShellWritePrimitive) {
+function isSafeSpineStatePrepSegment(segment, spinePathVariables) {
+  const trimmed = segment.trim();
+  if (!trimmed || hasShellWritePrimitive(trimmed)) return false;
+  if (/^\$[A-Za-z_][\w]*$/.test(trimmed)) return true;
+  if (/^add-member\b/i.test(trimmed) && /fetchrecord/i.test(trimmed)) {
     return true;
+  }
+  if (/^\$[A-Za-z_][\w]*\s*=/.test(trimmed)) {
+    if (touchesSpineStatePath(trimmed)) return true;
+    for (const variableName of spinePathVariables) {
+      const variablePattern = new RegExp(`\\$${escapeRegExp(variableName)}\\b`, "i");
+      if (variablePattern.test(trimmed)) return true;
+    }
+    return /\b(?:get-content|gc|convertfrom-json|convertto-json)\b/i.test(
+      trimmed,
+    );
+  }
+  return false;
+}
+
+function isSpineStateWriteSegment(segment, spinePathVariables = new Set()) {
+  const writesSpine =
+    shellWriteTargetsSpineState(segment) ||
+    segmentWritesToSpineVariable(segment, spinePathVariables);
+
+  if (hasShellWritePrimitive(segment)) {
+    return writesSpine;
   }
 
   return isNodeRepairOnlyFetchRecordWrite(segment);
+}
+
+function shellWriteTargetsSpineState(segment) {
+  if (!hasShellWritePrimitive(segment)) return false;
+  const normalized = segment.replace(/\\/g, "/");
+  const spineTarget = `[^"'\\s;&|]*(?:spine-state\\.json|/spine(?:/|$)[^"'\\s;&|]*)`;
+  const explicitPath = new RegExp(
+    `(?:^|[\\s;&|])(?:-Path|-LiteralPath|-Destination|-FilePath)\\s+["']?${spineTarget}(?=["'\\s;&|]|$)`,
+    "i",
+  );
+  const positionalPath = new RegExp(
+    `(?:^|[\\s;&|])(?:set-content|out-file|add-content|new-item|remove-item)\\s+["']?${spineTarget}(?=["'\\s;&|]|$)`,
+    "i",
+  );
+  const redirectionPath = new RegExp(
+    `[>]{1,2}\\s*["']?${spineTarget}(?=["'\\s;&|]|$)`,
+    "i",
+  );
+  return (
+    explicitPath.test(normalized) ||
+    positionalPath.test(normalized) ||
+    redirectionPath.test(normalized)
+  );
+}
+
+function segmentWritesToSpineVariable(segment, spinePathVariables) {
+  for (const variableName of spinePathVariables) {
+    const psVariable = new RegExp(`\\$${escapeRegExp(variableName)}\\b`, "i");
+    const jsVariable = new RegExp(`\\b${escapeRegExp(variableName)}\\b`, "i");
+    if (
+      hasShellWritePrimitive(segment) &&
+      psVariable.test(segment)
+    ) {
+      return true;
+    }
+    if (/writeFileSync\s*\(/i.test(segment) && jsVariable.test(segment)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isNodeRepairOnlyFetchRecordWrite(segment) {
@@ -219,14 +329,20 @@ function nodeWriteFileSyncTargetsSpineState(scriptText) {
   }
 
   const spinePathVariables = new Set();
-  const assignmentPattern =
+  const literalAssignmentPattern =
     /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*["']([^"']*spine-state\.json)["']/gi;
-  for (const match of normalized.matchAll(assignmentPattern)) {
+  for (const match of normalized.matchAll(literalAssignmentPattern)) {
+    spinePathVariables.add(match[1]);
+  }
+
+  const pathJoinAssignmentPattern =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:path\.)?(?:join|resolve)\s*\([^;]*spine-state\.json[^;]*\)/gi;
+  for (const match of normalized.matchAll(pathJoinAssignmentPattern)) {
     spinePathVariables.add(match[1]);
   }
 
   for (const variableName of spinePathVariables) {
-    const escaped = variableName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escaped = escapeRegExp(variableName);
     const writePattern = new RegExp(
       `writeFileSync\\s*\\(\\s*${escaped}\\s*,`,
       "i",
@@ -240,10 +356,60 @@ function nodeWriteFileSyncTargetsSpineState(scriptText) {
 }
 
 function isPlanningFile() {
-  const planningFiles = ["task_plan.md", "findings.md", "progress.md"];
-  if (planningFiles.some((f) => targetPath.endsWith(f))) return true;
-  const cmd = (toolInput?.command || "").toLowerCase();
-  return planningFiles.some((f) => cmd.includes(f.toLowerCase()));
+  if (touchesPlanningFilePath(targetPath)) return true;
+  if (toolName !== "Bash") return false;
+  return isBashPlanningFileWrite(String(toolInput?.command || ""));
+}
+
+function touchesPlanningFilePath(value) {
+  const normalized = normalizeHookPath(value);
+  return PLANNING_FILES.some((file) => normalized.endsWith(file));
+}
+
+function isBashPlanningFileWrite(command) {
+  if (!command.trim()) return false;
+  const segments = bashReadonlyInternals
+    .splitSegments(command)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (!segments.length) return false;
+
+  let sawPlanningWrite = false;
+  for (const segment of segments) {
+    if (isReadOnlyBash(segment)) {
+      continue;
+    }
+    if (!isPlanningFileWriteSegment(segment)) {
+      return false;
+    }
+    sawPlanningWrite = true;
+  }
+  return sawPlanningWrite;
+}
+
+function isPlanningFileWriteSegment(segment) {
+  if (!hasShellWritePrimitive(segment)) return false;
+  const normalized = segment.replace(/\\/g, "/");
+  return PLANNING_FILES.some((file) => {
+    const escaped = escapeRegExp(file);
+    const explicitPath = new RegExp(
+      `(?:^|[\\s;&|])(?:-Path|-LiteralPath|-Destination|-FilePath)\\s+["']?[^"'\\s;&|]*${escaped}(?=["'\\s;&|]|$)`,
+      "i",
+    );
+    const positionalPath = new RegExp(
+      `(?:^|[\\s;&|])(?:set-content|out-file|add-content|new-item|remove-item)\\s+["']?[^"'\\s;&|]*${escaped}(?=["'\\s;&|]|$)`,
+      "i",
+    );
+    const redirectionPath = new RegExp(
+      `[>]{1,2}\\s*["']?[^"'\\s;&|]*${escaped}(?=["'\\s;&|]|$)`,
+      "i",
+    );
+    return (
+      explicitPath.test(normalized) ||
+      positionalPath.test(normalized) ||
+      redirectionPath.test(normalized)
+    );
+  });
 }
 
 function matchesStageReadOnlyCommand(command, prefixes) {

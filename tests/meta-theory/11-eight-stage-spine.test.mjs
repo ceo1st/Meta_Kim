@@ -2209,6 +2209,62 @@ describe("Part F2: choice surface runtime gate", async () => {
     });
     assert.equal(businessWrite.status, 0);
     assert.match(businessWrite.stdout, /permissionDecision/);
+
+    const misleadingContentWrite = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: {
+        command: "Set-Content src/main.go 'spine-state.json fetchRecord'",
+      },
+    });
+    assert.equal(misleadingContentWrite.status, 0);
+    assert.match(misleadingContentWrite.stdout, /permissionDecision/);
+  });
+
+  test("Fetch stage allows apply_patch spine-state patches before fetchRecord exists", () => {
+    const state = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+      }),
+      currentStage: "fetch",
+      dispatchChain: {
+        fetch: ["meta-artisan"],
+      },
+    };
+    delete state.fetchRecord;
+
+    const spinePatch = runEnforceHook(state, {
+      tool_name: "apply_patch",
+      tool_input: {
+        patch:
+          "*** Begin Patch\n" +
+          "*** Update File: .meta-kim/state/test/spine/spine-state.json\n" +
+          "@@\n" +
+          "+  \"fetchRecord\": {\"capabilitySearchPerformed\": true}\n" +
+          "*** End Patch\n",
+      },
+    });
+
+    assert.equal(spinePatch.status, 0);
+    assert.doesNotMatch(spinePatch.stdout, /permissionDecision/);
+
+    const mixedPatch = runEnforceHook(state, {
+      tool_name: "apply_patch",
+      tool_input: {
+        patch:
+          "*** Begin Patch\n" +
+          "*** Update File: .meta-kim/state/test/spine/spine-state.json\n" +
+          "@@\n" +
+          "+  \"fetchRecord\": {\"capabilitySearchPerformed\": true}\n" +
+          "*** Update File: src/main.go\n" +
+          "@@\n" +
+          "+package main\n" +
+          "*** End Patch\n",
+      },
+    });
+
+    assert.equal(mixedPatch.status, 0);
+    assert.match(mixedPatch.stdout, /permissionDecision/);
   });
 
   test("Fetch self-lock allows repair-only Node fetchRecord spine-state write", () => {
@@ -2238,6 +2294,21 @@ describe("Part F2: choice surface runtime gate", async () => {
     assert.equal(repairWrite.status, 0);
     assert.doesNotMatch(repairWrite.stdout, /permissionDecision/);
 
+    const pathJoinRepairWrite = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: {
+        command:
+          "node -e \"const fs=require('fs'); const path=require('path'); " +
+          "const root='.'; " +
+          "const statePath=path.join(root,'.meta-kim/state/test/spine/spine-state.json'); " +
+          "const s=JSON.parse(fs.readFileSync(statePath,'utf8')); " +
+          "s.fetchRecord={status:'repair_only_fetch_record',repairOnly:true,capabilitySearchPerformed:false,executionClearance:false,researchRequired:false,researchValidationPerformed:false}; " +
+          "fs.writeFileSync(statePath, JSON.stringify(s, null, 2));\"",
+      },
+    });
+    assert.equal(pathJoinRepairWrite.status, 0);
+    assert.doesNotMatch(pathJoinRepairWrite.stdout, /permissionDecision/);
+
     const businessNodeWrite = runEnforceHook(state, {
       tool_name: "Bash",
       tool_input: {
@@ -2250,6 +2321,40 @@ describe("Part F2: choice surface runtime gate", async () => {
     });
     assert.equal(businessNodeWrite.status, 0);
     assert.match(businessNodeWrite.stdout, /permissionDecision/);
+  });
+
+  test("planning file mentions do not bypass Fetch business-file writes", () => {
+    const state = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+      }),
+      currentStage: "fetch",
+      dispatchChain: {
+        fetch: ["meta-artisan"],
+      },
+    };
+    delete state.fetchRecord;
+
+    const planningOnlyWrite = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: {
+        command: "Set-Content -Path progress.md -Value 'fetch noted'",
+      },
+    });
+    assert.equal(planningOnlyWrite.status, 0);
+    assert.doesNotMatch(planningOnlyWrite.stdout, /permissionDecision/);
+
+    const mixedBusinessWrite = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: {
+        command:
+          "Get-Content -Path progress.md | Out-Null; " +
+          "Set-Content src/main.go 'package main'",
+      },
+    });
+    assert.equal(mixedBusinessWrite.status, 0);
+    assert.match(mixedBusinessWrite.stdout, /permissionDecision/);
   });
 
   test("simpleMode residue in spine state cannot skip dispatch governance", () => {

@@ -68,7 +68,7 @@ npm run meta:delivery:bundle
 - Review 和 Verification 会留下产物证据，而不是只给安慰性结论
 - 兼容证据会保持分层，smoke evidence 不会被冒充成 native live proof
 
-带着示例看第一遍：[`examples/first-run/README.md`](examples/first-run/README.md)。想看产品级项目手册，读 [`docs/meta-kim-project-manual.zh-CN.md`](docs/meta-kim-project-manual.zh-CN.md)；英文版在 [`docs/meta-kim-project-manual.md`](docs/meta-kim-project-manual.md)。
+带着示例看第一遍：[`examples/first-run/README.md`](examples/first-run/README.md)。
 
 ## 快速开始
 

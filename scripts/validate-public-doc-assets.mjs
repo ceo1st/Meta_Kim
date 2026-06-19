@@ -9,14 +9,6 @@ const REQUIRED_PUBLIC_IMAGES = [
   "docs/images/wechat-pay.jpg",
   "docs/images/alipay.jpg",
 ];
-const REQUIRED_PUBLIC_DOCS = [
-  "docs/meta-kim-project-manual.md",
-  "docs/meta-kim-project-manual.zh-CN.md",
-];
-const README_DOC_LINKS = {
-  "README.md": REQUIRED_PUBLIC_DOCS,
-  "README.zh-CN.md": REQUIRED_PUBLIC_DOCS,
-};
 
 const pkg = await readJson("package.json");
 const gitignore = await fs.readFile(repoPath(".gitignore"), "utf8");
@@ -26,23 +18,9 @@ assert(/^!docs\/$/m.test(gitignore), ".gitignore must allow the docs directory f
 assert(/^!docs\/images\/$/m.test(gitignore), ".gitignore must allow docs/images/");
 assert(/^!docs\/images\/\*\*$/m.test(gitignore), ".gitignore must allow docs/images/**");
 assert(
-  /^!docs\/meta-kim-project-manual\.md$/m.test(gitignore),
-  ".gitignore must allow the English project manual",
-);
-assert(
-  /^!docs\/meta-kim-project-manual\.zh-CN\.md$/m.test(gitignore),
-  ".gitignore must allow the Chinese project manual",
-);
-assert(
   (pkg.files ?? []).includes("docs/images/"),
   "package.json files must include docs/images/ because README references those assets",
 );
-for (const doc of REQUIRED_PUBLIC_DOCS) {
-  assert(
-    (pkg.files ?? []).includes(doc),
-    `package.json files must include ${doc} because README references it`,
-  );
-}
 
 function gitTracked(relativePath) {
   const result = spawnSync("git", ["ls-files", "--error-unmatch", relativePath], {
@@ -73,10 +51,6 @@ for (const file of README_FILES) {
     await fs.access(repoPath(ref));
     assert(gitTracked(ref), `${ref} referenced by ${file} must be tracked`);
   }
-
-  for (const ref of README_DOC_LINKS[file] ?? []) {
-    assert(markdown.includes(ref), `${file} must link ${ref}`);
-  }
 }
 
 for (const image of REQUIRED_PUBLIC_IMAGES) {
@@ -85,11 +59,6 @@ for (const image of REQUIRED_PUBLIC_IMAGES) {
   assert(gitTracked(image), `${image} must be tracked as a public README asset`);
 }
 
-for (const doc of REQUIRED_PUBLIC_DOCS) {
-  await fs.access(repoPath(doc));
-  assert(gitTracked(doc), `${doc} must be tracked as a public README document`);
-}
-
 console.log(
-  `public docs image assets valid: ${referenced.size} README image assets and ${REQUIRED_PUBLIC_DOCS.length} project manual(s) checked`,
+  `public docs image assets valid: ${referenced.size} README image assets checked`,
 );
