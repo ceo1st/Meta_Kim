@@ -8,6 +8,28 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## [Unreleased]
 
+### Solved Problem
+
+The governed execution CLI and smoke-test path could stall or crash in Codex/Windows hosts that block nested Node child processes. That made fuzzy-instruction acceptance look broken even when the route selector and Node tests were valid.
+
+### Changed
+
+- **Route Selector Host Fallback** - Governed execution now falls back to an in-process route selector when `spawnSync(process.execPath, ...)` is blocked, while keeping the normal CLI path unchanged for unrestricted hosts.
+- **Compact Selector Output** - Added a runner-compact selector mode so governed runs avoid oversized route payloads but still preserve selected providers, worker lanes, and owner discovery counts.
+- **Eight-Stage Visible Progress** - Conversation notices and stage operation plans now surface Critical, Fetch, Thinking, Execution, Review, Meta-Review, Verification, and Evolution instead of stopping at Review.
+- **Capability Smoke Host Fallback** - Capability-discovery smoke now uses the same in-process selector fallback and reports spawn errors honestly instead of writing undefined output.
+- **Node Test Wrapper Fallback** - The shared Node test wrapper now has a narrow worker-backed fallback for local repo scripts when child-process execution is unavailable.
+
+### Verification
+
+- `node --check scripts/run-meta-theory-governed-execution.mjs scripts/select-execution-route.mjs scripts/run-capability-discovery-smoke.mjs scripts/run-node-tests.mjs scripts/meta-kim-i18n.mjs`
+- `node scripts/run-meta-theory-governed-execution.mjs --task "帮我把这个系统弄得更顺、更能自动处理复杂任务，并让我看见它怎么判断、怎么分工、怎么推进、怎么验收。" --run-id codex-goal-fuzzy-acceptance --state-dir .meta-kim/state/codex-goal-fuzzy --db .meta-kim/state/codex-goal-fuzzy/runs.sqlite --emit-conversation-notice --emit-card-dealing-summary`
+- `node scripts/validate-run-artifact.mjs .meta-kim/state/codex-goal-fuzzy/codex-goal-fuzzy-acceptance.json`
+- `node --test --test-concurrency=1 tests/meta-theory/*.test.mjs`
+- `npm run meta:test:integration`
+- `git diff --check`
+- Release boundary retained: `npm run meta:verify:all` still stops at `meta:graphify:check` because `GRAPH_REPORT.md` is stale and `npm run meta:graphify:rebuild` currently fails with Windows `WinError 5`. No new release should be cut until graphify is rebuilt and full verify passes.
+
 ## [2.8.46] - 2026-06-21
 
 ### Solved Problem

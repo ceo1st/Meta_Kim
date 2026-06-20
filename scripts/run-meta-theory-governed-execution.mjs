@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { classifyMetaTheoryEntry } from "./meta-theory-entry-classifier.mjs";
 import {
   openRunStateStore,
@@ -1805,6 +1805,23 @@ function buildBusinessPhasePlanPacket({ runId, orchestrationReport, runtimeEvide
   };
 }
 
+function normalizeRouteBindingType(type) {
+  const normalized = {
+    skills: "skill",
+    skill: "skill",
+    commands: "command",
+    command: "command",
+    mcpServers: "mcp_tool",
+    mcpTools: "mcp_tool",
+    mcp_tool: "mcp_tool",
+    runtimeTools: "runtime_tool",
+    runtime_tool: "runtime_tool",
+    hooks: "contract_ref",
+    hook: "contract_ref",
+  };
+  return normalized[type] ?? type ?? "capability_index_query";
+}
+
 function buildBusinessFlowBlueprintPacket({ businessPhasePlanPacket, orchestrationReport = null }) {
   const triggerCoveragePass = businessPhasePlanPacket.triggerStandard?.coveragePass === true;
   const routeWorkerTasks = orchestrationReport?.workerTaskPackets ?? [];
@@ -1861,6 +1878,7 @@ function buildBusinessFlowBlueprintPacket({ businessPhasePlanPacket, orchestrati
       packet.capabilitySelection?.selectedProvider ??
       packet.providerMatch?.selectedProvider ??
       null;
+    const selectedBindingType = normalizeRouteBindingType(selectedProvider?.type);
     const capabilityNeed = Array.isArray(packet.capabilityNeed)
       ? packet.capabilityNeed.join("; ")
       : Array.isArray(packet.capabilityRequirements)
@@ -1887,7 +1905,7 @@ function buildBusinessFlowBlueprintPacket({ businessPhasePlanPacket, orchestrati
         {
           matchId: `${laneId}_route_match`,
           capabilitySlot: `${laneId}_route_capability`,
-          bindingType: selectedProvider?.type ?? "route_selected_provider",
+          bindingType: selectedBindingType,
           bindingRef:
             selectedProvider?.id ??
             packet.capabilityLoadout?.capabilityProfileId ??
@@ -1908,7 +1926,7 @@ function buildBusinessFlowBlueprintPacket({ businessPhasePlanPacket, orchestrati
         {
           bindingId: `${laneId}_route_binding`,
           capabilitySlot: `${laneId}_route_capability`,
-          bindingType: selectedProvider?.type ?? "route_selected_provider",
+          bindingType: selectedBindingType,
           bindingRef:
             selectedProvider?.id ??
             packet.capabilityLoadout?.capabilityProfileId ??
@@ -2238,9 +2256,25 @@ function capabilityToolingFor(packet) {
 function buildStageOperationPlan({
   orchestrationReport,
   runtimeEvidence,
+  writebackFlow,
   labels,
 }) {
   const stageLabels = labels.stageOperationPlan.stages;
+  const metaReviewLabels = stageLabels.metaReview ?? {
+    uses: "meta-warden overclaim audit",
+    whatHappens:
+      "检查是否混淆 validator pass、runtime invocation、native choice 和 public-ready。",
+  };
+  const verificationLabels = stageLabels.verification ?? {
+    uses: "artifact validator, targeted tests, runtime projection evidence",
+    whatHappens: "运行新鲜验证，并把失败返回 Review 或 Execution。",
+  };
+  const evolutionLabels = stageLabels.evolution ?? {
+    uses: "Warden writeback flow and none-with-reason policy",
+    whatHappens: "记录 writeback 或 none-with-reason，不把 local continuity 当作写回。",
+  };
+  const stageOutputs = labels.stageOperationPlan.outputs;
+  const stageResults = labels.stageOperationPlan.results;
   const workerTasks = orchestrationReport.workerTaskPackets.map((packet, index) => {
     const tooling = capabilityToolingFor(packet);
     const mcp =
@@ -2325,7 +2359,46 @@ function buildStageOperationPlan({
           orchestrationReport.reviewResult.status,
           runtimeEvidence.status
         ),
-        nextWork: "Verification / Evolution",
+        nextWork: "Meta-Review",
+      },
+      {
+        stage: "Meta-Review",
+        owner: "meta-warden",
+        uses: metaReviewLabels.uses,
+        whatHappens: metaReviewLabels.whatHappens,
+        outputShape:
+          stageOutputs.metaReview?.(orchestrationReport.reviewResult.findings.length) ??
+          "claim-boundary checks for public-ready, native choice, and invocation truth.",
+        resultReport:
+          stageResults.metaReview?.() ??
+          "Overclaim boundaries are checked before public-ready is considered.",
+        nextWork: "Verification",
+      },
+      {
+        stage: "Verification",
+        owner: orchestrationReport.verificationResult.owner,
+        uses: verificationLabels.uses,
+        whatHappens: verificationLabels.whatHappens,
+        outputShape:
+          stageOutputs.verification?.(runtimeEvidence.status) ??
+          "fresh verification evidence with runtime status=" + runtimeEvidence.status + ".",
+        resultReport:
+          stageResults.verification?.(runtimeEvidence.status) ??
+          "Verification evidence status=" + runtimeEvidence.status + "; failures return to Review or Execution.",
+        nextWork: "Evolution",
+      },
+      {
+        stage: "Evolution",
+        owner: "meta-chrysalis",
+        uses: evolutionLabels.uses,
+        whatHappens: evolutionLabels.whatHappens,
+        outputShape:
+          stageOutputs.evolution?.(writebackFlow?.status) ??
+          "writeback decision=" + (writebackFlow?.status ?? "unknown") + "; reusable lessons require Warden approval.",
+        resultReport:
+          stageResults.evolution?.(writebackFlow?.status) ??
+          "Evolution decision=" + (writebackFlow?.status ?? "unknown") + "; local continuity is not writeback.",
+        nextWork: "Feedback / next run",
       },
     ],
   };
@@ -7689,19 +7762,71 @@ async function readLatestRunId(stateDir) {
   return JSON.parse(raw).runId ?? null;
 }
 
-function selectExecutionRoute({ task, runtime = "codex", os = "windows" }) {
+function selectExecutionRouteArgs({ task, runtime = "codex", os = "windows" }) {
+  return [
+    "--task",
+    task,
+    "--runtime",
+    runtime,
+    "--os",
+    os,
+    "--json",
+    "--runner-compact",
+  ];
+}
+
+async function selectExecutionRouteInProcess({ task, runtime = "codex", os = "windows", spawnError = null }) {
+  const originalArgv = process.argv;
+  const originalLog = console.log;
+  const originalError = console.error;
+  const stdout = [];
+  const stderr = [];
+  try {
+    process.argv = [
+      process.execPath,
+      SELECT_EXECUTION_ROUTE_SCRIPT,
+      ...selectExecutionRouteArgs({ task, runtime, os }),
+    ];
+    console.log = (...args) => stdout.push(args.join(" "));
+    console.error = (...args) => stderr.push(args.join(" "));
+    await import(
+      `${pathToFileURL(SELECT_EXECUTION_ROUTE_SCRIPT).href}?runner=${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+  } catch (error) {
+    throw new Error(
+      [
+        "select-execution-route in-process fallback failed.",
+        spawnError?.message ? `original spawn error: ${spawnError.message}` : null,
+        error?.stack ?? error?.message ?? String(error),
+        tailText(stderr.join("\n")),
+      ].filter(Boolean).join("\n"),
+    );
+  } finally {
+    process.argv = originalArgv;
+    console.log = originalLog;
+    console.error = originalError;
+  }
+  const text = stdout.join("\n").trim();
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      [
+        "select-execution-route in-process fallback returned invalid JSON.",
+        spawnError?.message ? `original spawn error: ${spawnError.message}` : null,
+        error?.message ?? String(error),
+        tailText(text),
+        tailText(stderr.join("\n")),
+      ].filter(Boolean).join("\n"),
+    );
+  }
+}
+
+async function selectExecutionRoute({ task, runtime = "codex", os = "windows" }) {
+  const args = selectExecutionRouteArgs({ task, runtime, os });
   const result = spawnSync(
     process.execPath,
-    [
-      SELECT_EXECUTION_ROUTE_SCRIPT,
-      "--task",
-      task,
-      "--runtime",
-      runtime,
-      "--os",
-      os,
-      "--json",
-    ],
+    [SELECT_EXECUTION_ROUTE_SCRIPT, ...args],
     {
       cwd: REPO_ROOT,
       encoding: "utf8",
@@ -7709,12 +7834,22 @@ function selectExecutionRoute({ task, runtime = "codex", os = "windows" }) {
       maxBuffer: 20 * 1024 * 1024,
     },
   );
+  if (result.error) {
+    return selectExecutionRouteInProcess({
+      task,
+      runtime,
+      os,
+      spawnError: result.error,
+    });
+  }
   if (result.status !== 0) {
     throw new Error(
       [
         "select-execution-route failed before governed execution.",
+        result.error?.message ? `spawn error: ${result.error.message}` : null,
+        result.signal ? `spawn signal: ${result.signal}` : null,
         result.stderr?.trim(),
-        result.stdout?.trim(),
+        tailText(result.stdout),
       ].filter(Boolean).join("\n"),
     );
   }
@@ -7989,8 +8124,8 @@ function buildRouteDrivenWorkerTasks({ runId, routeResult, task }) {
   });
 }
 
-function buildRouteDrivenOrchestration({ task, runId }) {
-  const routeResult = selectExecutionRoute({ task });
+async function buildRouteDrivenOrchestration({ task, runId }) {
+  const routeResult = await selectExecutionRoute({ task });
   const route = routeResult.recommendedRoute;
   const providerList = providerListFromRoute(routeResult);
   const workerTaskPackets = buildRouteDrivenWorkerTasks({ runId, routeResult, task });
@@ -8165,7 +8300,7 @@ export async function runMetaTheoryGovernedExecution({
     throw new Error("Missing task for governed meta-theory execution.");
   }
   const effectiveRunId = runId ?? stableId("meta-run", normalizedTask);
-  const orchestrationReport = buildRouteDrivenOrchestration({
+  const orchestrationReport = await buildRouteDrivenOrchestration({
     task: normalizedTask,
     runId: effectiveRunId,
   });
@@ -8244,6 +8379,7 @@ export async function runMetaTheoryGovernedExecution({
   const stageOperationPlan = buildStageOperationPlan({
     orchestrationReport,
     runtimeEvidence,
+    writebackFlow,
     labels,
   });
   const panelContractDefinition = await readJson(RUN_REPORT_PANEL_CONTRACT_PATH);

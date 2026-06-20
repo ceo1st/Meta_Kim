@@ -8,6 +8,28 @@
 
 ## [Unreleased]
 
+### 解决的问题
+
+在 Codex/Windows 宿主禁止嵌套 Node 子进程时，governed execution CLI 和 smoke 测试会卡住或崩溃，导致真实模糊指令验收看起来像没跑通，即便路线选择器和 Node 测试本身是有效的。
+
+### 变更
+
+- **路线选择器宿主 fallback** - 当 `spawnSync(process.execPath, ...)` 被宿主阻止时，governed execution 会退回同进程 route selector；普通不受限宿主仍走原 CLI 路径。
+- **Selector 紧凑输出** - 新增 runner-compact selector 模式，避免 governed run 携带过大的路线 payload，同时保留 selected providers、worker lanes 和 owner discovery counts。
+- **8 阶段可见进度** - 对话提示和 stage operation plan 现在展示 Critical、Fetch、Thinking、Execution、Review、Meta-Review、Verification、Evolution，不再停在 Review。
+- **能力 Smoke 宿主 fallback** - capability-discovery smoke 复用同进程 selector fallback，并诚实报告 spawn 错误，不再写出 undefined output。
+- **Node 测试包装器 fallback** - 共享 Node 测试包装器在 child-process 不可用时，对本仓本地脚本提供窄范围 worker-backed fallback。
+
+### 验证
+
+- `node --check scripts/run-meta-theory-governed-execution.mjs scripts/select-execution-route.mjs scripts/run-capability-discovery-smoke.mjs scripts/run-node-tests.mjs scripts/meta-kim-i18n.mjs`
+- `node scripts/run-meta-theory-governed-execution.mjs --task "帮我把这个系统弄得更顺、更能自动处理复杂任务，并让我看见它怎么判断、怎么分工、怎么推进、怎么验收。" --run-id codex-goal-fuzzy-acceptance --state-dir .meta-kim/state/codex-goal-fuzzy --db .meta-kim/state/codex-goal-fuzzy/runs.sqlite --emit-conversation-notice --emit-card-dealing-summary`
+- `node scripts/validate-run-artifact.mjs .meta-kim/state/codex-goal-fuzzy/codex-goal-fuzzy-acceptance.json`
+- `node --test --test-concurrency=1 tests/meta-theory/*.test.mjs`
+- `npm run meta:test:integration`
+- `git diff --check`
+- 发布边界保持诚实：`npm run meta:verify:all` 仍停在 `meta:graphify:check`，因为 `GRAPH_REPORT.md` 已过期且 `npm run meta:graphify:rebuild` 当前因 Windows `WinError 5` 失败。graphify 重建并通过 full verify 前，不应切正式新版本。
+
 ## [2.8.46] - 2026-06-21
 
 ### 解决的问题
