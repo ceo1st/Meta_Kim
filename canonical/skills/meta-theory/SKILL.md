@@ -81,6 +81,8 @@ Autonomous discovery rule: for natural-language durable work, Fetch starts capab
 
 **MANDATORY**: Use the current runtime adapter's verified native choice surface at key decision points. Keep the canonical card contract platform-neutral; renderer-specific schemas and tool names belong in runtime references such as `runtime-claude.md` or `runtime-codex.md`, not in the generic contract. For Codex and Claude Code, required branch-changing decisions must use `request_user_input` or `AskUserQuestion`; if that native interactive surface is unavailable, empty, rejected, stripped, or not deferred to host UI, block before Execution and return to Critical/Thinking. Only compatibility runtimes may fall back to a localized chat decision card, and that fallback must not be reported as a Codex or Claude Code popup.
 
+False native choice claim guard: do not write that a popup, panel, or native surface was shown, used, returned empty, timed out, failed, or selected an option unless the current runtime adapter has returned matching evidence. In Codex, that means a `request_user_input` answer or `nativeChoiceSurfaceBlocked`; in Claude Code, that means an `AskUserQuestion` answer, deferred `AskUserQuestion` evidence, or `nativeChoiceSurfaceBlocked`. Cursor, OpenClaw, and other compatibility runtimes may report a fallback only as fallback. If the tool is unavailable, say blocked or pending, not "the choice panel did not return".
+
 ### Choice Dialog Style
 
 Every decision-impacting point inside the governed route MUST be confirmed with the user through an AskUserQuestion / request_user_input dialog. Plain-text questions are not a substitute.

@@ -1002,7 +1002,7 @@
         "fallbackSurfaces": [],
         "unavailableAction": "block_before_execution",
         "triggerDescription": "Use AskUserQuestion for blocking Critical clarification when Fetch cannot proceed or subjective quality wording is too ambiguous to choose evidence, then use it once for Execution confirmation after contentEvidencePacket and preDecisionOptionFrame are complete. PreToolUse hooks must whitelist AskUserQuestion to avoid stripping return data (issue #12031). Claude Code non-interactive integrations may defer AskUserQuestion to the caller; that deferred tool call is acceptable trigger evidence when recorded. Chat decision cards are not accepted as completion evidence for this primary runtime.",
-        "implementation": "Invoke AskUserQuestion with a structured questions array when available. Preserve the native decision panel semantics: AI understanding, AI additions, Capability route, Candidate paths, recommended default, expected result, advantages, disadvantages or risk, and verification impact. If unavailable, rejected, stripped, or returning empty, record nativeChoiceSurfaceBlocked and stop before Execution. A non-interactive deferred AskUserQuestion must be handed to the host UI and resumed with an answer before the run continues. A cardPlanPacket, run report, hook notice, or chat card is not native popup evidence."
+        "implementation": "Invoke AskUserQuestion with a structured questions array when available. Preserve the native decision panel semantics: AI understanding, AI additions, Capability route, Candidate paths, recommended default, expected result, advantages, disadvantages or risk, and verification impact. If unavailable, rejected, stripped, or returning empty, record nativeChoiceSurfaceBlocked and stop before Execution. A non-interactive deferred AskUserQuestion must be handed to the host UI and resumed with an answer before the run continues. A cardPlanPacket, run report, hook notice, or chat card is not native popup evidence. Do not narrate that the native question appeared, returned empty, timed out, or selected an option unless AskUserQuestion or deferred AskUserQuestion evidence is attached."
       },
       "codex": {
         "primarySurface": "request_user_input",
@@ -1011,7 +1011,7 @@
         "featureFlag": "default_mode_request_user_input",
         "recommendedConfig": "[features].default_mode_request_user_input = true",
         "triggerDescription": "Use Codex request_user_input only when it is listed in the active tool set and the payload fits the active host schema. The official default_mode_request_user_input feature flag enables this tool in Default mode when the host supports it. Use the active schema's maximum meaningful option count; do not add a Meta_Kim lower cap. If the host does not expose the tool, returns API 400, returns empty, or rejects the payload, block before Execution with nativeChoiceSurfaceBlocked. Codex exec, repository hook adapters, run artifacts, conversation notices, markdown cards, and chat cards must not claim a popup or complete a required Codex decision.",
-        "implementation": "Invoke request_user_input when available and valid. Preserve the native decision panel semantics inside the compact payload: AI understanding, AI additions, Capability route, Candidate paths, recommended default, expected result, advantages, disadvantages or risk, and verification impact. If a semantic frame has more options than the active Codex host accepts, render the strongest host-maximum set and record omitted alternatives instead of retrying an oversized payload unchanged. If the native tool cannot run, record nativeChoiceSurfaceBlocked and return to Critical or Thinking; do not continue with conversation_fallback. A cardPlanPacket or CLI conversationNotice is artifact-only and does not complete the native choice trigger."
+        "implementation": "Invoke request_user_input when available and valid. Preserve the native decision panel semantics inside the compact payload: AI understanding, AI additions, Capability route, Candidate paths, recommended default, expected result, advantages, disadvantages or risk, and verification impact. If a semantic frame has more options than the active Codex host accepts, render the strongest host-maximum set and record omitted alternatives instead of retrying an oversized payload unchanged. If the native tool cannot run, record nativeChoiceSurfaceBlocked and return to Critical or Thinking; do not continue with conversation_fallback. A cardPlanPacket or CLI conversationNotice is artifact-only and does not complete the native choice trigger. Do not narrate that the Codex choice panel was shown, returned empty, timed out, or selected an option unless request_user_input evidence is attached."
       },
       "openclaw": {
         "primarySurface": "workspace_agent",
@@ -1071,6 +1071,84 @@
         ],
         "compatibilityOnlyEvidence": ["conversation_fallback_reason"],
         "description": "When Codex or Claude Code requires a branch-changing user decision, completion requires an actual native tool answer, a deferred native tool call handed to the host and resumed with an answer, or a valid strict choiceGateSkip. Generated card plans, conversation notices, markdown reports, hook warnings, and chat cards are not trigger evidence. Conversation fallback is compatibility-only for non-primary runtimes."
+      },
+      "falseNativeChoiceClaimPolicy": {
+        "enabled": true,
+        "failureClass": "false_native_choice_claim",
+        "claimDefinition": "Assistant text states or implies that a runtime choice surface was shown, sent, used, returned empty, timed out, completed, or selected.",
+        "appliesTo": [
+          "assistant_chat_text",
+          "run_report",
+          "conversation_notice",
+          "artifact_summary"
+        ],
+        "claimPhrases": [
+          "I used the choice panel",
+          "choice panel did not return",
+          "popup did not return",
+          "native choice was shown",
+          "我用 Codex 的选择面板",
+          "选择面板没有返回",
+          "弹框没有返回",
+          "已弹出选择"
+        ],
+        "evidenceByRuntime": {
+          "codex": {
+            "acceptedEvidence": [
+              "request_user_input_answer",
+              "nativeChoiceSurfaceBlocked"
+            ],
+            "forbiddenSubstitutes": [
+              "chat_text",
+              "markdown_card",
+              "conversationNotice",
+              "cardPlanPacket",
+              "run_report"
+            ],
+            "fallbackAllowed": false
+          },
+          "claude_code": {
+            "acceptedEvidence": [
+              "AskUserQuestion_answer",
+              "deferred_AskUserQuestion_tool_call",
+              "nativeChoiceSurfaceBlocked"
+            ],
+            "forbiddenSubstitutes": [
+              "chat_text",
+              "markdown_card",
+              "conversationNotice",
+              "cardPlanPacket",
+              "run_report"
+            ],
+            "fallbackAllowed": false
+          },
+          "cursor": {
+            "acceptedEvidence": [
+              "verified_native_choice_answer",
+              "conversation_fallback_user_reply"
+            ],
+            "mustLabelFallback": true,
+            "forbiddenClaim": "native_popup"
+          },
+          "openclaw": {
+            "acceptedEvidence": [
+              "verified_native_choice_answer",
+              "conversation_fallback_user_reply",
+              "channel_user_reply"
+            ],
+            "mustLabelFallback": true,
+            "forbiddenClaim": "native_popup"
+          },
+          "structural_runner": {
+            "acceptedEvidence": [
+              "hostInvocationRequestPacket",
+              "host_handoff_pending"
+            ],
+            "mustLabelPending": true,
+            "forbiddenClaim": "choice_completed"
+          }
+        },
+        "rule": "A choice-surface claim is valid only when the current runtime adapter attaches matching evidence. If evidence is missing, report the exact pending or blocked state instead of narrating a result."
       },
       "optionQualityStandard": {
         "requiredDimensions": [
