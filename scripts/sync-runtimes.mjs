@@ -2671,8 +2671,12 @@ Examples:
   }
 
   const scope = parseScopeArg(cliArgs);
-  const { cliTargets, supportedTargets } = await resolveTargetContext(cliArgs);
-  const selectedTargets = cliTargets.length > 0 ? cliTargets : supportedTargets;
+  const targetContext = await resolveTargetContext(cliArgs);
+  const globalOnlyProjectSync =
+    scope === "project" &&
+    targetContext.cliTargets.length === 0 &&
+    targetContext.localOverrides.projectProjectionMode === "global_only";
+  const selectedTargets = globalOnlyProjectSync ? [] : targetContext.activeTargets;
   const dirs = resolveProjectionDirs(scope);
   const agents = await loadAgents();
   const teamDirectory = buildWorkspaceDirectory(agents);

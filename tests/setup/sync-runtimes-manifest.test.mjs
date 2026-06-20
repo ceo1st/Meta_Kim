@@ -32,6 +32,29 @@ function p(...bits) {
   return path.join(REPO, ...bits);
 }
 
+describe("sync-runtimes / target selection", () => {
+  test("uses activeTargets instead of all supportedTargets by default", async () => {
+    const source = await readFsFile("scripts/sync-runtimes.mjs", "utf8");
+
+    assert.match(
+      source,
+      /const targetContext = await resolveTargetContext\(cliArgs\);/,
+    );
+    assert.match(
+      source,
+      /targetContext\.localOverrides\.projectProjectionMode === "global_only"/,
+    );
+    assert.match(
+      source,
+      /const selectedTargets = globalOnlyProjectSync \? \[\] : targetContext\.activeTargets;/,
+    );
+    assert.doesNotMatch(
+      source,
+      /const selectedTargets = cliTargets\.length > 0 \? cliTargets : supportedTargets;/,
+    );
+  });
+});
+
 describe("sync-runtimes / inferProjectCategory", () => {
   test("maps .claude/settings.json to category G", () => {
     assert.equal(

@@ -3372,7 +3372,8 @@ const PROJECT_META_KIM_CONFIG_RELS_BY_PLATFORM = {
 
 const PROJECT_META_KIM_LOCAL_STATE_RELS = [
   ".claude/project-task-state.json",
-  ".meta-kim",
+  ".meta-kim/meta-kim-post-copy.mjs",
+  ".meta-kim/state/default/project-bootstrap.json",
 ];
 
 const PROJECT_HOOK_REL_DIRS_BY_PLATFORM = {
@@ -6825,6 +6826,14 @@ async function selectActiveTargets(runtimes) {
   return chosenTargets;
 }
 
+async function rememberProjectProjectionMode(mode) {
+  const localOverrides = await loadLocalOverrides();
+  await writeLocalOverrides({
+    ...localOverrides,
+    projectProjectionMode: mode,
+  });
+}
+
 function runNodeScript(scriptRelative, extraArgs = [], envOverrides = {}) {
   // Automatically pass --lang to child scripts
   const langArgs = currentLangCode ? ["--lang", currentLangCode] : [];
@@ -8745,6 +8754,7 @@ async function runInstall() {
   const installScope = await askInstallScope();
   const needProject = installScope === "project";
   const needGlobal = installScope === "global";
+  await rememberProjectProjectionMode(needGlobal ? "global_only" : "project");
 
   // Ask proxy configuration (saves to localOverrides)
   await askProxyConfig();
@@ -8953,6 +8963,7 @@ async function runUpdate() {
   const updateScope = await askInstallScope();
   const needProject = updateScope === "project";
   const needGlobal = updateScope === "global";
+  await rememberProjectProjectionMode(needGlobal ? "global_only" : "project");
 
   // Ask proxy configuration (saves to localOverrides)
   await askProxyConfig();
