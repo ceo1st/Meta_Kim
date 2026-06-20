@@ -8,6 +8,44 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## [Unreleased]
 
+## [2.8.46] - 2026-06-21
+
+### Solved Problem
+
+This release fixes the boundary that made interrupted Claude Code runs look like they could continue an active Meta_Kim run when the runtime spine had already stopped. HookPrompt remains the first prompt-intake and intent-amplification layer, but its model-visible context can no longer be mistaken for Fetch, Thinking, worker, execution, verification, or public-ready evidence.
+
+### Changed
+
+- **HookPrompt Evidence Boundary** - Documented HookPrompt as prompt-intake context only in the meta-theory skill, abstract capability contract, and runtime safety contract; it may clarify intent, but it cannot advance stages or satisfy governance evidence.
+- **HookPrompt JSONL Transcript Safety** - Stop hooks now strip HookPrompt display segments without swallowing later real transcript content when Claude stores the prompt display as a one-line JSONL record with escaped newlines.
+- **Public Readiness State Split** - Separated runtime `surfaceState` (`silent` / `notice` / `decision`) from Warden-owned `publicReadinessState` (`debug-surface` / `internal-ready` / `public-ready`) so UI interaction mode can no longer masquerade as release readiness.
+- **Dynamic Workflow Lane Truth** - Route-selected worker lanes now feed the business-flow blueprint directly, preserve omitted lanes with reasons, and use `meta-conductor` as the merge owner for orchestration synthesis.
+- **Invocation Truth Public-Ready Gate** - Run artifact validation now rejects public-ready claims when selected executable capabilities are only selected, unavailable, blocked, missing host evidence, or inconsistent between top-level packets and `coreLoop`.
+- **LangGraph-Style Runtime Boundary** - Product evidence now identifies the graph work as a LangGraph-style structural control graph without adding or claiming a real LangGraph runtime dependency.
+- **Global-Only Capability Inventory** - Capability discovery can now use cached global runtime inventory in `global_only` projection mode while preserving project config records as reference-only.
+- **Inactive Run Continuation Boundary** - `active-run.json` and status envelopes now expose `deactivatedAt`, `deactivationReason`, and `continuationBoundary` so `session_stop` histories are visible without being treated as active managed runs.
+- **Claude Runtime Session-Stop Repair** - Claude spine activation now reads inactive spine state before starting a new observed run, records the previous stopped run when the user asks to continue, and refuses to claim the old run is still active.
+- **Continuation Wording Parity** - Shared and Claude activation hooks now recognize the same broad continuation wording such as `current run`, `same run`, `当前 run`, and `同一个 run`.
+- **Stop Hook Transcript Filtering** - Stop compaction and progress hooks strip HookPrompt foreground display blocks before transcript heuristics, preventing prompt-optimization text from producing false stage progress, findings, or continuation handoffs.
+- **Stop Cleanup Path Safety** - `stop-spine-cleanup` now reuses the repo-local state resolver before deleting completed spine state, so an unsafe `META_KIM_SPINE_STATE_DIR` cannot delete files outside `.meta-kim/state`.
+- **Local Continuity Wording** - Stop compaction and project task state now mark handoffs as `local_continuity_only` with `mustNotClaimActiveRun`, replacing misleading "Resume from X stage" language.
+- **Status CLI Honesty** - `meta-run-status` reports inactive `session_stop` reason and continuation boundary instead of collapsing stopped runs into a generic inactive line.
+- **Release Metadata Alignment** - Bumped the package metadata to `2.8.46` so the source tree, tag, and GitHub release point at the same version.
+
+### Verification
+
+- `node --check canonical/runtime-assets/claude/hooks/stop-compaction.mjs canonical/runtime-assets/claude/hooks/stop-save-progress.mjs canonical/runtime-assets/claude/hooks/activate-meta-theory-spine.mjs canonical/runtime-assets/claude/hooks/spine-state.mjs canonical/runtime-assets/shared/hooks/spine-state.mjs scripts/meta-run-status.mjs`
+- `node --test tests/meta-theory/20-run-status-envelope.test.mjs`
+- `node --test tests/meta-theory/09-run-artifact-validator.test.mjs`
+- `node --test tests/meta-theory/32-meta-theory-four-product-targets.test.mjs`
+- `node --test tests/meta-theory/11-eight-stage-spine.test.mjs`
+- `node --test tests/governance/runtime-safety-contract.test.mjs`
+- `node --test tests/governance/capability-inventory-bus.test.mjs`
+- `node --test tests/setup/mcp-memory-hooks.test.mjs`
+- `npm run meta:release:smoke`
+- `npm run meta:verify:all`
+- Public-ready boundary retained: HookPrompt prompt-intake context is not runtime invocation, verification, or release-grade all-runtime live evidence.
+
 ## [2.8.45] - 2026-06-20
 
 ### Solved Problem

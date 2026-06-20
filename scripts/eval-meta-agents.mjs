@@ -2814,17 +2814,16 @@ async function runClaudeDiscovery(agentIds) {
   const supportsAgentsCommand = /^\s{2}agents\s/m.test(help.stdout);
 
   async function discoverFromProjectFiles(extra = {}) {
-    const projectAgentFiles = (
-      await fs.readdir(path.join(repoRoot, ".claude", "agents"))
-    )
-      .filter((file) => file.endsWith(".md"))
-      .map((file) => file.replace(/\.md$/, ""));
-    const projectAgents = new Set(projectAgentFiles);
+    const discoveredAgents = await readRuntimeAgentIdsOrCanonical(
+      path.join(repoRoot, ".claude", "agents"),
+      ".md",
+    );
+    const projectAgents = new Set(discoveredAgents.ids);
     const missing = agentIds.filter((agentId) => !projectAgents.has(agentId));
     return {
       ok: missing.length === 0,
       missing,
-      source: "project-files",
+      source: discoveredAgents.source,
       cliSupportsAgentsCommand: false,
       ...extra,
     };

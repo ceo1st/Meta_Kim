@@ -1288,6 +1288,14 @@
         "completed",
         "next",
         "blockedOn",
+        "authorityMode",
+        "driverMode",
+        "hookGateMode",
+        "publicReadyAuthority",
+        "publicReadyBoundary",
+        "deactivatedAt",
+        "deactivationReason",
+        "continuationBoundary",
         "startedAt",
         "updatedAt",
         "lastUserVisibleNotice",
@@ -1334,6 +1342,15 @@
           "packet_id",
           "protocol_trace"
         ]
+      },
+      "authorityPolicy": {
+        "authorityModeEnum": [
+          "managed_runtime_spine",
+          "hook_observed_advisory"
+        ],
+        "publicReadyAuthority": false,
+        "continuationRule": "Inactive runs must expose deactivatedAt, deactivationReason, and continuationBoundary in active-run.json. A later prompt may preserve the user's continuation wording through HookPrompt, but it must reconcile against runtime state and choose a new governed run or offline audit when the previous run stopped.",
+        "rule": "The run status envelope reports runtime stage progress only. It must not imply summary closure, verification pass, real capability invocation, or public-ready completion. Hook-observed/advisory state is visible as observed state and must not be presented as managed runtime execution."
       },
       "languagePolicy": "User-facing run status labels and stage purpose text must follow the runtime/tool selected output language first, explicit output-language choice second, and latest user input language only as fallback. The envelope may carry runtime-provided publicLabels and a resolved stagePurpose; canonical stage labels stay English. Fixed labels in any single human language are forbidden as the default public notice shell.",
       "runtimeAdapters": {
@@ -1850,7 +1867,13 @@
       "compaction": {
         "pathPattern": ".meta-kim/state/{profile}/compaction/",
         "localOnly": true,
-        "publicArtifactForbidden": true
+        "publicArtifactForbidden": true,
+        "authoritySourcePreference": [
+          "runtime_spine_state",
+          "runStatusEnvelope",
+          "transcript_heuristic"
+        ],
+        "transcriptFallbackPolicy": "Transcript-derived stage/completion data is local continuity only. It must not set verifyGateState=verified or publicReady=true without authoritative runtime spine verification evidence."
       },
       "doctorCache": {
         "pathPattern": ".meta-kim/state/{profile}/doctor-cache/",
@@ -3582,6 +3605,9 @@
         "runRef",
         "profile",
         "profileKey",
+        "authority",
+        "sourceAuthority",
+        "sourceAuthorityDetail",
         "openFindings",
         "pendingRevisions",
         "verifyGateState",
@@ -3594,7 +3620,16 @@
         "verified",
         "accepted_risk"
       ],
-      "description": "Local-only handoff packet stored under .meta-kim/state. It preserves unresolved findings, pending revision state, verify gate status, single-deliverable closure state, summary delta, and writeback decision for compaction / cross-session continuation. It is not a public-ready artifact."
+      "authorityPolicy": {
+        "defaultAuthority": "local_continuity_only",
+        "allowedSourceAuthority": [
+          "runtime_spine_state",
+          "transcript_heuristic",
+          "manual_doctor_fixture"
+        ],
+        "publicReadyClaimAllowed": false
+      },
+      "description": "Local-only handoff packet stored under .meta-kim/state. It preserves unresolved findings, pending revision state, verify gate status, single-deliverable closure state, summary delta, and writeback decision for compaction / cross-session continuation. It is not a public-ready artifact. Runtime spine state is the preferred stage authority; transcript fallback is heuristic continuity only."
     },
     "evolutionWritebackPacket": {
       "requiredFields": [

@@ -2036,7 +2036,7 @@ const output = {
   dispatchBoardDraft: recommendedRoute ? {
     owner: "meta-conductor",
     route: recommendedRoute.id,
-    mergeOwner: "meta-warden",
+    mergeOwner: "meta-conductor",
     parallelGroups: recommendedRoute.subjectiveUiCapabilityAmplification?.lanes?.map((lane) => lane.parallelGroup) ?? [],
   } : null,
   workerTaskPacketDrafts: recommendedRoute?.subjectiveUiCapabilityAmplification?.lanes
@@ -2051,7 +2051,7 @@ const output = {
         verificationOwner: recommendedRoute.verificationOwner,
         dependsOn: lane.dependsOn,
         parallelGroup: lane.parallelGroup,
-        mergeOwner: "meta-warden",
+        mergeOwner: "meta-conductor",
         purpose: lane.purpose,
         decisionImpact: lane.decisionImpact,
       }))
@@ -2064,7 +2064,7 @@ const output = {
         os: osTarget,
         verificationOwner: recommendedRoute.verificationOwner,
         dependsOn: [],
-        mergeOwner: "meta-warden",
+        mergeOwner: "meta-conductor",
       }] : [],
   capabilityGapPacket,
   verificationPlan: {

@@ -70,7 +70,7 @@ Durable Claude Code agent completion is a four-step lifecycle, not a file write:
 
 Until steps 3 and 4 are attached, `durableAgentLifecyclePacket.status` remains partial even if the file exists.
 
-If no real provider is callable, do not self-execute to "keep moving". Return to Thinking with `capabilityGapPacket`, or enter degraded mode with explicit `degradationReason`, `humanAcceptanceRequired`, and `surfaceState=internal-ready`.
+If no real provider is callable, do not self-execute to "keep moving". Return to Thinking with `capabilityGapPacket`, or enter degraded mode with explicit `degradationReason`, `humanAcceptanceRequired`, `publicReadinessState=internal-ready`, and runtime `surfaceState=notice` or `silent`.
 
 ## Write-Time Fact Gates
 
