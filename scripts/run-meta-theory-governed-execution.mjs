@@ -4558,6 +4558,62 @@ function normalizeHostInvocationEvidence(input, { trusted = false } = {}) {
   return normalizeHostInvocationEvidence([input], { trusted });
 }
 
+function normalizeNativeChoiceEvidence(input, { trusted = false } = {}) {
+  if (!input) return [];
+  const acceptedStates = new Set(["completed", "answered", "returned", "deferred", "blocked"]);
+  const acceptedEvidenceKinds = new Set([
+    "request_user_input_answer",
+    "AskUserQuestion_answer",
+    "deferred_AskUserQuestion_tool_call",
+    "nativeChoiceSurfaceBlocked",
+  ]);
+  if (Array.isArray(input)) {
+    return input
+      .map((item) => {
+        const state = item?.state ?? item?.status ?? "missing";
+        const surface = item?.surface ?? item?.hostSurface ?? null;
+        const evidenceKind = item?.evidenceKind ?? "unverified_native_choice_claim";
+        const evidenceRef = item?.evidenceRef ?? item?.answerRef ?? item?.hostToolCallId ?? null;
+        const hasEvidenceRef =
+          typeof evidenceRef === "string" ? evidenceRef.trim().length > 0 : Boolean(evidenceRef);
+        const proofValid =
+          trusted &&
+          acceptedStates.has(state) &&
+          acceptedEvidenceKinds.has(evidenceKind) &&
+          hasEvidenceRef &&
+          Boolean(surface);
+        return {
+          runtime: item?.runtime ?? null,
+          stage: item?.stage ?? item?.choiceStage ?? null,
+          state,
+          surface,
+          evidenceKind,
+          evidenceRef,
+          proofValid,
+          passEligible:
+            item?.passEligible !== false &&
+            proofValid &&
+            evidenceKind !== "nativeChoiceSurfaceBlocked",
+          blockedEligible: proofValid && evidenceKind === "nativeChoiceSurfaceBlocked",
+          rejectionReason: proofValid
+            ? null
+            : "native choice evidence requires trusted host evidence, accepted state, accepted evidenceKind, surface, and non-empty evidenceRef",
+        };
+      })
+      .filter((item) => item.surface || item.evidenceKind !== "unverified_native_choice_claim");
+  }
+  if (typeof input === "string") {
+    const trimmed = input.trim();
+    if (!trimmed) return [];
+    try {
+      return normalizeNativeChoiceEvidence(JSON.parse(trimmed), { trusted });
+    } catch {
+      return [];
+    }
+  }
+  return normalizeNativeChoiceEvidence([input], { trusted });
+}
+
 function compactCommand(command, args = []) {
   return [path.basename(command), ...args].join(" ");
 }
@@ -5629,7 +5685,12 @@ function buildUserPerceptionPacket({
 const PRODUCT_EXPERIENCE_CORE_GOAL_IDS = ["P-102", "P-103", "P-104"];
 const PRODUCT_EXPERIENCE_SUPPORT_GATE_IDS = ["P-105", "P-106", "P-107", "P-108", "P-109", "P-110"];
 
-function buildNativeChoiceSurfaceGate({ cardPlanPacket, dynamicWorkflowDecisionRecord }) {
+function buildNativeChoiceSurfaceGate({
+  cardPlanPacket,
+  dynamicWorkflowDecisionRecord,
+  nativeChoiceEvidence,
+  nativeChoiceEvidenceTrusted,
+}) {
   const branchCardRefs = [
     ...(cardPlanPacket?.cardEvents ?? [])
       .filter((card) => ["clarify", "options", "approval"].includes(card.cardKey))
@@ -5638,10 +5699,27 @@ function buildNativeChoiceSurfaceGate({ cardPlanPacket, dynamicWorkflowDecisionR
       .filter((card) => ["clarify", "options", "approval"].includes(card.cardKey))
       .map((card) => `dynamicWorkflowDecisionRecord.cards.${card.cardKey}`),
   ];
+  const evidence = normalizeNativeChoiceEvidence(nativeChoiceEvidence, {
+    trusted: nativeChoiceEvidenceTrusted,
+  });
+  const acceptedAnswers = evidence.filter((item) => item.passEligible === true);
+  const blockedEvidence = evidence.filter((item) => item.blockedEligible === true);
+  const branchChoiceRequired = branchCardRefs.length > 0;
+  const liveStatus = !branchChoiceRequired
+    ? "no_branching_choice"
+    : acceptedAnswers.length > 0
+      ? "native_choice_answered"
+      : blockedEvidence.length > 0
+        ? "nativeChoiceSurfaceBlocked"
+        : "needs-host-invocation";
+  const status =
+    !branchChoiceRequired || acceptedAnswers.length > 0
+      ? "pass"
+      : "partial";
   return {
     id: "P-106",
     name: "Codex/Claude 原生选择面支撑门",
-    status: "pass",
+    status,
     evidenceKind: "product_support_gate",
     requiredFor:
       "Any branch-changing Critical clarification or post-Thinking execution confirmation in primary Codex/Claude Code runtimes.",
@@ -5668,8 +5746,20 @@ function buildNativeChoiceSurfaceGate({ cardPlanPacket, dynamicWorkflowDecisionR
       ],
     },
     liveRuntimeBoundary: {
-      status: "not_claimed_by_structural_runner",
+      status: liveStatus,
       requiredForNativePass: true,
+      branchChoiceRequired,
+      evidenceTrusted: nativeChoiceEvidenceTrusted === true,
+      acceptedEvidenceRefs: acceptedAnswers.map((item) => item.evidenceRef),
+      blockedEvidenceRefs: blockedEvidence.map((item) => item.evidenceRef),
+      rejectedEvidence:
+        evidence
+          .filter((item) => item.proofValid !== true)
+          .map((item) => ({
+            surface: item.surface,
+            evidenceKind: item.evidenceKind,
+            rejectionReason: item.rejectionReason,
+          })),
       acceptableProof: [
         "Codex request_user_input returned answer before Execution",
         "Claude AskUserQuestion returned or deferred answer before Execution",
@@ -5852,6 +5942,8 @@ function buildProductExperiencePacket({
   userPerceptionPacket,
   cardPlanPacket,
   dynamicWorkflowDecisionRecord,
+  nativeChoiceEvidence,
+  nativeChoiceEvidenceTrusted,
 }) {
   const callableInvocationPass =
     capabilityInvocationTruthPacket?.callableInvocationCoverage?.status === "pass" &&
@@ -5927,7 +6019,12 @@ function buildProductExperiencePacket({
       failIf:
         "Goal lacks verification, constraints, boundaries, iteration policy, stop/pause, or contains placeholders.",
     },
-    buildNativeChoiceSurfaceGate({ cardPlanPacket, dynamicWorkflowDecisionRecord }),
+    buildNativeChoiceSurfaceGate({
+      cardPlanPacket,
+      dynamicWorkflowDecisionRecord,
+      nativeChoiceEvidence,
+      nativeChoiceEvidenceTrusted,
+    }),
     buildRepeatFailureDesignGate(),
     buildNoHardcodedFixtureGate({ goalContractPacket }),
     buildCapabilityInvocationTruthGate({ capabilityInvocationTruthPacket }),
@@ -5975,14 +6072,15 @@ function buildProductExperiencePacket({
     capabilityInvocationTruthGate: supportGates.find((gate) => gate.id === "P-109"),
     agentTeamsPlaybookGate: supportGates.find((gate) => gate.id === "P-110"),
     noOverclaimGate,
-    completionEvidence: [
+    requiredCompletionEvidence: [
       "goalContractPacket.status=pass",
       "langGraphRunPacket.status=pass",
       "dynamicWorkflowRuntimePacket.status=pass",
       "peerAgentMeshPacket.status=pass",
-    "capabilityInvocationTruthPacket.status=pass",
-    "capabilityInvocationTruthPacket.callableInvocationCoverage.status=pass",
-    "visibleMetaTheorySurfacePacket.status=pass",
+      "nativeChoiceSurfaceGate.status=pass",
+      "capabilityInvocationTruthPacket.status=pass",
+      "capabilityInvocationTruthPacket.callableInvocationCoverage.status=pass",
+      "visibleMetaTheorySurfacePacket.status=pass",
       "userPerceptionPacket.status=pass",
       "productExperiencePacket.supportGates[].status=pass",
     ],
@@ -6110,6 +6208,8 @@ function buildCoreLoopArtifact({
   hostVisibleSubagents,
   hostInvocationEvidence,
   hostInvocationEvidenceTrusted,
+  nativeChoiceEvidence,
+  nativeChoiceEvidenceTrusted,
   agentTeamsPlaybookProvider,
   invokeCapabilityProbes = false,
 }) {
@@ -6484,6 +6584,8 @@ function buildCoreLoopArtifact({
     userPerceptionPacket,
     cardPlanPacket,
     dynamicWorkflowDecisionRecord,
+    nativeChoiceEvidence,
+    nativeChoiceEvidenceTrusted,
   });
   const selectedExecutableTruthGaps = (capabilityInvocationTruthPacket.rows ?? [])
     .filter(
@@ -8293,6 +8395,8 @@ export async function runMetaTheoryGovernedExecution({
   hostVisibleSubagents = process.env.META_KIM_HOST_VISIBLE_SUBAGENTS ?? null,
   hostInvocationEvidence = process.env.META_KIM_HOST_INVOCATION_EVIDENCE ?? null,
   hostInvocationEvidenceTrusted = false,
+  nativeChoiceEvidence = process.env.META_KIM_NATIVE_CHOICE_EVIDENCE ?? null,
+  nativeChoiceEvidenceTrusted = false,
   invokeCapabilityProbes = false,
 } = {}) {
   const normalizedTask = normalizeTask(task);
@@ -8408,12 +8512,16 @@ export async function runMetaTheoryGovernedExecution({
     hostVisibleSubagents,
     hostInvocationEvidence,
     hostInvocationEvidenceTrusted,
+    nativeChoiceEvidence,
+    nativeChoiceEvidenceTrusted,
     agentTeamsPlaybookProvider,
     invokeCapabilityProbes,
   });
   artifactStatus =
     artifactStatus === "pass" &&
     runtimeEvidence.status === "pass" &&
+    coreLoop.runtimeInvocationPlanPacket.status === "pass" &&
+    coreLoop.hostInvocationRequestPacket.status === "pass" &&
     coreLoop.capabilityInvocationTruthPacket.status === "pass" &&
     coreLoop.productExperiencePacket.status === "product_experience_pass"
       ? "pass"
@@ -8652,6 +8760,10 @@ function argValue(name, fallback = null) {
   return index >= 0 ? process.argv[index + 1] : fallback;
 }
 
+function truthyEnvFlag(value) {
+  return ["1", "true", "yes", "on"].includes(String(value ?? "").trim().toLowerCase());
+}
+
 function positionalTask(fallback = null) {
   const positional = [];
   for (let index = 2; index < process.argv.length; index += 1) {
@@ -8668,6 +8780,7 @@ function positionalTask(fallback = null) {
         "--canonical-root",
         "--host-visible-subagents",
         "--host-invocation-evidence",
+        "--native-choice-evidence",
       ].includes(value)
     ) {
       index += 1;
@@ -8695,6 +8808,7 @@ function rawPositionals() {
         "--canonical-root",
         "--host-visible-subagents",
         "--host-invocation-evidence",
+        "--native-choice-evidence",
       ].includes(value)
     ) {
       index += 1;
@@ -8767,6 +8881,16 @@ async function main() {
       "--host-invocation-evidence",
       process.env.META_KIM_HOST_INVOCATION_EVIDENCE ?? null,
     ),
+    hostInvocationEvidenceTrusted:
+      process.argv.includes("--host-invocation-evidence-trusted") ||
+      truthyEnvFlag(process.env.META_KIM_HOST_INVOCATION_EVIDENCE_TRUSTED),
+    nativeChoiceEvidence: argValue(
+      "--native-choice-evidence",
+      process.env.META_KIM_NATIVE_CHOICE_EVIDENCE ?? null,
+    ),
+    nativeChoiceEvidenceTrusted:
+      process.argv.includes("--native-choice-evidence-trusted") ||
+      truthyEnvFlag(process.env.META_KIM_NATIVE_CHOICE_EVIDENCE_TRUSTED),
     invokeCapabilityProbes: process.argv.includes("--invoke-capability-probes"),
   });
   if (report.conversationNotice.emitted) {

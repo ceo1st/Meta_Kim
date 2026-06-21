@@ -6,11 +6,13 @@
 
 更新说明先解释本次解决的用户痛点或风险，再说明为了解决它改了什么、为什么重要。过细的内部任务编号、低价值 backlog id 和实现流水账不放在这里；需要精确证据时，请看 Git 历史、测试、生成报告和 PRD 产物。
 
-## [Unreleased]
+## [2.8.47] - 2026-06-21
 
 ### 解决的问题
 
 在 Codex/Windows 宿主禁止嵌套 Node 子进程时，governed execution CLI 和 smoke 测试会卡住或崩溃，导致真实模糊指令验收看起来像没跑通，即便路线选择器和 Node 测试本身是有效的。
+
+同时，产品体验支撑门仍会把结构性的 native choice 支撑误写成 pass。一次运行可能已经证明了 worker packets 和 selected providers，但仍有风险把 `selected_not_invoked`、CLI 子进程或 markdown/card artifact 误读成真实 host invocation 或 native choice 证据。
 
 ### 变更
 
@@ -19,6 +21,10 @@
 - **8 阶段可见进度** - 对话提示和 stage operation plan 现在展示 Critical、Fetch、Thinking、Execution、Review、Meta-Review、Verification、Evolution，不再停在 Review。
 - **能力 Smoke 宿主 fallback** - capability-discovery smoke 复用同进程 selector fallback，并诚实报告 spawn 错误，不再写出 undefined output。
 - **Node 测试包装器 fallback** - 共享 Node 测试包装器在 child-process 不可用时，对本仓本地脚本提供窄范围 worker-backed fallback。
+- **可信 Host Invocation 证据** - governed execution 现在只接受带有真实 family、state、provider 或 surface、合法 evidence kind、非空 evidence ref 的 trusted host evidence；`hostInvocationRequestPacket` 也必须 pass，artifact 才能 pass。
+- **Native Choice 证据门** - P-106 不再因为结构性 card 证据默认 pass。Codex/Claude 的分支决策会保持 `needs-host-invocation`，直到附上可信 `request_user_input` / `AskUserQuestion` 证据。
+- **禁止伪造 Native Choice 快捷口令** - `select-execution-route` 不再把纯字符串 `completed` / `confirmed` 当成可信 native choice 证明；结构化证据也必须带 native surface 和 evidence ref。
+- **Validator 摘要诚实化** - 默认 governed-execution validator 现在拆分 `validationStatus` 与 `governedExecutionStatus`，有效但 partial 的运行不会再被顶层 `status=pass` 混淆。
 
 ### 验证
 
@@ -27,8 +33,17 @@
 - `node scripts/validate-run-artifact.mjs .meta-kim/state/codex-goal-fuzzy/codex-goal-fuzzy-acceptance.json`
 - `node --test --test-concurrency=1 tests/meta-theory/*.test.mjs`
 - `npm run meta:test:integration`
+- `node --test tests/meta-theory/32-meta-theory-four-product-targets.test.mjs`
+- `node --test tests/governance/core-loop-contract.test.mjs tests/meta-theory/34-run-deliverables.test.mjs tests/governance/capability-routing.test.mjs`
+- `npm run meta:prd:default-execution:validate`
+- `npm run meta:prd:product-experience:validate`
+- 通过 `Start-Process node scripts/run-meta-theory-governed-execution.mjs` 启动干净 host-acceptance 新进程，使用当前 Codex `spawn_agent` 和 `request_user_input` 证据；产物结果为 artifact status `pass`、`hostInvocationRequest=pass`、`realInvocationCoverage=pass`、`nativeChoiceGate=pass`、`productExperience=product_experience_pass`
+- `npm run meta:release:smoke`
+- `npm run meta:verify:all`
+- `node scripts/graphify-cli.mjs rebuild --force`
+- `npm run meta:graphify:check`
 - `git diff --check`
-- 发布边界保持诚实：`npm run meta:verify:all` 仍停在 `meta:graphify:check`，因为 `GRAPH_REPORT.md` 已过期且 `npm run meta:graphify:rebuild` 当前因 Windows `WinError 5` 失败。graphify 重建并通过 full verify 前，不应切正式新版本。
+- 发布边界保持诚实：full verification、validator、graphify check 与干净 host evidence 支撑本次 patch 发布；全 runtime native live proof 仍是单独的 release-grade 目标。
 
 ## [2.8.46] - 2026-06-21
 

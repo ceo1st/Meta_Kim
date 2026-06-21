@@ -6,11 +6,13 @@ This file is the reader-facing release history for Meta_Kim.
 
 The changelog explains the user-facing problem or risk each release solved, what changed to solve it, and why the change matters. It intentionally avoids long internal task ledgers, low-signal backlog ids, and implementation trivia. When exact evidence is needed, use the repository history, tests, generated reports, and PRD artifacts.
 
-## [Unreleased]
+## [2.8.47] - 2026-06-21
 
 ### Solved Problem
 
 The governed execution CLI and smoke-test path could stall or crash in Codex/Windows hosts that block nested Node child processes. That made fuzzy-instruction acceptance look broken even when the route selector and Node tests were valid.
+
+The product-experience gate also still treated structural native-choice support as a pass. A run could prove worker packets and selected providers, but it could still over-read `selected_not_invoked`, a CLI child process, or a markdown/card artifact as real host invocation or native choice evidence.
 
 ### Changed
 
@@ -19,6 +21,10 @@ The governed execution CLI and smoke-test path could stall or crash in Codex/Win
 - **Eight-Stage Visible Progress** - Conversation notices and stage operation plans now surface Critical, Fetch, Thinking, Execution, Review, Meta-Review, Verification, and Evolution instead of stopping at Review.
 - **Capability Smoke Host Fallback** - Capability-discovery smoke now uses the same in-process selector fallback and reports spawn errors honestly instead of writing undefined output.
 - **Node Test Wrapper Fallback** - The shared Node test wrapper now has a narrow worker-backed fallback for local repo scripts when child-process execution is unavailable.
+- **Trusted Host Invocation Evidence** - Governed execution now accepts trusted host evidence through CLI/env only when it includes a real family, state, provider or surface, accepted evidence kind, and non-empty evidence ref; `hostInvocationRequestPacket` must be pass before the artifact can be pass.
+- **Native Choice Evidence Gate** - P-106 no longer defaults to pass from structural card evidence. Branch-changing Codex/Claude choices now stay `needs-host-invocation` until trusted `request_user_input` / `AskUserQuestion` evidence is attached.
+- **No Forged Native Choice Shortcut** - `select-execution-route` no longer accepts plain `completed` / `confirmed` strings as trusted native choice proof; structured evidence now needs a native surface and evidence reference.
+- **Honest Validator Summary** - The default governed-execution validator now reports `validationStatus` separately from `governedExecutionStatus`, so a valid partial run is no longer summarized as a top-level pass.
 
 ### Verification
 
@@ -27,8 +33,17 @@ The governed execution CLI and smoke-test path could stall or crash in Codex/Win
 - `node scripts/validate-run-artifact.mjs .meta-kim/state/codex-goal-fuzzy/codex-goal-fuzzy-acceptance.json`
 - `node --test --test-concurrency=1 tests/meta-theory/*.test.mjs`
 - `npm run meta:test:integration`
+- `node --test tests/meta-theory/32-meta-theory-four-product-targets.test.mjs`
+- `node --test tests/governance/core-loop-contract.test.mjs tests/meta-theory/34-run-deliverables.test.mjs tests/governance/capability-routing.test.mjs`
+- `npm run meta:prd:default-execution:validate`
+- `npm run meta:prd:product-experience:validate`
+- clean host-acceptance process via `Start-Process node scripts/run-meta-theory-governed-execution.mjs`, using current Codex `spawn_agent` and `request_user_input` evidence; result artifact status `pass`, `hostInvocationRequest=pass`, `realInvocationCoverage=pass`, `nativeChoiceGate=pass`, `productExperience=product_experience_pass`
+- `npm run meta:release:smoke`
+- `npm run meta:verify:all`
+- `node scripts/graphify-cli.mjs rebuild --force`
+- `npm run meta:graphify:check`
 - `git diff --check`
-- Release boundary retained: `npm run meta:verify:all` still stops at `meta:graphify:check` because `GRAPH_REPORT.md` is stale and `npm run meta:graphify:rebuild` currently fails with Windows `WinError 5`. No new release should be cut until graphify is rebuilt and full verify passes.
+- Release boundary retained: full verification, validators, graphify check, and clean host evidence support this patch release; all-runtime native live proof remains a separate release-grade target.
 
 ## [2.8.46] - 2026-06-21
 

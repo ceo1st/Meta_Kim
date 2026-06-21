@@ -43,16 +43,6 @@ function normalizeNativeChoiceEvidence(raw) {
       trusted: false,
     };
   }
-  if (raw === "completed" || raw === "confirmed") {
-    return {
-      ...base,
-      status: "completed",
-      surface: "request_user_input",
-      answerRecorded: true,
-      trusted: true,
-      completedStages: ["Critical"],
-    };
-  }
   try {
     const parsed = JSON.parse(raw);
     const evidenceItems = Array.isArray(parsed)
@@ -66,6 +56,10 @@ function normalizeNativeChoiceEvidence(raw) {
       .filter((item) => item?.status === "completed" || item?.state === "completed" || item?.answerRecorded === true)
       .map((item) => item.stage ?? item.choiceStage ?? item.checkpoint ?? parsed.stage ?? parsed.choiceStage ?? null)
       .filter(Boolean);
+    const evidenceRefs = evidenceItems
+      .filter((item) => item?.status === "completed" || item?.state === "completed" || item?.answerRecorded === true)
+      .map((item) => item.evidenceRef ?? item.answerRef ?? parsed.evidenceRef ?? parsed.answerRef ?? null)
+      .filter((ref) => typeof ref === "string" ? ref.trim().length > 0 : Boolean(ref));
     const answerRecorded =
       parsed.answerRecorded === true ||
       parsed.status === "completed" ||
@@ -79,10 +73,13 @@ function normalizeNativeChoiceEvidence(raw) {
       answerRecorded,
       trusted:
         answerRecorded &&
+        completedStages.length > 0 &&
+        evidenceRefs.length > 0 &&
         ["request_user_input", "AskUserQuestion", "native_choice"].includes(
           surface,
         ),
       evidenceRef: parsed.evidenceRef ?? parsed.answerRef ?? null,
+      evidenceRefs,
       completedStages,
     };
   } catch {

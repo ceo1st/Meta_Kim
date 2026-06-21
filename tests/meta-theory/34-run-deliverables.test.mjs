@@ -762,8 +762,9 @@ describe("34 — Meta-theory run deliverables", () => {
       assert.equal(runArtifact.productExperiencePacket.noOverclaimGate.status, "pass");
       assert.equal(
         runArtifact.productExperiencePacket.nativeChoiceSurfaceGate.liveRuntimeBoundary.status,
-        "not_claimed_by_structural_runner"
+        "needs-host-invocation"
       );
+      assert.equal(runArtifact.productExperiencePacket.nativeChoiceSurfaceGate.status, "partial");
       assert.equal(
         runArtifact.productExperiencePacket.repeatFailureDesignGate.actionOnSecondOccurrence,
         "bottom_design_failure_return_to_critical_fetch_thinking"
