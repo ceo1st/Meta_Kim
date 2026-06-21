@@ -6,6 +6,33 @@
 
 更新说明先解释本次解决的用户痛点或风险，再说明为了解决它改了什么、为什么重要。过细的内部任务编号、低价值 backlog id 和实现流水账不放在这里；需要精确证据时，请看 Git 历史、测试、生成报告和 PRD 产物。
 
+## [2.8.49] - 2026-06-21
+
+### 解决的问题
+
+当用户级 Codex `config.toml` 在 `[features]` 上方有坏掉的 TOML 数组时，macOS 上的 Codex 可能在 Meta_Kim 启动前就失败。宿主错误会指向 `multi_agent = true`，看起来像这个合法 Codex feature 写错了，但真正的问题是上方数组缺逗号或没有闭合。
+
+Meta_Kim 的全局同步和依赖安装路径也会用行级合并修改 Codex 配置，所以需要在写入前拒绝合并结构不安全的配置，并给出可执行的本地修复提示。
+
+### 变更
+
+- **Codex 配置合并护栏** - Codex config merge 在写入 feature flags、App native controls 或 add-only 依赖配置前，会拒绝未闭合的 TOML 数组或 inline table。
+- **人话诊断** - 错误会指出仍处在未闭合 TOML 容器里的行、容器打开的行/列，并展示 `multi_agent = true` 应放在 `[features]` 下。
+- **全局检查可见性** - `meta:check:global` 现在会单独报告 Codex `config.toml` 无效，不再只降级成 `default_mode_request_user_input` 缺失。
+- **回归覆盖** - Setup 测试复现截图里的 `notify = [` 加 `multi_agent = true` 失败形态，同时保持合法多行 TOML 数组可用。
+
+### 验证
+
+- `node --check scripts/codex-config-merge.mjs`
+- `node --check scripts/sync-global-meta-theory.mjs`
+- `node --test tests/setup/codex-config-merge.test.mjs`
+- 临时 Codex home 执行 `sync-global-meta-theory.mjs --check --targets codex` 坏配置复现
+- `npm run meta:test:setup`
+- `npm run meta:check`
+- `npm run meta:check:global`
+- `npm run meta:release:smoke`
+- `git diff --check`
+
 ## [2.8.48] - 2026-06-21
 
 ### 解决的问题

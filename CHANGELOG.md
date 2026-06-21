@@ -6,6 +6,33 @@ This file is the reader-facing release history for Meta_Kim.
 
 The changelog explains the user-facing problem or risk each release solved, what changed to solve it, and why the change matters. It intentionally avoids long internal task ledgers, low-signal backlog ids, and implementation trivia. When exact evidence is needed, use the repository history, tests, generated reports, and PRD artifacts.
 
+## [2.8.49] - 2026-06-21
+
+### Solved Problem
+
+Codex could fail on macOS before Meta_Kim even started when the user-level `config.toml` had a malformed TOML array above `[features]`. The host error pointed at `multi_agent = true`, which made a valid Codex feature flag look wrong even though the real issue was an unclosed or comma-broken array above it.
+
+Meta_Kim's global sync and dependency install paths also edited Codex config through line-based merges, so they needed a guard that refuses to merge into a structurally unsafe config and explains the local repair.
+
+### Changed
+
+- **Codex Config Merge Guard** - Codex config merge now rejects unclosed TOML arrays or inline tables before writing feature flags, App native controls, or add-only dependency config.
+- **Human-Readable Diagnosis** - The error now points to the line that is still inside an unclosed TOML container, reports the opener line/column, and shows the correct `[features]` placement for `multi_agent = true`.
+- **Global Check Visibility** - `meta:check:global` now reports invalid Codex `config.toml` separately instead of reducing the problem to a missing `default_mode_request_user_input` feature.
+- **Regression Coverage** - Setup tests reproduce the screenshot-style `notify = [` plus `multi_agent = true` failure and keep valid multiline TOML arrays accepted.
+
+### Verification
+
+- `node --check scripts/codex-config-merge.mjs`
+- `node --check scripts/sync-global-meta-theory.mjs`
+- `node --test tests/setup/codex-config-merge.test.mjs`
+- Temporary Codex home `sync-global-meta-theory.mjs --check --targets codex` invalid-config reproduction
+- `npm run meta:test:setup`
+- `npm run meta:check`
+- `npm run meta:check:global`
+- `npm run meta:release:smoke`
+- `git diff --check`
+
 ## [2.8.48] - 2026-06-21
 
 ### Solved Problem
