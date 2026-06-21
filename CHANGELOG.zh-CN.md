@@ -6,6 +6,41 @@
 
 更新说明先解释本次解决的用户痛点或风险，再说明为了解决它改了什么、为什么重要。过细的内部任务编号、低价值 backlog id 和实现流水账不放在这里；需要精确证据时，请看 Git 历史、测试、生成报告和 PRD 产物。
 
+## [2.8.48] - 2026-06-21
+
+### 解决的问题
+
+Graphify 的提示仍可能把 agent 引向大范围读取 `GRAPH_REPORT.md` 或图谱上下文，使大项目上下文过重，也模糊了“图谱导航提示”和“源文件证据”的边界。即使 canonical source 已更新，旧的全局 Codex hook 也可能继续吐出旧版短提示。
+
+全局安装模式在 macOS 上也可能出现假红：`setup.mjs --check` 仍按项目本地投影检查所有 supported runtime，而没有尊重当前 `global_only` 模式和 active targets。
+
+### 变更
+
+- **Graphify Query-First 策略** - meta-theory 现在把 Graphify 视为导航能力，而不是上下文倾倒。聚焦任务应优先用 `graphify query`、`graphify path` 或 `graphify explain` 找候选锚点。
+- **源文件验证边界** - Graphify 结果只算候选文件锚点；会改变路线的判断必须回读源文件验证。结果泛、旧、或被生成状态污染时，回退到定向仓库搜索。
+- **Hook 上下文瘦身** - Claude subagent 与 Graphify hooks 现在明确禁止把完整 `graph.json`、完整 `GRAPH_REPORT.md` 或大范围 graph dump 注入 worker 上下文。
+- **Sync 模板对齐** - Codex runtime sync 和 setup 模板同步使用 query-first 文案，避免项目或全局同步把旧提示刷回来。
+- **Global-Only Setup 检查修复** - Setup check/update 路径现在尊重 `projectProjectionMode=global_only`；全局模式跳过项目本地投影校验，项目模式只校验当前选中的 active targets。
+- **全局 Hook 刷新** - 使用 `--with-global-hooks` 刷新全局 Claude 与 Codex `meta-kim` hooks，使当前运行时提示与 canonical policy 一致。
+- **文档与回归覆盖** - README/CLAUDE 现在说明 Graphify 应通过 query/path/explain 小切片使用，并配合源文件验证；setup 测试会拒绝旧的 compressed-context 文案。
+
+### 验证
+
+- `node --test tests/setup/sync-runtimes-manifest.test.mjs`
+- `node --test tests/setup/graphify-wiring-contract.test.mjs`
+- `node --test tests/setup/setup-update-default-flow.test.mjs`
+- `npm run meta:sync`
+- `npm run meta:validate`
+- `node scripts/graphify-cli.mjs rebuild --force`
+- `npm run meta:graphify:check`
+- `npm run discover:global`
+- `npm run meta:check`
+- `npm run meta:sync:global -- --with-global-hooks`
+- `npm run meta:check:global -- --with-global-hooks`
+- `npm run meta:release:smoke`
+- 当前 Codex 的 `rg` hook probe 已输出新版 query-first/source-verification Graphify 提示。
+- `git diff --check`
+
 ## [2.8.47] - 2026-06-21
 
 ### 解决的问题

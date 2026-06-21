@@ -6,6 +6,41 @@ This file is the reader-facing release history for Meta_Kim.
 
 The changelog explains the user-facing problem or risk each release solved, what changed to solve it, and why the change matters. It intentionally avoids long internal task ledgers, low-signal backlog ids, and implementation trivia. When exact evidence is needed, use the repository history, tests, generated reports, and PRD artifacts.
 
+## [2.8.48] - 2026-06-21
+
+### Solved Problem
+
+Graphify guidance could still push agents toward broad `GRAPH_REPORT.md` or graph context use, which made large projects feel too heavy and blurred the boundary between a graph navigation hint and source-backed evidence. A stale global Codex hook could also keep emitting the old short Graphify hint even after the canonical source had been updated.
+
+Global-only installs could also show false red sync failures on macOS because `setup.mjs --check` still required project-local runtime projection files for every supported runtime instead of respecting the active global targets.
+
+### Changed
+
+- **Graphify Query-First Policy** - Meta-theory now treats Graphify as a navigation capability, not a context dump. Focused work should use `graphify query`, `graphify path`, or `graphify explain` to find candidate anchors.
+- **Source Verification Boundary** - Graphify results are now explicitly candidate file anchors only; route-changing claims must be verified against source files, with targeted repository search as the fallback for stale, generic, or polluted graph results.
+- **Hook Context Slimming** - Claude subagent and Graphify hooks now forbid injecting full `graph.json`, full `GRAPH_REPORT.md`, or broad graph dumps into worker context.
+- **Sync Template Alignment** - Codex runtime sync and setup templates now carry the same query-first wording, preventing project or global sync from restoring the old guidance.
+- **Global-Only Setup Check** - Setup check/update paths now respect `projectProjectionMode=global_only`; repo-local projection checks are skipped in global-only mode, and project-scope validation checks only selected active targets.
+- **Global Hook Refresh** - The global Claude and Codex `meta-kim` hooks were refreshed with `--with-global-hooks` so the active runtime hint matches the canonical policy.
+- **Documentation And Regression Coverage** - README/CLAUDE surfaces now describe Graphify as query/path/explain slices plus source verification, and setup tests reject the old compressed-context wording.
+
+### Verification
+
+- `node --test tests/setup/sync-runtimes-manifest.test.mjs`
+- `node --test tests/setup/graphify-wiring-contract.test.mjs`
+- `node --test tests/setup/setup-update-default-flow.test.mjs`
+- `npm run meta:sync`
+- `npm run meta:validate`
+- `node scripts/graphify-cli.mjs rebuild --force`
+- `npm run meta:graphify:check`
+- `npm run discover:global`
+- `npm run meta:check`
+- `npm run meta:sync:global -- --with-global-hooks`
+- `npm run meta:check:global -- --with-global-hooks`
+- `npm run meta:release:smoke`
+- Runtime Codex `rg` hook probe emitted the new query-first/source-verification Graphify hint.
+- `git diff --check`
+
 ## [2.8.47] - 2026-06-21
 
 ### Solved Problem
