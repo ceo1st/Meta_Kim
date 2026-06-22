@@ -6,6 +6,35 @@ This file is the reader-facing release history for Meta_Kim.
 
 The changelog explains the user-facing problem or risk each release solved, what changed to solve it, and why the change matters. It intentionally avoids long internal task ledgers, low-signal backlog ids, and implementation trivia. When exact evidence is needed, use the repository history, tests, generated reports, and PRD artifacts.
 
+## [2.8.51] - 2026-06-22
+
+### Solved Problem
+
+Meta_Kim could still self-lock during a governed run after entering later spine stages such as Verification. The operator could be blocked from running read-only Fetch or diagnostic commands like `git status` and `Get-Content` because the execution-tool hook checked the choice surface gate before it allowed read-only Bash inspection.
+
+That created a governance contradiction: the run needed Fetch evidence to continue, but the hook could deny the very commands needed to collect or repair that evidence.
+
+### Changed
+
+- **Read-Only Inspection Before Choice Gate** - The dispatch enforcement hook now lets safe read-only Bash inspection run before `checkChoiceSurfaceGate`, preserving the ability to inspect and repair state without weakening mutation controls.
+- **Mutation Still Blocked** - The same incomplete-state path still denies mutating commands such as `npm install`, so the fix restores Fetch access without turning off capability-first enforcement.
+- **Verification-Stage Regression Coverage** - The eight-stage spine tests now cover the exact self-lock shape: Verification stage with incomplete choice evidence allows `git status --short` but still denies mutation.
+- **Global Hook Refresh** - The fixed canonical hook was synced into the global Claude Code and Codex hook packages so the active runtime receives the same behavior as the source tree.
+
+### Verification
+
+- `node --test tests/meta-theory/11-eight-stage-spine.test.mjs`
+- `npm run meta:sync`
+- `npm run discover:global`
+- `node scripts/graphify-cli.mjs rebuild --force`
+- `npm run meta:graphify:check`
+- `npm run meta:check`
+- `node scripts/sync-global-meta-theory.mjs --with-global-hooks`
+- `node scripts/sync-global-meta-theory.mjs --check --with-global-hooks`
+- `npm run meta:check:global`
+- `npm run meta:release:smoke`
+- `git diff --check`
+
 ## [2.8.50] - 2026-06-22
 
 ### Solved Problem

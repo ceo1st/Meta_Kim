@@ -6,6 +6,35 @@
 
 更新说明先解释本次解决的用户痛点或风险，再说明为了解决它改了什么、为什么重要。过细的内部任务编号、低价值 backlog id 和实现流水账不放在这里；需要精确证据时，请看 Git 历史、测试、生成报告和 PRD 产物。
 
+## [2.8.51] - 2026-06-22
+
+### 解决的问题
+
+Meta_Kim 在 governed run 进入 Verification 等后置阶段后，仍可能发生自锁。维护者想运行 `git status`、`Get-Content` 这类只读 Fetch 或诊断命令时，会先被 execution-tool hook 送进 choice surface gate；如果当前 state 缺 Fetch evidence 或 Thinking option frame，这些只读命令也会被拒绝。
+
+这会形成治理悖论：运行需要 Fetch 证据才能继续，但 hook 又拦住了收集或修复证据所需的只读命令。
+
+### 变更
+
+- **只读检查先于 choice gate** - dispatch enforcement hook 现在会在 `checkChoiceSurfaceGate` 前放行安全的只读 Bash inspection，恢复取证和状态修复能力，同时不削弱变更控制。
+- **变更命令仍然被拦** - 同一条 incomplete-state 路径下，`npm install` 等 mutation 命令仍会被拒绝；本次修复恢复的是 Fetch 访问，不是关闭 capability-first gate。
+- **Verification 阶段回归覆盖** - eight-stage spine 测试新增复现：Verification 阶段 choice evidence 不完整时，`git status --short` 可通过，但 mutation 仍拒绝。
+- **全局 Hook 刷新** - fixed canonical hook 已同步到全局 Claude Code 和 Codex hook 包，使当前运行时和源码树行为一致。
+
+### 验证
+
+- `node --test tests/meta-theory/11-eight-stage-spine.test.mjs`
+- `npm run meta:sync`
+- `npm run discover:global`
+- `node scripts/graphify-cli.mjs rebuild --force`
+- `npm run meta:graphify:check`
+- `npm run meta:check`
+- `node scripts/sync-global-meta-theory.mjs --with-global-hooks`
+- `node scripts/sync-global-meta-theory.mjs --check --with-global-hooks`
+- `npm run meta:check:global`
+- `npm run meta:release:smoke`
+- `git diff --check`
+
 ## [2.8.50] - 2026-06-22
 
 ### 解决的问题
