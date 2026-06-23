@@ -6,6 +6,34 @@
 
 更新说明先解释本次解决的用户痛点或风险，再说明为了解决它改了什么、为什么重要。过细的内部任务编号、低价值 backlog id 和实现流水账不放在这里；需要精确证据时，请看 Git 历史、测试、生成报告和 PRD 产物。
 
+## [2.8.53] - 2026-06-23
+
+### 解决的问题
+
+Meta_Kim 的 runtime hook 仍可能把设计期阶段表现得像是必须先派 Agent。Fetch 阶段真实业务文件写入被拦是正确的，但拒绝文案会提示维护者去 dispatch Agent；这和当前设定冲突，因为 Critical、Fetch、Thinking 都允许主线程推进。相同 gate 还可能拦住 Claude `/plan` 的计划更新，让计划面动作看起来也像被禁止的业务写入。
+
+这会制造错误修复循环：维护者真正需要补的是 Fetch / Thinking 证据，再进入 Execution；但 hook 暗示下一步必须派 Agent。
+
+### 变更
+
+- **设计期阶段语义修正** - Critical、Fetch、Thinking 的拒绝文案现在明确说明：业务 mutation 要等 Execution；主线程仍可继续 read/search、capability discovery、planning/control-plane 更新和 spine-state packet 写入。
+- **Agent 要求只属于 Execution** - stage runtime control contract 现在记录 Fetch 和 Thinking 进行中不要求 Agent dispatch；execution owner/loadout 与 dispatch evidence 仍保留为 Execution 阶段门。
+- **计划控制面放行** - Claude plan-mode surface、task/todo bookkeeping、`.claude/plans/*.md` 和 Meta_Kim planning files 可在 Fetch 阶段、没有 `fetchRecord` 时更新；普通业务文件仍然会被拦。
+- **观察态本地发布步骤放行** - 自动触发的观察态现在允许本地 `git add` 和 `git commit` 检查点，也不会因为搜索文本里出现高风险词而误拦；`git push`、包安装、reset 等外部发布或破坏性命令仍继续拦截。
+- **Hook 路径字段兼容** - hook 的 file-path 提取支持 camelCase 和 target path 变体，确保 runtime planning surface 按真实目标路径分类。
+- **回归覆盖** - eight-stage spine 测试覆盖设计期不强制 Agent、planning control-plane 放行，以及业务 mutation 被拦时不得提示用户 dispatch Agent 的精确文案。
+
+### 验证
+
+- `npm run meta:prd:stage-runtime-control:validate`
+- `node --test tests/meta-theory/11-eight-stage-spine.test.mjs`
+- `npm run meta:sync`
+- `npm run discover:global`
+- `npm run meta:check`
+- `npm run meta:check:global`
+- `npm run meta:release:smoke`
+- `git diff --check`
+
 ## [2.8.52] - 2026-06-23
 
 ### 解决的问题

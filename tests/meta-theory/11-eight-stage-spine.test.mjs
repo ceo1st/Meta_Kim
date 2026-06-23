@@ -1414,6 +1414,33 @@ describe("Part F2: choice surface runtime gate", async () => {
     assert.deepEqual(commit.missing, ["fetchRecord in spine state"]);
   });
 
+  test("Fetch and Thinking in progress do not require Agent dispatch", () => {
+    for (const stage of ["fetch", "thinking"]) {
+      const state = {
+        ...createInitialState({
+          taskClassification: "meta_theory_auto",
+          triggerReason: "test",
+        }),
+        currentStage: stage,
+        dispatchChain: {},
+      };
+      delete state.fetchRecord;
+
+      const requirements = checkStageRequirements(state);
+      assert.equal(requirements.met, true, `${stage} should be in-progress ready`);
+
+      const governanceDispatch = runEnforceHook(state, {
+        tool_name: "Agent",
+        tool_input: {
+          description: `meta-artisan ${stage} capability discovery`,
+          prompt: `meta-artisan continue ${stage} evidence collection`,
+        },
+      });
+      assert.equal(governanceDispatch.status, 0);
+      assert.doesNotMatch(governanceDispatch.stdout, /permissionDecision/);
+    }
+  });
+
   test("observed hook state allows ordinary local file mutation with one readable notice", () => {
     const state = {
       ...createInitialState({
@@ -1464,6 +1491,66 @@ describe("Part F2: choice surface runtime gate", async () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /permissionDecision/);
     assert.match(result.stdout, /高风险|external side-effect/);
+  });
+
+  test("observed hook state allows local git stage and commit but not push", () => {
+    const state = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+        activationMode: "hook_observed",
+        driverMode: "hook_observed",
+        hookGateMode: "advisory",
+        latestUserInputLanguage: "zh-CN",
+      }),
+      currentStage: "critical",
+    };
+
+    for (const command of [
+      "git add CHANGELOG.md",
+      "git commit -m \"test local publication checkpoint\"",
+    ]) {
+      const result = runEnforceHook(state, {
+        tool_name: "Bash",
+        tool_input: { command },
+      });
+      assert.equal(result.status, 0);
+      assert.doesNotMatch(result.stdout, /permissionDecision/);
+    }
+
+    const pushResult = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: { command: "git push origin main" },
+    });
+
+    assert.equal(pushResult.status, 0);
+    assert.match(pushResult.stdout, /permissionDecision/);
+    assert.match(pushResult.stdout, /高风险|external side-effect/);
+  });
+
+  test("observed hook state ignores high-risk words inside quoted search text", () => {
+    const state = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+        activationMode: "hook_observed",
+        driverMode: "hook_observed",
+        hookGateMode: "advisory",
+        latestUserInputLanguage: "zh-CN",
+      }),
+      currentStage: "critical",
+    };
+
+    const result = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: {
+        command:
+          "graphify query \"Meta_Kim hook blocks git add during local stage\" --budget 1000",
+      },
+    });
+
+    assert.equal(result.status, 0);
+    assert.doesNotMatch(result.stdout, /permissionDecision/);
   });
 
   test("observed hook state allows PowerShell read-only pipelines", () => {
@@ -2237,6 +2324,33 @@ describe("Part F2: choice surface runtime gate", async () => {
     }
   });
 
+  test("Fetch business mutation denial does not instruct Agent dispatch", () => {
+    const state = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+      }),
+      currentStage: "fetch",
+      stageTransitionIntent: "commit",
+    };
+    delete state.fetchRecord;
+
+    const result = runEnforceHook(state, {
+      tool_name: "Write",
+      tool_input: {
+        file_path: "src/main.go",
+        content: "package main\n",
+      },
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /permissionDecision/);
+    assert.match(result.stdout, /fetchRecord in spine state/);
+    assert.match(result.stdout, /Agent dispatch is not required before Execution/);
+    assert.doesNotMatch(result.stdout, /Dispatch them via Agent tool/);
+    assert.doesNotMatch(result.stdout, /description must contain the meta-agent name/);
+  });
+
   test("queryBypass allows read-only inspection but still denies mutation", () => {
     const state = {
       ...createInitialState({
@@ -2476,6 +2590,60 @@ describe("Part F2: choice surface runtime gate", async () => {
     });
     assert.equal(mixedBusinessWrite.status, 0);
     assert.match(mixedBusinessWrite.stdout, /permissionDecision/);
+  });
+
+  test("Fetch stage allows planning control-plane updates before fetchRecord exists", () => {
+    const state = {
+      ...createInitialState({
+        taskClassification: "meta_theory_auto",
+        triggerReason: "test",
+      }),
+      currentStage: "fetch",
+      stageTransitionIntent: "commit",
+    };
+    delete state.fetchRecord;
+
+    const nativePlanWrite = runEnforceHook(state, {
+      tool_name: "Write",
+      tool_input: {
+        filePath: "C:/Users/Kim/.claude/plans/meta-kim-plan.md",
+        content: "# Plan\n",
+      },
+    });
+    assert.equal(nativePlanWrite.status, 0);
+    assert.doesNotMatch(nativePlanWrite.stdout, /permissionDecision/);
+
+    const nativePlanBashWrite = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: {
+        command:
+          "Set-Content -Path C:/Users/Kim/.claude/plans/meta-kim-plan.md -Value '# Plan'",
+      },
+    });
+    assert.equal(nativePlanBashWrite.status, 0);
+    assert.doesNotMatch(nativePlanBashWrite.stdout, /permissionDecision/);
+
+    for (const tool of ["EnterPlanMode", "ExitPlanMode", "TodoWrite"]) {
+      const result = runEnforceHook(state, {
+        tool_name: tool,
+        tool_input: {
+          plan: "# Plan",
+          todos: [{ content: "Plan the repair", status: "pending" }],
+        },
+      });
+      assert.equal(result.status, 0);
+      assert.doesNotMatch(result.stdout, /permissionDecision/);
+    }
+
+    const businessWriteWithPlanMention = runEnforceHook(state, {
+      tool_name: "Bash",
+      tool_input: {
+        command:
+          "Set-Content -Path src/main.go -Value 'C:/Users/Kim/.claude/plans/meta-kim-plan.md'",
+      },
+    });
+    assert.equal(businessWriteWithPlanMention.status, 0);
+    assert.match(businessWriteWithPlanMention.stdout, /permissionDecision/);
   });
 
   test("simpleMode residue in spine state cannot skip dispatch governance", () => {

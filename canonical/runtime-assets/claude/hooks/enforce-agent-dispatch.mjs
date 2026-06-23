@@ -124,6 +124,17 @@ const SPINE_STATE_DIR =
   process.env.META_KIM_SPINE_STATE_DIR || ".meta-kim/state/default/spine";
 const targetPath = extractFilePath(payload) || "";
 const PLANNING_FILES = ["task_plan.md", "findings.md", "progress.md"];
+const CONTROL_PLANE_TOOLS = new Set([
+  "EnterPlanMode",
+  "ExitPlanMode",
+  "TaskCreate",
+  "TaskUpdate",
+  "TaskList",
+  "TaskGet",
+  "TaskOutput",
+  "TaskStop",
+  "TodoWrite",
+]);
 
 function normalizeHookPath(value) {
   const raw = String(value || "").trim();
@@ -356,14 +367,30 @@ function nodeWriteFileSyncTargetsSpineState(scriptText) {
 }
 
 function isPlanningFile() {
-  if (touchesPlanningFilePath(targetPath)) return true;
+  if (touchesPlanningSurfacePath(targetPath)) return true;
   if (toolName !== "Bash") return false;
   return isBashPlanningFileWrite(String(toolInput?.command || ""));
 }
 
 function touchesPlanningFilePath(value) {
+  return touchesPlanningSurfacePath(value);
+}
+
+function touchesPlanningSurfacePath(value) {
   const normalized = normalizeHookPath(value);
-  return PLANNING_FILES.some((file) => normalized.endsWith(file));
+  if (!normalized) return false;
+  return (
+    PLANNING_FILES.some((file) => normalized.endsWith(file)) ||
+    /(^|\/)\.claude\/plans\/[^/]+\.md$/.test(normalized)
+  );
+}
+
+function shellPlanningSurfaceTargetPattern() {
+  const planningFileAlternatives = PLANNING_FILES.map(escapeRegExp).join("|");
+  return (
+    `[^"'\\s;&|]*(?:(?:${planningFileAlternatives})|` +
+    `(?:\\.claude/plans/[^"'\\s;&|]+\\.md))`
+  );
 }
 
 function isBashPlanningFileWrite(command) {
@@ -390,26 +417,50 @@ function isBashPlanningFileWrite(command) {
 function isPlanningFileWriteSegment(segment) {
   if (!hasShellWritePrimitive(segment)) return false;
   const normalized = segment.replace(/\\/g, "/");
-  return PLANNING_FILES.some((file) => {
-    const escaped = escapeRegExp(file);
-    const explicitPath = new RegExp(
-      `(?:^|[\\s;&|])(?:-Path|-LiteralPath|-Destination|-FilePath)\\s+["']?[^"'\\s;&|]*${escaped}(?=["'\\s;&|]|$)`,
-      "i",
-    );
-    const positionalPath = new RegExp(
-      `(?:^|[\\s;&|])(?:set-content|out-file|add-content|new-item|remove-item)\\s+["']?[^"'\\s;&|]*${escaped}(?=["'\\s;&|]|$)`,
-      "i",
-    );
-    const redirectionPath = new RegExp(
-      `[>]{1,2}\\s*["']?[^"'\\s;&|]*${escaped}(?=["'\\s;&|]|$)`,
-      "i",
-    );
-    return (
-      explicitPath.test(normalized) ||
-      positionalPath.test(normalized) ||
-      redirectionPath.test(normalized)
-    );
-  });
+  const planningTarget = shellPlanningSurfaceTargetPattern();
+  const explicitPath = new RegExp(
+    `(?:^|[\\s;&|])(?:-Path|-LiteralPath|-Destination|-FilePath)\\s+["']?${planningTarget}(?=["'\\s;&|]|$)`,
+    "i",
+  );
+  const positionalPath = new RegExp(
+    `(?:^|[\\s;&|])(?:set-content|out-file|add-content|new-item|remove-item)\\s+["']?${planningTarget}(?=["'\\s;&|]|$)`,
+    "i",
+  );
+  const redirectionPath = new RegExp(
+    `[>]{1,2}\\s*["']?${planningTarget}(?=["'\\s;&|]|$)`,
+    "i",
+  );
+  return (
+    explicitPath.test(normalized) ||
+    positionalPath.test(normalized) ||
+    redirectionPath.test(normalized)
+  );
+}
+
+function formatDesignStageMutationDeny(label, req, state) {
+  const missing = req?.missing?.length
+    ? ` Missing: ${req.missing.join(", ")}.`
+    : "";
+  const reason = req?.reason ? ` ${req.reason}` : "";
+  return (
+    `Stage "${label}" is a design-time stage; business mutation is blocked until Execution.` +
+    `${missing}${reason} Critical, Fetch, and Thinking can be completed by the main thread; ` +
+    "Agent dispatch is not required before Execution. Allowed next actions: read/search, " +
+    "capability discovery, planning/control-plane updates, or spine-state packet writes. " +
+    `Dispatch chain so far: ${JSON.stringify(state.dispatchChain || {})}`
+  );
+}
+
+function formatPostExecutionStageDeny(label, req, state) {
+  const missing = req?.missing?.length
+    ? ` Missing: ${req.missing.join(", ")}.`
+    : "";
+  const reason = req?.reason ? ` ${req.reason}` : "";
+  return (
+    `Stage "${label}" requirements are not met.${missing}${reason} ` +
+    "Return to the responsible stage and record the missing evidence before continuing. " +
+    `Dispatch chain: ${JSON.stringify(state.dispatchChain || {})}`
+  );
 }
 
 function matchesStageReadOnlyCommand(command, prefixes) {
@@ -658,13 +709,54 @@ function observedModeHighRiskReason(state, command = "") {
   );
 }
 
+function stripQuotedShellText(value) {
+  const raw = String(value || "");
+  let result = "";
+  let quote = null;
+  let escaped = false;
+
+  for (const ch of raw) {
+    if (escaped) {
+      if (!quote) result += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      if (!quote) result += ch;
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      result += " ";
+      continue;
+    }
+    result += ch;
+  }
+
+  return result;
+}
+
+function isHighRiskObservedSegment(segment) {
+  const lower = stripQuotedShellText(segment).trim().toLowerCase();
+  if (!lower) return false;
+  const highRiskCommandPattern =
+    /^(?:npm\s+(?:install|i|publish)|pnpm\s+(?:install|i|add)|yarn\s+(?:install|add)|cargo\s+(?:install|publish|run)|pip\s+(?:install|uninstall)|git\s+(?:push|pull|fetch|reset|checkout|restore|clean|rebase|merge|rm|mv)\b|gh\s+(?:release|pr\s+merge)|curl\b|wget\b|invoke-webrequest\b|invoke-restmethod\b|iwr\b|irm\b|remove-item\b|rm\s+-|del\b|rmdir\b|setx\b|set-item\s+env)\b/i;
+  return highRiskCommandPattern.test(lower);
+}
+
 function isHighRiskObservedBash(command) {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
-  const lower = normalized.toLowerCase();
-  const highRiskPattern =
-    /\b(?:npm\s+(?:install|i|publish)|pnpm\s+(?:install|i|add)|yarn\s+(?:install|add)|cargo\s+(?:install|publish|run)|pip\s+(?:install|uninstall)|git\s+(?:push|pull|fetch|reset|checkout|restore|clean|rebase|merge|commit|add|rm|mv)|gh\s+(?:release|pr\s+merge)|curl\b|wget\b|invoke-webrequest\b|invoke-restmethod\b|iwr\b|irm\b|remove-item\b|rm\s+-|del\b|rmdir\b|setx\b|set-item\s+env)\b/i;
-  if (highRiskPattern.test(lower)) return true;
+  const segments = bashReadonlyInternals
+    .splitSegments(normalized)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.some(isHighRiskObservedSegment)) return true;
   const classification = classifyBashCommand(normalized);
   if (classification.readOnly) return false;
   if (!/^dangerous pattern:/i.test(classification.reason || "")) return false;
@@ -1251,15 +1343,9 @@ if (isAgentDispatchTool(toolName)) {
   process.exit(0);
 }
 
-// Task tools: always allow
-if (
-  toolName === "TaskCreate" ||
-  toolName === "TaskUpdate" ||
-  toolName === "TaskList" ||
-  toolName === "TaskGet" ||
-  toolName === "TaskOutput" ||
-  toolName === "TaskStop"
-) {
+// Control-plane tools: always allow. The fuse is about business mutation and
+// external side effects, not native planning/task bookkeeping.
+if (CONTROL_PLANE_TOOLS.has(toolName)) {
   process.exit(0);
 }
 
@@ -1382,16 +1468,9 @@ if (isExecutionTool(toolName)) {
     const label = stageInfo?.label || stage;
 
     if (!req.met) {
-      exitAfterDeny(
-        `Stage "${label}" requires: ${req.missing.join(", ")}. ` +
-          `Dispatch them via Agent tool (description must contain the meta-agent name). ` +
-          `Dispatch chain so far: ${JSON.stringify(state.dispatchChain || {})}`,
-      );
+      exitAfterDeny(formatDesignStageMutationDeny(label, req, state));
     } else {
-      exitAfterDeny(
-        `You are in stage "${label}". Complete this stage before executing. ` +
-          `Dispatch chain: ${JSON.stringify(state.dispatchChain || {})}`,
-      );
+      exitAfterDeny(formatDesignStageMutationDeny(label, req, state));
     }
   }
 
@@ -1411,9 +1490,7 @@ if (isExecutionTool(toolName)) {
     if (!req.met) {
       const stageInfo = STAGE_META_AGENT_MAP[stage];
       exitAfterDeny(
-        `Stage "${stageInfo?.label || stage}" requires: ${req.missing.join(", ")}. ` +
-          `Dispatch them via Agent tool (description must contain the meta-agent name). ` +
-          `Dispatch chain so far: ${JSON.stringify(state.dispatchChain || {})}`,
+        formatDesignStageMutationDeny(stageInfo?.label || stage, req, state),
       );
     }
     exitAfterDeny(
@@ -1441,11 +1518,7 @@ if (isExecutionTool(toolName)) {
     const req = checkStageRequirements(state);
     if (!req.met) {
       const stageInfo = STAGE_META_AGENT_MAP[stage];
-      exitAfterDeny(
-        `Stage "${stageInfo?.label || stage}" requires: ${req.missing.join(", ")}. ` +
-          `Dispatch them via Agent tool first. ` +
-          `Dispatch chain: ${JSON.stringify(state.dispatchChain || {})}`,
-      );
+      exitAfterDeny(formatPostExecutionStageDeny(stageInfo?.label || stage, req, state));
     }
   }
 }

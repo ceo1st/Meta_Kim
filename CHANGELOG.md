@@ -6,6 +6,34 @@ This file is the reader-facing release history for Meta_Kim.
 
 The changelog explains the user-facing problem or risk each release solved, what changed to solve it, and why the change matters. It intentionally avoids long internal task ledgers, low-signal backlog ids, and implementation trivia. When exact evidence is needed, use the repository history, tests, generated reports, and PRD artifacts.
 
+## [2.8.53] - 2026-06-23
+
+### Solved Problem
+
+Meta_Kim's runtime hook could still make the design-time stages feel like they required Agent dispatch. During Fetch, a real business-file write was correctly blocked, but the denial text told the operator to dispatch an Agent even though Critical, Fetch, and Thinking are allowed to proceed in the main thread. The same gate could also block Claude plan-mode updates, making `/plan` look like another forbidden business mutation.
+
+That created the wrong repair loop: the operator needed to finish Fetch and Thinking evidence before Execution, but the hook implied the next step was mandatory Agent dispatch.
+
+### Changed
+
+- **Design-Time Stage Semantics** - Critical, Fetch, and Thinking denial messages now say business mutation waits for Execution, while the main thread may continue with read/search, capability discovery, planning/control-plane updates, and spine-state packet writes.
+- **Execution-Only Dispatch Requirement** - The stage runtime control contract now records that Fetch and Thinking in progress do not require Agent dispatch; execution owner/loadout and dispatch evidence remain Execution-stage gates.
+- **Planning Control Plane Allowance** - Claude plan-mode surfaces, task/todo bookkeeping, `.claude/plans/*.md`, and Meta_Kim planning files can update during Fetch without a `fetchRecord`, while ordinary business files remain blocked.
+- **Observed Local Publish Step** - Auto-triggered observed mode now allows local `git add` and `git commit` checkpoints and ignores risky words inside quoted search text, while continuing to block external publish/destructive commands such as `git push`, package installs, and resets.
+- **Hook Payload Path Compatibility** - Hook file-path extraction now handles camelCase and target path variants so runtime planning surfaces are classified by their real target.
+- **Regression Coverage** - Eight-stage spine tests cover the no-Agent design-stage rule, planning control-plane allowance, and the exact business-mutation denial wording that must not tell users to dispatch an Agent.
+
+### Verification
+
+- `npm run meta:prd:stage-runtime-control:validate`
+- `node --test tests/meta-theory/11-eight-stage-spine.test.mjs`
+- `npm run meta:sync`
+- `npm run discover:global`
+- `npm run meta:check`
+- `npm run meta:check:global`
+- `npm run meta:release:smoke`
+- `git diff --check`
+
 ## [2.8.52] - 2026-06-23
 
 ### Solved Problem
