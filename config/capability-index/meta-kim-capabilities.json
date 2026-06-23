@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-23T14:31:32.628Z",
+  "generatedAt": "2026-06-23T15:21:07.273Z",
   "registryName": "meta-kim-capabilities",
   "scope": "repo-canonical",
   "canonicalProjection": "config/capability-index/meta-kim-capabilities.json",
@@ -22,9 +22,9 @@
     "totalSkills": 16,
     "totalHooks": 25,
     "totalMcpServers": 1,
-    "totalMcpTools": 3,
+    "totalMcpTools": 4,
     "totalPlugins": 4,
-    "totalCommands": 3,
+    "totalCommands": 7,
     "countSemantics": {
       "totalHooks": "canonical_inventory_entries",
       "totalCommands": "canonical_inventory_entries"
@@ -34,7 +34,7 @@
       "note": "Canonical totals count source inventory entries; runtimeActualCounts counts generated local projection files/settings when those gitignored runtime folders exist.",
       "canonicalInventory": {
         "hooks": 25,
-        "commands": 3
+        "commands": 7
       },
       "claude": {
         "projectionPresent": true,
@@ -222,8 +222,8 @@
         "type": "agents",
         "namespace": "canonical",
         "path": "canonical/agents/meta-sentinel.md",
-        "size": 23260,
-        "modified": "2026-05-30T12:24:41.998Z",
+        "size": 23364,
+        "modified": "2026-06-23T15:17:23.860Z",
         "layer": "meta",
         "executionBlock": true
       },
@@ -598,6 +598,14 @@
         "path": "canonical/runtime-assets/claude/mcp.json",
         "size": 211,
         "modified": "2026-05-15T15:13:52.586Z"
+      },
+      "repo:repo-mcp:meta-kim-runtime:dispatch_meta_agent": {
+        "id": "meta-kim-runtime:dispatch_meta_agent",
+        "type": "mcpTools",
+        "namespace": "repo-mcp",
+        "path": "canonical/runtime-assets/claude/mcp.json",
+        "size": 211,
+        "modified": "2026-05-15T15:13:52.586Z"
       }
     },
     "plugins": {
@@ -682,6 +690,24 @@
     "rules": {},
     "prompts": {},
     "commands": {
+      "repo:canonical-runtime-assets:meta-theory-report": {
+        "id": "meta-theory-report",
+        "type": "commands",
+        "namespace": "canonical-runtime-assets",
+        "path": "canonical/runtime-assets/codex/commands/meta-theory-report.md",
+        "relativePath": "meta-theory-report.md",
+        "size": 622,
+        "modified": "2026-06-23T15:17:45.269Z"
+      },
+      "repo:canonical-runtime-assets:meta-theory-verify": {
+        "id": "meta-theory-verify",
+        "type": "commands",
+        "namespace": "canonical-runtime-assets",
+        "path": "canonical/runtime-assets/codex/commands/meta-theory-verify.md",
+        "relativePath": "meta-theory-verify.md",
+        "size": 905,
+        "modified": "2026-06-23T15:17:45.270Z"
+      },
       "repo:canonical-runtime-assets:meta-theory": {
         "id": "meta-theory",
         "type": "commands",
