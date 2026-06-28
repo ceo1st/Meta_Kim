@@ -1634,7 +1634,7 @@ const OUTPUT_I18N = {
     noMatchingCapabilities: "no matching capabilities",
     noMatchingCapabilityType: "No matching capability type",
     warnings: "warnings",
-    more: "more",
+    more: "more, remaining {n} hidden due to length",
     none: "none",
     scanning: "Scanning global capabilities across platforms...",
     scanningPlatform: (name) => `  Scanning ${name}...`,
@@ -1658,7 +1658,7 @@ const OUTPUT_I18N = {
     noMatchingCapabilities: "没有匹配的能力",
     noMatchingCapabilityType: "没有匹配的能力类型",
     warnings: "警告",
-    more: "项未显示",
+    more: "等，剩余 {n} 项因篇幅关系未显示",
     none: "无",
     scanning: "正在扫描全局能力...",
     scanningPlatform: (name) => `  正在扫描 ${name}...`,
@@ -1684,14 +1684,18 @@ function outputText(lang) {
   return OUTPUT_I18N[normalizeOutputLang(lang)] ?? OUTPUT_I18N.en;
 }
 
-function formatCounts(counts, maxItems = 8, labels = OUTPUT_I18N.en) {
+function formatCounts(counts, maxItems = 20, labels = OUTPUT_I18N.en) {
   if (counts.length === 0) return labels.none;
   const shown = counts
     .slice(0, maxItems)
     .map(([label, count]) => `${label} ${count}`)
     .join(", ");
   const hidden = counts.length - maxItems;
-  return hidden > 0 ? `${shown}, +${hidden} ${labels.more}` : shown;
+  if (hidden > 0) {
+    const suffix = typeof labels.more === "string" ? labels.more.replace("{n}", String(hidden)) : `${hidden} ${labels.more}`;
+    return `${shown}, ${suffix}`;
+  }
+  return shown;
 }
 
 function flattenCapabilitiesByType(index, type) {
@@ -1732,7 +1736,7 @@ function formatDefaultSummary(index, { filterType, lang } = {}) {
         (cap) => cap.platformId === data.platformId,
       );
       if (platformHooks.length === 0) continue;
-      output += `  ${data.platform}: ${formatCounts(countBy(platformHooks, classifyHookCapability), 8, labels)}\n`;
+      output += `  ${data.platform}: ${formatCounts(countBy(platformHooks, classifyHookCapability), 20, labels)}\n`;
     }
   }
 
@@ -1744,7 +1748,7 @@ function formatDefaultSummary(index, { filterType, lang } = {}) {
         (cap) => cap.platformId === data.platformId,
       );
       if (platformSkills.length === 0) continue;
-      output += `  ${data.platform}: ${formatCounts(countBy(platformSkills, skillFamily), 8, labels)}\n`;
+      output += `  ${data.platform}: ${formatCounts(countBy(platformSkills, skillFamily), 20, labels)}\n`;
     }
   }
 

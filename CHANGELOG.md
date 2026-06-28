@@ -6,6 +6,29 @@ This file is the reader-facing release history for Meta_Kim.
 
 The changelog explains the user-facing problem or risk each release solved, what changed to solve it, and why the change matters. It intentionally avoids long internal task ledgers, low-signal backlog ids, and implementation trivia. When exact evidence is needed, use the repository history, tests, generated reports, and PRD artifacts.
 
+## [2.8.60] - 2026-06-29
+
+### Solved Problem
+
+`meta:deps:install` / `discover-global-capabilities.mjs` printed a Skills-by-family line that hid everything past the 8 most popular families behind a terse suffix. The English version read `+N more`, the Chinese version read `项未显示` — both easily mistaken for a missing-data warning rather than a truncation marker. The behaviour itself was not a bug (the missing families were still discoverable via `--verbose`), but the phrasing made it look like one.
+
+### Changes
+
+- **Default visible families raised from 8 to 20** — `formatCounts(counts, maxItems = 20, ...)` and the two `formatCounts(...)` call sites now use 20 instead of 8.
+- **Truncation marker is self-describing** — both English and Chinese labels were rewritten to spell out the hidden count and the reason. English: `more, remaining {n} hidden due to length`. Chinese: `等，剩余 {n} 项因篇幅关系未显示`. The `{n}` placeholder is substituted by `formatCounts` itself.
+- **Regression coverage** — `tests/meta-theory/52-discover-i18n-truncate-format.test.mjs` pins the new wording and asserts at least 10 visible families per platform before truncation.
+
+### Verification
+
+- Live run: `node scripts/discover-global-capabilities.mjs --zh | grep "Skills 家族统计" -A 4` shows lines like `Claude Code: vercel 4, agent-browser 1, ..., django-security 1, 等，剩余 56 项因篇幅关系未显示`.
+- `node --test tests/meta-theory/*.test.mjs` → 1067 pass / 0 fail (added 3 cases in suite 52).
+- Other suites → 638 pass / 0 fail.
+- `npm run meta:doctor:governance` → `All governance doctor checks passed`.
+
+### Note
+
+This release only ships the two i18n strings that are present in the source today (`en` + `zh`). Other locales will continue to fall back to English. If a translation pass for additional languages is wanted, ship them in a follow-up release alongside a translator review.
+
 ## [2.8.59] - 2026-06-28
 
 ### Solved Problem

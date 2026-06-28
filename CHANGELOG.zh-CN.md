@@ -6,6 +6,29 @@
 
 更新说明先解释本次解决的用户痛点或风险，再说明为了解决它改了什么、为什么重要。过细的内部任务编号、低价值 backlog id 和实现流水账不放在这里；需要精确证据时，请看 Git 历史、测试、生成报告和 PRD 产物。
 
+## [2.8.60] - 2026-06-29
+
+### 解决的问题
+
+`meta:deps:install` / `discover-global-capabilities.mjs` 在 Skills 家族统计那行里只显示前 8 个家族，剩下的折成一个简短后缀。英文版本是 `+N more`，中文版本是 `项未显示` —— 两个都容易被误读成「数据缺失」而不是「截断提示」。行为本身不是 bug（缺的家族用 `--verbose` 还能看到），但措辞让它看着像 bug。
+
+### 变更
+
+- **默认可见家族数从 8 提到 20** - `formatCounts(counts, maxItems = 20, ...)` 函数默认值改为 20，两个调用点同步改。
+- **截断提示自解释** - 英中文案重写，明示隐藏数和原因。英文：`more, remaining {n} hidden due to length`；中文：`等，剩余 {n} 项因篇幅关系未显示`。`{n}` 占位符由 `formatCounts` 实际替换。
+- **回归保护** - 新增 `tests/meta-theory/52-discover-i18n-truncate-format.test.mjs`，守护新文案 + 断言每个平台至少有 10 个可见家族。
+
+### 验证
+
+- 实测：`node scripts/discover-global-capabilities.mjs --zh | grep "Skills 家族统计" -A 4` 输出形如 `Claude Code: vercel 4, agent-browser 1, ..., django-security 1, 等，剩余 56 项因篇幅关系未显示`。
+- `node --test tests/meta-theory/*.test.mjs` → 1067 pass / 0 fail（52 号加 3 个 case）。
+- 其它 suite → 638 pass / 0 fail。
+- `npm run meta:doctor:governance` → `All governance doctor checks passed`。
+
+### 说明
+
+本次只覆盖源码里现有的 2 个语言字符串（en + zh）。其它 locale 继续 fallback 到英文。如果需要加更多语言，下次发版和翻译 review 一起出。
+
 ## [2.8.59] - 2026-06-28
 
 ### 解决的问题
