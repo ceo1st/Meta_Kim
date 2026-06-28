@@ -24,29 +24,45 @@ describe("50 — Parallel execution lanes (engineering fan-out)", () => {
     assert.ok(drafts.length >= 2, `expected >=2 worker drafts, got ${drafts.length}`);
   });
 
-  test("every produced worker ownerAgent must come from runtime-scoped candidate owners", () => {
+  test("every produced worker ownerAgent must come from runtime-scoped candidate owners (by ownerKind)", () => {
     const result = route(
       "refactor frontend components in src/ui, rebuild backend api routes in src/api, and migrate database schema."
     );
-    const available = new Set(result.ownerDiscoveryPacket.candidateExistingExecutionOwners);
+    const agentAvailable = new Set(result.ownerDiscoveryPacket.candidateExistingExecutionOwners);
+    const nonAgentProviders = [
+      ...result.ownerDiscoveryPacket.repoCanonicalCapabilityProviders,
+      ...result.ownerDiscoveryPacket.projectRuntimeCapabilityProviders,
+      ...result.ownerDiscoveryPacket.localGlobalCapabilityProviders,
+    ];
+    const nonAgentIds = new Set(nonAgentProviders.map((p) => p.id));
     for (const draft of result.workerTaskPacketDrafts) {
+      const kind = draft.ownerKind ?? "agent";
+      const pool = kind === "agent" ? agentAvailable : nonAgentIds;
       assert.ok(
-        available.has(draft.ownerAgent),
-        `worker ownerAgent "${draft.ownerAgent}" must be in candidateExistingExecutionOwners (no fake owners allowed)`
+        pool.has(draft.ownerAgent),
+        `worker ownerAgent "${draft.ownerAgent}" (kind=${kind}) must be in runtime-scoped candidate set`
       );
     }
   });
 
-  test("every parallel lane owner must come from runtime-scoped candidate agents (matched on real metadata)", () => {
+  test("every parallel lane owner must come from runtime-scoped candidate providers (by ownerKind)", () => {
     const result = route(
       "refactor frontend components in src/ui, rebuild backend api routes in src/api, and migrate database schema."
     );
     const lanes = result.recommendedRoute.parallelExecutionLanes ?? [];
-    const available = new Set(result.ownerDiscoveryPacket.candidateExistingExecutionOwners);
+    const agentAvailable = new Set(result.ownerDiscoveryPacket.candidateExistingExecutionOwners);
+    const nonAgentProviders = [
+      ...result.ownerDiscoveryPacket.repoCanonicalCapabilityProviders,
+      ...result.ownerDiscoveryPacket.projectRuntimeCapabilityProviders,
+      ...result.ownerDiscoveryPacket.localGlobalCapabilityProviders,
+    ];
+    const nonAgentIds = new Set(nonAgentProviders.map((p) => p.id));
     for (const lane of lanes) {
+      const kind = lane.ownerKind ?? "agent";
+      const pool = kind === "agent" ? agentAvailable : nonAgentIds;
       assert.ok(
-        available.has(lane.ownerAgent),
-        `lane ownerAgent "${lane.ownerAgent}" must be in candidateExistingExecutionOwners`
+        pool.has(lane.ownerAgent),
+        `lane ownerAgent "${lane.ownerAgent}" (kind=${kind}) must be in runtime-scoped candidate set`
       );
     }
   });

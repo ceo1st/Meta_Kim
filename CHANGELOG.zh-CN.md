@@ -6,6 +6,27 @@
 
 更新说明先解释本次解决的用户痛点或风险，再说明为了解决它改了什么、为什么重要。过细的内部任务编号、低价值 backlog id 和实现流水账不放在这里；需要精确证据时，请看 Git 历史、测试、生成报告和 PRD 产物。
 
+## [2.8.59] - 2026-06-28
+
+### 解决的问题
+
+v2.8.58 只暴露一类 owner（execution agent）。Meta_Kim 实际有 9 类 owner（agent / skill / MCP / command / runtime tool / hook / plugin / memory-graph / dependency），但 lane 解析只在 agent 池里搜，所以想用真 command / MCP / runtime tool 的 lane 会拿到假 agent owner。fan-out orchestrator 也是一维的：≥2 worker 一律走 `agent-teams-playbook`，即使 lane 都是 skill / MCP / command worker（playbook 派不了）。
+
+### 变更
+
+- **owner 解析覆盖全部 9 类** - `findOwnerForLaneTerms` 换成 `resolveProvider({ kind, terms })`，底层是 `PROVIDER_POOL_SOURCES` 类型化 map。lane 按优先级链 `agent → skill → mcp → command → runtimeTool → hook → plugin → memory → dependency` 探测，第一个命中的 kind 即用。
+- **lane 带 `ownerKind` 字段** - 每条 parallel-execution lane 都记录 owner 的能力类目，dispatcher 据此选 host 工具（Task / Skill / Bash / apply_patch / MCP call 等）而不是猜。
+- **orchestrator-kind 分桶取代单 playbook 闸** - `classifyOrchestratorKinds` 按 ownerKind 把 lane 分组，触发最多 6 类并行 orchestrator：`agentTeamsPlaybook`（≥2 agent lane）、`skillComposition` / `mcpComposition` / `commandSequence` / `runtimeToolSequence`（其它桶达 ≥2）、`mixedParallelism`（多种 kind 同时存在）。dispatchBoard 报告触发的集合，`agent-teams-playbook` 不再被强派去管非 agent lane。
+- **workerTaskPacket 透传 `ownerKind` 与 `orchestratorKinds`** - `run-meta-theory-governed-execution.mjs` 把 `ownerKind` 透到每个 workerTaskPacket，host dispatcher 知道每条 lane 用什么工具。
+- **回归保护** - `tests/meta-theory/50-parallel-execution-lanes.test.mjs` 改按 `ownerKind` 分桶断言，`tests/meta-theory/51-orchestrator-kind-bucketing.test.mjs` 守护 orchestrator-kind 触发逻辑。
+
+### 验证
+
+- 实测：`node scripts/run-meta-theory-governed-execution.mjs --runtime claude_code "refactor frontend in src/ui, rebuild backend api in src/api, migrate database schema, deploy config ci"` → `orchestratorKinds: ["agentTeamsPlaybook","mixedParallelism"]`，5 个 worker 的 `ownerKind` 分布 `[agent, agent, agent, command, agent]`；`migrate database schema` lane 现在匹配到真 command provider（`package-script:migrate:meta-kim`），不再是假 agent。
+- `node --test tests/meta-theory/*.test.mjs` → 1064 pass / 0 fail。
+- 其它 suite → 638 pass / 0 fail。
+- `npm run meta:doctor:governance` → `All governance doctor checks passed`。
+
 ## [2.8.58] - 2026-06-28
 
 ### 解决的问题

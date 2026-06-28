@@ -8364,6 +8364,7 @@ function buildRouteDrivenWorkerTasks({ runId, routeResult, task }) {
     const taskPacketId = `${runId}-${lane.laneId ?? `route-${index + 1}`}`;
     const roleDisplayName = lane.roleDisplayName ?? draft.roleDisplayName ?? "operations";
     const ownerAgent = lane.ownerAgent ?? draft.ownerAgent ?? route?.owner ?? "meta-conductor";
+    const ownerKind = lane.ownerKind ?? draft.ownerKind ?? "agent";
     const isVerification = ["test", "review"].includes(roleDisplayName);
     const isEvolution = lane.laneId === "evolution-signal";
     return {
@@ -8374,6 +8375,7 @@ function buildRouteDrivenWorkerTasks({ runId, routeResult, task }) {
       routeId,
       owner: ownerAgent,
       ownerAgent,
+      ownerKind,
       ownerMode: "existing-owner",
       executionMode: isVerification || isEvolution ? "verification_execution" : "primary_execution",
       businessRoleId: roleDisplayName,

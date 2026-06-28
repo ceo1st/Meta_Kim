@@ -6,6 +6,27 @@ This file is the reader-facing release history for Meta_Kim.
 
 The changelog explains the user-facing problem or risk each release solved, what changed to solve it, and why the change matters. It intentionally avoids long internal task ledgers, low-signal backlog ids, and implementation trivia. When exact evidence is needed, use the repository history, tests, generated reports, and PRD artifacts.
 
+## [2.8.59] - 2026-06-28
+
+### Solved Problem
+
+v2.8.58 only exposed a single owner class (execution agent). Meta_Kim actually has nine owner classes (agent / skill / MCP / command / runtime tool / hook / plugin / memory-graph / dependency), but lane resolution only searched the agent pool, so a lane that wanted a real command, MCP server, or runtime tool had to fall back to a fake agent owner. The fan-out orchestrator stayed one-dimensional: any `>=2 workers` fan-out was forced through `agent-teams-playbook` even when the lanes were skill, MCP, or command workers, which the playbook cannot dispatch.
+
+### Changes
+
+- **Owner resolution now covers all nine capability classes** — `findOwnerForLaneTerms` is replaced by `resolveProvider({ kind, terms })` over a typed `PROVIDER_POOL_SOURCES` map. Lanes walk the priority chain `agent → skill → mcp → command → runtimeTool → hook → plugin → memory → dependency` and adopt the first kind that yields a real provider.
+- **Lanes carry an `ownerKind` field** — every parallel-execution lane now records which capability class its owner came from, so dispatchers can pick the right host tool (Task / Skill / Bash / apply_patch / MCP call etc.) instead of guessing.
+- **Orchestrator-kind bucketing replaces the single-playbook gate** — `classifyOrchestratorKinds` groups lanes by owner kind and emits up to six parallel orchestrators: `agentTeamsPlaybook` (>=2 agent lanes), `skillComposition` / `mcpComposition` / `commandSequence` / `runtimeToolSequence` (other buckets reaching the >=2 threshold), plus `mixedParallelism` whenever more than one kind is present. The dispatch board reports the triggered set; `agent-teams-playbook` is no longer asked to dispatch non-agent lanes.
+- **Worker packets propagate `ownerKind` and `orchestratorKinds`** — `run-meta-theory-governed-execution.mjs` copies `ownerKind` through every `workerTaskPacket`, so the host dispatcher can drive each lane with the matching tool.
+- **Regression coverage** — `tests/meta-theory/50-parallel-execution-lanes.test.mjs` now asserts by `ownerKind` bucket and `tests/meta-theory/51-orchestrator-kind-bucketing.test.mjs` pins the orchestrator-kind trigger logic.
+
+### Verification
+
+- Live run: `node scripts/run-meta-theory-governed-execution.mjs --runtime claude_code "refactor frontend in src/ui, rebuild backend api in src/api, migrate database schema, deploy config ci"` → `orchestratorKinds: ["agentTeamsPlaybook","mixedParallelism"]`, 5 workers with `ownerKind` distribution `[agent, agent, agent, command, agent]`; the `migrate database schema` lane is now resolved to a real command provider (`package-script:migrate:meta-kim`) instead of a fake agent.
+- `node --test tests/meta-theory/*.test.mjs` → 1064 pass / 0 fail.
+- Other suites → 638 pass / 0 fail.
+- `npm run meta:doctor:governance` → `All governance doctor checks passed`.
+
 ## [2.8.58] - 2026-06-28
 
 ### Solved Problem

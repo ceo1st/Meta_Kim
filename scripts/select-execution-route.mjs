@@ -1401,46 +1401,91 @@ function capabilityDiscoveryTaskRequested() {
   return discoveryVerb && discoveryTarget;
 }
 
-// 在 ownerDiscoveryPacket 实际暴露的 agent 池里，按 lane terms 找最匹配的 owner。
-// 匹配字段：id + description + own + boundary + trigger（都来自 canonical frontmatter）。
-// 选出来的 agent.id 必须保证在 candidateExistingExecutionOwners 里（避免 transient hash 假 owner）。
-// 找不到返回 null —— lane 直接不进 workerTaskPacketDrafts，让 route gate 自然降级。
-function findOwnerForLaneTerms(laneTerms) {
-  const tokens = laneTerms
+// 9 类 owner 池（agent / skill / mcp / command / runtimeTool / hook / plugin / memory / dependency）。
+// 抽象入口：resolveProvider({ kind, terms, runtime }) → { id, kind, metadata } | null
+const PROVIDER_POOL_SOURCES = {
+  agent: () => candidateExecutionAgents,
+  skill: () => [
+    ...repoCanonicalSkillProviders,
+    ...projectRuntimeSkillProviders,
+    ...localGlobalSkillProviders,
+  ],
+  mcp: () => [
+    ...repoCanonicalCapabilityProviders,
+    ...projectRuntimeCapabilityProviders,
+    ...localGlobalCapabilityProviders,
+  ].filter((p) => p.type === "mcpServer" || p.type === "mcpTool"),
+  command: () => [
+    ...repoCanonicalCapabilityProviders,
+    ...projectRuntimeCapabilityProviders,
+    ...localGlobalCapabilityProviders,
+  ].filter((p) => p.type === "commands"),
+  runtimeTool: () => runtimeToolProviders,
+  hook: () => [
+    ...repoCanonicalCapabilityProviders,
+    ...projectRuntimeCapabilityProviders,
+    ...localGlobalCapabilityProviders,
+  ].filter((p) => p.type === "hooks"),
+  plugin: () => [
+    ...repoCanonicalCapabilityProviders,
+    ...projectRuntimeCapabilityProviders,
+    ...localGlobalCapabilityProviders,
+  ].filter((p) => p.type === "plugins"),
+  memory: () => [
+    ...repoCanonicalCapabilityProviders,
+    ...projectRuntimeCapabilityProviders,
+    ...localGlobalCapabilityProviders,
+  ].filter((p) => p.type === "rules" || p.type === "prompts"),
+  dependency: () => [
+    ...repoCanonicalCapabilityProviders,
+    ...projectRuntimeCapabilityProviders,
+    ...localGlobalCapabilityProviders,
+  ].filter((p) => p.type === "skills" || p.type === "mcpServers"),
+};
+
+// 每类 provider 的 corpus 字段（语义搜索用的描述文本）。
+function providerCorpus(p, kind) {
+  const base = [p.id, p.description, p.type].filter(Boolean).join(" ");
+  return base;
+}
+
+// 在指定 kind 的 provider 池里，按 lane terms 找最匹配的 provider。
+// 返回 { id, kind, metadata } | null —— 找不到就不强塞，避免假 owner。
+function resolveProvider({ kind, terms, runtime: runtimeName = runtime }) {
+  const tokens = String(terms ?? "")
     .toLowerCase()
     .split(/[^a-z0-9一-鿿]+/)
     .filter((t) => t.length >= 2);
   if (tokens.length === 0) return null;
   const declared = new Set(ownerDiscoveryPacket.candidateExistingExecutionOwners);
-  const pool = [
-    ...ownerDiscoveryPacket.projectRuntimeAgents,
-    ...ownerDiscoveryPacket.localGlobalAgents,
-  ];
+  const poolFn = PROVIDER_POOL_SOURCES[kind];
+  if (!poolFn) return null;
+  const pool = poolFn().filter((p) => {
+    if (kind === "agent") return declared.has(p.id);
+    return true;
+  });
   let best = null;
   let bestScore = 0;
-  for (const agent of pool) {
-    if (!declared.has(agent.id)) continue;
-    const corpus = [agent.id, agent.description, agent.own, agent.boundary, agent.trigger]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
+  for (const p of pool) {
+    const corpus = providerCorpus(p, kind).toLowerCase();
     let score = 0;
     for (const token of tokens) {
       if (corpus.includes(token)) score += 1;
     }
     if (score > bestScore) {
       bestScore = score;
-      best = agent;
+      best = p;
     }
   }
-  return bestScore > 0 ? best : null;
+  return bestScore > 0 ? { id: best.id, kind, metadata: best } : null;
 }
 
 function buildParallelExecutionLanes() {
   // 最大限度放开：>=2 个独立工作单元就拆 lane。
-  // lane terms 来自 taskText 临时提取（路径 + 动名词 + 显式 lane 标记），
-  // 不预设 DOMAIN_KEYWORDS。owner 通过 findOwnerForLaneTerms 在
-  // candidateExecutionAgents 元数据里语义搜索，找不到就别硬塞。
+  // lane terms 来自 taskText 临时提取（路径 + 显式 lane 标记 + 句子分段），
+  // 不预设 DOMAIN_KEYWORDS。owner 通过 resolveProvider 按 9 类池（agent → skill → mcp
+  // → command → runtimeTool → hook → plugin → memory → dependency）优先级链探测，
+  // 第一个命中的 kind 就用；都找不到就别硬塞。
   const laneSegments = new Map();
 
   // 1. 路径型 segment：src/ui、src/api、database/migrations —— 每个顶层目录一个 lane
@@ -1475,17 +1520,23 @@ function buildParallelExecutionLanes() {
 
   if (laneSegments.size < 2) return null;
 
+  const KIND_PRIORITY = ["agent", "skill", "mcp", "command", "runtimeTool", "hook", "plugin", "memory", "dependency"];
   const lanes = [];
   for (const [, segment] of laneSegments) {
-    const owner = findOwnerForLaneTerms(segment.terms);
-    if (!owner) continue;
+    let provider = null;
+    for (const kind of KIND_PRIORITY) {
+      provider = resolveProvider({ kind, terms: segment.terms });
+      if (provider) break;
+    }
+    if (!provider) continue;
     lanes.push({
       laneId: `exec-${segment.laneHint.replace(/[^a-z0-9一-鿿-]/gi, "-").toLowerCase()}-${lanes.length + 1}`,
       roleDisplayName: segment.laneHint,
-      ownerAgent: owner.id,
-      purpose: `并行执行 "${segment.terms.trim().slice(0, 60)}"；独立交付，由 ${owner.id} owner 负责`,
+      ownerKind: provider.kind,
+      ownerAgent: provider.id,
+      purpose: `并行执行 "${segment.terms.trim().slice(0, 60)}"；独立交付，由 ${provider.kind}/${provider.id} owner 负责`,
       capabilityProvider: null,
-      decisionImpact: `${owner.id} 是 runtime-scoped 真 owner，匹配到 lane terms：${segment.terms.trim().slice(0, 40)}`,
+      decisionImpact: `${provider.kind}/${provider.id} 是 runtime-scoped 真 owner，匹配到 lane terms：${segment.terms.trim().slice(0, 40)}`,
       dependsOn: [],
       parallelGroup: "parallel-execution",
     });
@@ -1493,6 +1544,37 @@ function buildParallelExecutionLanes() {
 
   if (lanes.length < 2) return null;
   return lanes;
+}
+
+// 按 ownerKind 桶分 lane，触发对应 orchestratorKind（fan-out adapter）。
+// 6 种 orchestratorKind：agentTeamsPlaybook / skillComposition / mcpComposition
+// / commandSequence / runtimeToolSequence / mixedParallelism（混合）。
+function classifyOrchestratorKinds(lanes) {
+  if (!Array.isArray(lanes) || lanes.length < 2) return [];
+  const buckets = new Map();
+  for (const lane of lanes) {
+    const kind = lane.ownerKind ?? "agent";
+    if (!buckets.has(kind)) buckets.set(kind, []);
+    buckets.get(kind).push(lane);
+  }
+  const orchestratorKinds = [];
+  for (const [kind, group] of buckets) {
+    if (group.length < 2) continue;
+    switch (kind) {
+      case "agent": orchestratorKinds.push("agentTeamsPlaybook"); break;
+      case "skill": orchestratorKinds.push("skillComposition"); break;
+      case "mcp": orchestratorKinds.push("mcpComposition"); break;
+      case "command": orchestratorKinds.push("commandSequence"); break;
+      case "runtimeTool": orchestratorKinds.push("runtimeToolSequence"); break;
+      case "hook": orchestratorKinds.push("hookSequence"); break;
+      case "plugin": orchestratorKinds.push("pluginComposition"); break;
+      case "memory": orchestratorKinds.push("memoryComposition"); break;
+      case "dependency": orchestratorKinds.push("dependencyComposition"); break;
+      default: orchestratorKinds.push("mixedParallelism");
+    }
+  }
+  if (buckets.size > 1) orchestratorKinds.push("mixedParallelism");
+  return orchestratorKinds;
 }
 
 function executionCapabilityDiscoveryRoute() {
@@ -2250,9 +2332,13 @@ const output = {
     route: recommendedRoute.id,
     mergeOwner: "meta-conductor",
     parallelGroups: (recommendedRoute.subjectiveUiCapabilityAmplification?.lanes ?? recommendedRoute.parallelExecutionLanes)?.map((lane) => lane.parallelGroup) ?? [],
+    orchestratorKinds: classifyOrchestratorKinds(
+      recommendedRoute.subjectiveUiCapabilityAmplification?.lanes ?? recommendedRoute.parallelExecutionLanes ?? []
+    ),
   } : null,
   workerTaskPacketDrafts: (recommendedRoute?.subjectiveUiCapabilityAmplification?.lanes ?? recommendedRoute?.parallelExecutionLanes)
     ? (recommendedRoute.subjectiveUiCapabilityAmplification?.lanes ?? recommendedRoute.parallelExecutionLanes).map((lane) => ({
+        ownerKind: lane.ownerKind ?? "agent",
         ownerAgent: lane.ownerAgent,
         roleDisplayName: lane.roleDisplayName,
         roleInstanceId: lane.laneId,
