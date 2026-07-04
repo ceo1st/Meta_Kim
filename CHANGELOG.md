@@ -12,6 +12,22 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 _Reserved for the next release._
 
+## [2.8.67] - 2026-07-04
+
+### Solved Problem
+
+`npm run meta:check` 对 `projectProjectionMode: global_only` 的项目会在第一步静默放过——`meta:check:runtimes` 默认什么 target 都不传,直接拿到一个"工具端镜像已是最新"的绿灯,其实啥也没对比。这条路径上的项目看上去是健康的,但实际从未走过 `claude` / `codex` 项目投影的对照检查。
+
+### Changes
+
+- **`meta:check:runtimes` 默认显式选 target。** `package.json` 里这条 script 现在固定传 `--scope project --targets claude,codex`。对 global_only 项目,跑 `npm run meta:check` 会真的去对比两边镜像,silent skip 不再发生。
+
+### Verification
+
+- `npm run meta:check` 退出码 0,7/7 通过
+- `npm run meta:graphify:check` 报 `graphify graph matches HEAD a6dc5734`(rebuild 后)
+- `npm run meta:doctor:governance` 报 `run index ready`(rebuild 后)
+
 ## [2.8.66] - 2026-07-04
 
 ### Solved Problem
