@@ -12,6 +12,27 @@
 
 _留给下个版本。_
 
+## [2.8.68] - 2026-07-04
+
+### 解决的问题
+
+用户在 Codex 里输入 `/meta` 时，可能会看到好几个看起来都像 Meta_Kim / Meta Theory 的入口。根因不是用户装错了，而是历史版本留下的全局 skill 别名没有被同步器收走：`meta_kim`、旧 report/verify source command、agent-calling-gap 记录，以及 `critical/fetch/thinking/review` 这类路线别名可能同时留在 `~/.agents`、`~/.codex`、`~/.claude`。这样开源用户升级后也会和维护者一样困惑，不知道应该选哪个入口。另一个发布阻塞点是 Graphify：源码改动后 `npm run meta:graphify:rebuild` 可能因为“新图节点数更少”被 Graphify 拒绝覆盖，导致 `meta:graphify:check` 一直报旧 HEAD。
+
+### 改动
+
+- **全局同步器会安全清理旧 Meta_Kim skill 别名。** `scripts/sync-global-meta-theory.mjs` 现在按内容签名识别历史别名，先备份到 `.meta-kim/backups/stale-skill-aliases`，再删除确认属于 Meta_Kim 管理的旧入口；用户自己创建的同名 skill 会保留。
+- **Codex 的共享 skill 根目录也纳入清理。** 选择 Codex 目标时，同步器会检查旧的 `~/.agents/skills`，并在 canonical `~/.codex/skills/meta-theory` 存在时清掉共享目录里的旧 `meta-theory` 重复镜像。
+- **Graphify rebuild 能从 smaller-graph guard 自动恢复。** `scripts/graphify-cli.mjs rebuild` 现在识别 Graphify 特定的 `Refusing to overwrite` 保护，自动用 `--force` 重跑并把图谱 stamp 到当前 HEAD；同时支持 `META_KIM_GRAPHIFY_BIN` 和 `META_KIM_GRAPHIFY_BIN_ARGS`，方便测试和诊断固定使用哪个 Graphify 可执行入口。
+- **能力发现脚本支持短语言参数。** `discover-global-capabilities.mjs` 现在识别 `--zh`、`--en`、`--ja`、`--ko`，和已有测试及 CLI 预期对齐。
+
+### 验证
+
+- `npm run meta:graphify:rebuild` 从 smaller graph guard 自动恢复，并 stamp 到当前 HEAD。
+- `npm run meta:graphify:check` → rebuild 后图谱匹配当前 HEAD。
+- `node --test tests/setup/graphify-wiring-contract.test.mjs tests/setup/sync-global-hooks-policy.test.mjs` → 41/41 pass。
+- `npm run meta:release:smoke` → 1108 tests，1103 pass，0 fail，5 skipped；integration 6/6 pass。
+- `git diff --check` → pass。
+
 ## [2.8.67] - 2026-07-04
 
 ### 解决的问题

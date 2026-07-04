@@ -12,6 +12,27 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 _Reserved for the next release._
 
+## [2.8.68] - 2026-07-04
+
+### Solved Problem
+
+Codex users could see multiple Meta_Kim entries for the same governed route after installing or upgrading across several historical releases. Old global skill aliases such as `meta_kim`, legacy report/verify commands, agent-calling-gap notes, and `critical/fetch/thinking/review` route aliases could remain in `~/.agents`, `~/.codex`, or `~/.claude`, so `/meta` surfaced several confusing choices instead of one canonical `meta-theory` entry. During release verification, `npm run meta:graphify:rebuild` could also fail after source changes because Graphify refused to overwrite a smaller regenerated graph, leaving `meta:graphify:check` stale even when the rebuild was intentional.
+
+### Changes
+
+- **Global sync now removes stale Meta_Kim skill aliases safely.** `scripts/sync-global-meta-theory.mjs` checks known legacy alias directories by content signature, backs them up under `.meta-kim/backups/stale-skill-aliases`, and removes only Meta_Kim-managed stale aliases. User-created skills with similar names are preserved.
+- **Codex shared skill cleanup is covered.** The sync path now checks the legacy shared `~/.agents/skills` root when Codex is selected, including the old duplicate `meta-theory` mirror once the canonical `~/.codex/skills/meta-theory` exists.
+- **Graphify rebuild recovers from the smaller-graph guard.** `scripts/graphify-cli.mjs rebuild` now detects Graphify's specific "Refusing to overwrite" guard, retries with `--force`, and stamps the rebuilt graph to the current HEAD. The wrapper also supports `META_KIM_GRAPHIFY_BIN` and `META_KIM_GRAPHIFY_BIN_ARGS` for deterministic tests and diagnostics.
+- **Capability discovery language flags work.** `discover-global-capabilities.mjs` now honors short language flags such as `--zh`, `--en`, `--ja`, and `--ko`, matching the existing test and CLI expectation.
+
+### Verification
+
+- `npm run meta:graphify:rebuild` recovered from the smaller graph guard and stamped the graph to HEAD.
+- `npm run meta:graphify:check` → graph matches the current HEAD after rebuild.
+- `node --test tests/setup/graphify-wiring-contract.test.mjs tests/setup/sync-global-hooks-policy.test.mjs` → 41/41 pass.
+- `npm run meta:release:smoke` → 1108 tests, 1103 pass, 0 fail, 5 skipped; integration 6/6 pass.
+- `git diff --check` → pass.
+
 ## [2.8.67] - 2026-07-04
 
 ### Solved Problem
