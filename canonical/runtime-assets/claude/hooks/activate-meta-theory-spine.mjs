@@ -2,7 +2,8 @@ import process from "node:process";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { readJsonFromStdin } from "./utils.mjs";
 import {
   readSpineState,
@@ -15,11 +16,30 @@ const cwd = process.cwd();
 const payload = await readJsonFromStdin();
 const toolName = payload?.tool_name ?? "";
 const toolInput = payload?.tool_input ?? {};
+
+// 开源场景：sync/setup 把 canonical 模板 __REPO_ROOT__ 渲染成绝对路径，写到
+// 全局/项目 settings 后跨机器即死路径。candidate 在用户机器不存在时，从脚本
+// 自身位置往上找含 scripts/project-post-copy-init.mjs 的仓根。
+function resolvePackageRoot(candidate) {
+  if (candidate && existsSync(candidate)) return candidate;
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(join(dir, "scripts", "project-post-copy-init.mjs"))) {
+      return dir;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
 const packageRootArgIndex = process.argv.indexOf("--package-root");
-const packageRoot =
+const rawPackageRoot =
   packageRootArgIndex >= 0 && process.argv[packageRootArgIndex + 1]
     ? process.argv[packageRootArgIndex + 1]
     : process.env.META_KIM_PACKAGE_ROOT || null;
+const packageRoot = resolvePackageRoot(rawPackageRoot);
 
 const EXPLICIT_META_THEORY_RE =
   /(?:^|\b)(?:\/?meta-theory|meta theory|run meta theory|execute meta theory)(?:\b|$)|元理论/u;

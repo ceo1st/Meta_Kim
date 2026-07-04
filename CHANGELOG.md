@@ -12,6 +12,24 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 _Reserved for the next release._
 
+## [2.8.69] - 2026-07-05
+
+### Solved Problem
+
+Open-source users who installed Meta_Kim and then ran the spine hook in a different project or on a different machine hit a silent dead path. `setup.mjs` and `sync-runtimes.mjs` render the canonical `__REPO_ROOT__` placeholder into an absolute path at install time, so the `--package-root <absolute-path>` argument baked into global and project hook registrations pointed at a directory that did not exist on the user's machine. The spine activator swallowed the mismatch silently (EXIT=0), so `startPostCopyAutoInit` never found `scripts/project-post-copy-init.mjs` and the global post-copy initializer was unreachable for anyone who was not the original author.
+
+### Changes
+
+- **Spine activator resolves the package root at runtime instead of trusting the baked-in path.** `canonical/runtime-assets/claude/hooks/activate-meta-theory-spine.mjs` and `canonical/runtime-assets/shared/hooks/activate-meta-theory-spine.mjs` add `resolvePackageRoot(candidate)`. If the `--package-root` argument or `META_KIM_PACKAGE_ROOT` env var points at a directory that actually exists, it is used as-is; otherwise the script walks up from its own location (`import.meta.url`) until it finds a directory containing `scripts/project-post-copy-init.mjs`, and falls back to `null` only when no Meta_Kim root is reachable. The `.claude/hooks`, `.codex/hooks`, and `.cursor/hooks` mirrors and the global `~/.claude/hooks/meta-kim` and `~/.codex/hooks/meta-kim` copies all carry the same resolver.
+
+### Verification
+
+- `node --check` on both canonical sources → SYNTAX OK.
+- `npm run meta:validate` → 7/7 pass.
+- `node --test tests/setup/graphify-wiring-contract.test.mjs tests/setup/sync-runtimes-manifest.test.mjs` → 71/71 pass.
+- `npm run meta:check:runtimes` → runtime mirrors up to date.
+- `npm run meta:sync:global:release` → Claude Code and Codex global hooks/skills/commands synced; `resolvePackageRoot` present in both `~/.claude/hooks/meta-kim/activate-meta-theory-spine.mjs` and `~/.codex/hooks/meta-kim/activate-meta-theory-spine.mjs`.
+
 ## [2.8.68] - 2026-07-04
 
 ### Solved Problem

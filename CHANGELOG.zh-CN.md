@@ -12,6 +12,24 @@
 
 _留给下个版本。_
 
+## [2.8.69] - 2026-07-05
+
+### 解决的问题
+
+开源用户装好 Meta_Kim 后，去别的项目或别的机器跑 spine hook 时会撞上一条写死的死路径。`setup.mjs` 和 `sync-runtimes.mjs` 在安装时把 canonical 模板里的 `__REPO_ROOT__` 占位符渲染成绝对路径，所以全局和项目 hook 注册里的 `--package-root <绝对路径>` 在用户自己机器上根本不存在。spine 激活脚本又把这个对不上静默吞掉（EXIT=0），`startPostCopyAutoInit` 永远找不到 `scripts/project-post-copy-init.mjs`，全局 post-copy 初始化对除原作者以外的所有人都不可达。
+
+### 改动
+
+- **spine 激活脚本改为运行时解析 package root，不再盲目信任写死的路径。** `canonical/runtime-assets/claude/hooks/activate-meta-theory-spine.mjs` 与 `canonical/runtime-assets/shared/hooks/activate-meta-theory-spine.mjs` 新增 `resolvePackageRoot(candidate)`：若 `--package-root` 参数或 `META_KIM_PACKAGE_ROOT` 环境变量指向的目录确实存在，照用；否则从脚本自身位置（`import.meta.url`）逐层往上找，直到命中含 `scripts/project-post-copy-init.mjs` 的目录；找不到任何 Meta_Kim 根时才回退到 `null`。`.claude/hooks`、`.codex/hooks`、`.cursor/hooks` 镜像和全局 `~/.claude/hooks/meta-kim`、`~/.codex/hooks/meta-kim` 副本现在都带同一个解析器。
+
+### 验证
+
+- 两个 canonical 源 `node --check` → 语法 OK。
+- `npm run meta:validate` → 7/7 通过。
+- `node --test tests/setup/graphify-wiring-contract.test.mjs tests/setup/sync-runtimes-manifest.test.mjs` → 71/71 通过。
+- `npm run meta:check:runtimes` → 工具端镜像已是最新。
+- `npm run meta:sync:global:release` → Claude Code 和 Codex 的全局 hook/skill/command 已同步；`~/.claude/hooks/meta-kim/activate-meta-theory-spine.mjs` 与 `~/.codex/hooks/meta-kim/activate-meta-theory-spine.mjs` 均含 `resolvePackageRoot`。
+
 ## [2.8.68] - 2026-07-04
 
 ### 解决的问题
