@@ -12,6 +12,26 @@
 
 _留给下个版本。_
 
+## [2.8.74] - 2026-07-06
+
+### 解决的问题
+
+`2.8.73` 把治理路由和 live subagent 授权分开后，Codex 里仍有一个实际 fan-out 缺陷：用户直接纠正“我要的是派发 / 并行”时，入口分类器虽然识别到了 fan-out 信号，却仍可能把它留在 `fast_path`。即使进入路由，中文里的“规则、runtime、测试缺口”这类可拆范围也可能合并成一个 worker，或者把 lane 绑定到 skill，而不是可复用的 Codex agent owner，结果用户看到的还是协议解释，不是真并行派发。
+
+### 改动
+
+- **直接“派发/并行”现在就是治理执行入口。** “派发”“并行”等中文纠偏会进入标准治理路径，成为 fan-out eligible，并作为 Codex subagent 的直接授权来源。
+- **显式 fan-out 优先绑定 agent owner。** 用户要求 agent fan-out 时，每个 worker lane 先绑定可复用的 Codex 全局/项目 agent owner；skill、command、MCP tool、runtime tool 只作为 loadout 或依赖，不替代 lane owner。
+- **中文范围能正确拆并行 lane。** route selection 现在把中文逗号、顿号、分号、冒号也当成 lane 分隔符，所以“规则、runtime、测试缺口”能产出多个 worker packets。
+- **测试锁住真实派发形状。** 回归测试要求直接并行派发必须产出多个 agent-owned worker packets，且每个 Codex worker 都带 typed `spawn_agent` 绑定，并选择 agent-teams fan-out adapter。
+
+### 验证
+
+- `node --test tests/meta-theory/47-meta-theory-entry-classifier.test.mjs tests/governance/capability-routing.test.mjs` -> 18 个入口分类测试和 capability-routing fixtures 通过。
+- `npm run meta:route:validate` -> 通过。
+- `npm run meta:sync` -> 项目 runtime 投影 manifest 已刷新。
+- `npm run meta:release:smoke` -> 1105 通过，0 失败，5 跳过；integration 通过。
+
 ## [2.8.73] - 2026-07-05
 
 ### 解决的问题

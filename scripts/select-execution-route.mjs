@@ -26,6 +26,9 @@ const taskText = String(task ?? "").toLowerCase();
 const entryClassification = classifyMetaTheoryEntry(task);
 const choicePolicy = entryClassification.ambiguityPacket?.choicePolicy ?? "no_choice_needed";
 const subjectiveRouteChoice = entryClassification.triggerReason === "subjective_quality_ambiguous";
+const directParallelDispatchRequested =
+  entryClassification.fanoutEligible === true &&
+  entryClassification.subagentAuthorizationSource === "direct_parallel_agent_request";
 const nativeChoiceEvidenceRaw =
   argValue("--native-choice-evidence", null) ??
   process.env.META_KIM_NATIVE_CHOICE_EVIDENCE ??
@@ -1488,7 +1491,7 @@ function selectExecutionOwner() {
 function capabilityDiscoveryTaskRequested() {
   const discoveryVerb = /find|discover|search|match|route|寻找|找|发现|搜索|检索|匹配|路由/.test(taskText);
   const discoveryTarget = /agent|subagent|owner|skill|provider|capability|mcp|tool|智能体|代理|技能|能力|工具/.test(taskText);
-  return (discoveryVerb && discoveryTarget) || agentProviderReuseConcernRequested();
+  return (discoveryVerb && discoveryTarget) || agentProviderReuseConcernRequested() || directParallelDispatchRequested;
 }
 
 // 9 类 owner 池（agent / skill / mcp / command / runtimeTool / hook / plugin / memory / dependency）。
@@ -1598,8 +1601,8 @@ function buildParallelExecutionLanes() {
     }
   }
 
-  // 3. 句子分段：逗号/分号/「and」/「与」断句
-  for (const segment of taskText.split(/[,;]|\band\b|与|和|以及/)) {
+  // 3. 句子分段：中英文逗号/顿号/冒号/分号/「and」/「与」断句
+  for (const segment of taskText.split(/[,;，、；:：]|\band\b|与|和|以及/)) {
     const trimmed = segment.trim();
     if (trimmed.length < 4) continue;
     const key = `seg:${trimmed}`;
@@ -1614,9 +1617,22 @@ function buildParallelExecutionLanes() {
   const lanes = [];
   for (const [, segment] of laneSegments) {
     let provider = null;
-    for (const kind of KIND_PRIORITY) {
-      provider = resolveProvider({ kind, terms: segment.terms });
-      if (provider) break;
+    let capabilityProvider = null;
+    if (directParallelDispatchRequested) {
+      provider = resolveProvider({ kind: "agent", terms: segment.terms });
+      if (!provider) {
+        const fallbackOwner = selectExecutionOwner();
+        provider = fallbackOwner ? { id: fallbackOwner, kind: "agent", metadata: null } : null;
+      }
+      for (const kind of KIND_PRIORITY.filter((item) => item !== "agent")) {
+        capabilityProvider = resolveProvider({ kind, terms: segment.terms });
+        if (capabilityProvider) break;
+      }
+    } else {
+      for (const kind of KIND_PRIORITY) {
+        provider = resolveProvider({ kind, terms: segment.terms });
+        if (provider) break;
+      }
     }
     if (!provider) continue;
     lanes.push({
@@ -1626,7 +1642,7 @@ function buildParallelExecutionLanes() {
       ownerAgent: provider.id,
       codexSpawnBinding: codexSpawnBindingForOwner(provider.id, provider.kind),
       purpose: `并行执行 "${segment.terms.trim().slice(0, 60)}"；独立交付，由 ${provider.kind}/${provider.id} owner 负责`,
-      capabilityProvider: null,
+      capabilityProvider,
       decisionImpact: `${provider.kind}/${provider.id} 是 runtime-scoped 真 owner，匹配到 lane terms：${segment.terms.trim().slice(0, 40)}`,
       dependsOn: [],
       parallelGroup: "parallel-execution",

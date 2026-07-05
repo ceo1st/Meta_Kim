@@ -12,6 +12,26 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 _Reserved for the next release._
 
+## [2.8.74] - 2026-07-06
+
+### Solved Problem
+
+After the `2.8.73` authorization split, Codex still had a practical fan-out failure: a direct correction such as "我要的是派发 / 并行" was detected as a fan-out signal, but the entry classifier could still leave it on `fast_path`. Even when a route was selected, separable Chinese scopes could collapse into one worker or bind lanes to skills instead of reusable Codex agent owners, so users saw protocol explanations instead of real parallel dispatch.
+
+### Changes
+
+- **Direct dispatch/parallel wording is now a governed execution entry.** Chinese corrections such as "派发" and "并行" enter the standard governed path, become fan-out eligible, and count as direct Codex subagent authorization.
+- **Explicit fan-out routes now prefer agent owners.** When users ask for agent fan-out, worker lanes bind reusable Codex global/project agent owners first; skills, commands, MCP tools, and runtime tools stay as loadout or dependency bindings.
+- **Chinese scoped fan-out splits correctly.** Route selection now treats Chinese commas, enumeration marks, semicolons, and colons as lane separators so prompts like "规则、runtime、测试缺口" can produce multiple worker packets.
+- **Regression coverage locks the real route shape.** Tests now require direct parallel dispatch to produce multiple agent-owned worker packets with typed Codex `spawn_agent` bindings and the agent-teams fan-out adapter.
+
+### Verification
+
+- `node --test tests/meta-theory/47-meta-theory-entry-classifier.test.mjs tests/governance/capability-routing.test.mjs` -> 18 entry-classifier tests plus capability-routing fixtures pass.
+- `npm run meta:route:validate` -> pass.
+- `npm run meta:sync` -> project runtime projection manifest refreshed.
+- `npm run meta:release:smoke` -> 1105 pass, 0 fail, 5 skipped; integration pass.
+
 ## [2.8.73] - 2026-07-05
 
 ### Solved Problem

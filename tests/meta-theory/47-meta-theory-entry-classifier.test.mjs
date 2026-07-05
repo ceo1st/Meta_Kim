@@ -73,6 +73,20 @@ describe("47 - Meta-theory entry classifier", () => {
     assert.equal(result.subagentAuthorizationSource, "direct_parallel_agent_request");
   });
 
+  test("direct Chinese dispatch and parallel correction enters governed fan-out", () => {
+    const result = classifyMetaTheoryEntry("不是 我要的是派发啊 并行啊");
+
+    assert.equal(result.governedEntry, true);
+    assert.equal(result.path, "standard_path");
+    assert.equal(result.taskClassification, "meta_theory_auto");
+    assert.equal(result.triggerReason, "direct_parallel_dispatch_request");
+    assert.equal(result.fanoutEligible, true);
+    assert.ok(result.expectedIndependentLaneCount >= 2);
+    assert.equal(result.requiresSubagentAuthorization, false);
+    assert.equal(result.subagentAuthorizationSource, "direct_parallel_agent_request");
+    assert.ok(result.fanoutSignals.includes("parallel_agent_or_fanout_requested"));
+  });
+
   test("critical fetch thinking review wording enters governed path without explicit meta-theory", () => {
     const result = classifyMetaTheoryEntry(
       "critical and fetch thinking and review 帮我检查项目级更新、全局能力扫描和发布验证",

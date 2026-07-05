@@ -452,6 +452,35 @@ test("routing fixtures recall internal patterns and platform/OS matrices", () =>
     "A complaint about repeated agent creation must not be misread as a create-agent capability gap request",
   );
 
+  const codexExplicitParallelDispatch = route(
+    "我要的是派发啊 并行啊：检查 meta-theory 规则、Codex runtime、测试缺口",
+    "codex",
+    "windows",
+  );
+  assert.equal(
+    codexExplicitParallelDispatch.recommendedRoute?.id,
+    "execution-capability-discovery:codex:windows",
+    "Direct parallel dispatch requests must route to execution capability discovery",
+  );
+  assert.ok(
+    codexExplicitParallelDispatch.workerTaskPacketDrafts.length >= 2,
+    "Direct parallel dispatch requests with separable scopes must produce multiple worker task packets",
+  );
+  assert.ok(
+    codexExplicitParallelDispatch.workerTaskPacketDrafts.every((packet) => packet.ownerKind === "agent"),
+    "Direct parallel dispatch worker lanes must bind reusable agent owners instead of replacing owners with skills",
+  );
+  assert.ok(
+    codexExplicitParallelDispatch.workerTaskPacketDrafts.every(
+      (packet) => packet.codexSpawnBinding?.spawnMode === "typed_spawn" && packet.codexSpawnBinding?.agent_type === packet.ownerAgent,
+    ),
+    "Every Codex parallel dispatch worker must carry a typed spawn_agent binding for its selected owner",
+  );
+  assert.ok(
+    codexExplicitParallelDispatch.dispatchBoardDraft?.orchestratorKinds?.includes("agentTeamsPlaybook"),
+    "Multiple Codex agent lanes must select the agent teams fan-out adapter",
+  );
+
   const hook = route("platform hook install");
   assert.ok(hook.candidateWeapons.includes("runtime-capability-matrix"));
 

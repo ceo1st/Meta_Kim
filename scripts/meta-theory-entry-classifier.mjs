@@ -70,6 +70,9 @@ function estimateIndependentLaneCount(text, {
   if (/review\s*\+\s*fix\s*\+\s*verify|审查.*修复.*验证|修复.*测试.*发布/iu.test(text)) {
     return Math.max(base, 3);
   }
+  if (PARALLEL_AGENT_RE.test(text)) {
+    return Math.max(base, 2);
+  }
   if (explicitMetaTheory && (durableOutputIntent || fileOrMutationIntent || base >= 2)) {
     return Math.max(base, 2);
   }
@@ -173,6 +176,8 @@ export function classifyMetaTheoryEntry(prompt) {
   const productBuildIntent = actionIntent && PRODUCT_BUILD_OBJECT_RE.test(text);
   const projectUnderstandingIntent = PROJECT_UNDERSTANDING_RE.test(text);
   const pureQuery = hasQuestionOnlyShape(text);
+  const directParallelAgentRequest = PARALLEL_AGENT_RE.test(text);
+  const serialAgentRouteComplaint = COMPLEXITY_COMPLAINT_RE.test(text);
   const fanoutContext = {
     explicitMetaTheory,
     productBuildIntent,
@@ -203,6 +208,20 @@ export function classifyMetaTheoryEntry(prompt) {
       choiceSurfaceState: "not_allowed",
       shouldAskBeforeFetch: false,
       confidence: 1,
+    }, text, fanoutContext);
+  }
+
+  if (directParallelAgentRequest || serialAgentRouteComplaint) {
+    return withFanoutMetadata({
+      governedEntry: true,
+      path: "standard_path",
+      taskClassification: "meta_theory_auto",
+      triggerReason: directParallelAgentRequest
+        ? "direct_parallel_dispatch_request"
+        : "serial_agent_route_complaint",
+      choiceSurfaceState: "not_allowed",
+      shouldAskBeforeFetch: false,
+      confidence: directParallelAgentRequest ? 0.9 : 0.82,
     }, text, fanoutContext);
   }
 

@@ -26,6 +26,8 @@ If `spawn_agent` / `Agent` equivalent is unavailable:
 If `spawn_agent` is available and the user explicitly authorized subagents:
 
 - use it for independent, bounded worker or review lanes after Thinking creates `workerTaskPackets`
+- treat direct "dispatch / parallel / multiple agents" corrections as explicit fan-out authorization; enter owner discovery and build multiple agent-owned worker packets when the task has separable scopes
+- bind explicit fan-out worker lanes to reusable Codex global or project `agent_type` owners first; skills, commands, MCP tools, and runtime tools are loadout/dependency bindings, not replacements for the lane owner
 - keep each worker's write scope disjoint when it edits files
 - size fan-out from Codex host/config capacity such as `[agents].max_threads`, current runtime capacity, task DAG, and collision boundaries instead of a fixed Meta_Kim cap
 - show the dispatch board before or alongside dispatch
