@@ -12,6 +12,31 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 _Reserved for the next release._
 
+## [2.8.73] - 2026-07-05
+
+### Solved Problem
+
+`meta-theory` could enter a governed run and produce parallel worker lanes, but Codex could still execute the work serially in the main thread because the docs and tests treated a `meta-theory` trigger as if it were live `spawn_agent` authorization. In real Codex sessions this made "multi-agent orchestration" look present in protocol text while no host subagent call actually happened.
+
+### Changes
+
+- **Governed routing and live subagent authorization are now separate.** `meta-theory` triggers governed routing and fan-out candidacy; live Codex subagent fan-out now requires direct subagent/delegation/parallel-agent wording or a completed native choice surface.
+- **Silent serial fallback is guarded.** Codex-selected `spawn_agent` lanes with zero recorded dispatches now trip the fan-out completion gate unless a valid degraded state is recorded.
+- **Invocation truth has a distinct `not_authorized` state.** Capability truth packets, contracts, reports, and product-goal validation now distinguish "not authorized" from "host tool unavailable" and "blocked".
+- **Codex command and runtime docs no longer overclaim `/meta-theory`.** The command adapter now says `/meta-theory` authorizes governed routing only, and live delegation still depends on explicit authorization plus a callable host tool.
+
+### Verification
+
+- `node --test tests/meta-theory/32-meta-theory-four-product-targets.test.mjs tests/meta-theory/34-run-deliverables.test.mjs tests/governance/fanout-completion-gate.test.mjs tests/meta-theory/47-meta-theory-entry-classifier.test.mjs` -> 48/48 pass.
+- `node scripts/validate-product-experience-core-goals.mjs` -> pass; default run shows `not_authorized`, trusted self-test reaches product-experience pass.
+- `node scripts/validate-runtime-matrix.mjs` -> pass.
+- `npm run meta:sync -- --targets claude,codex,cursor,openclaw` -> project runtime mirrors updated.
+- `npm run meta:sync:global:release` and `npm run meta:check:global:release` -> Claude Code and Codex global skills, hooks, and commands synced and checked.
+- `npm run meta:check` -> pass.
+- `npm run meta:release:smoke` -> 1104 pass, 0 fail, 5 skipped; integration pass.
+- `npm run meta:graphify:check` -> graph matches HEAD.
+- `git diff --check` -> pass.
+
 ## [2.8.72] - 2026-07-05
 
 ### Solved Problem

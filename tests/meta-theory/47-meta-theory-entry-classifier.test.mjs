@@ -84,7 +84,7 @@ describe("47 - Meta-theory entry classifier", () => {
     assert.ok(result.fanoutSignals.includes("critical_fetch_thinking_review_requested"));
   });
 
-  test("explicit meta-theory with serial-agent complaint authorizes fan-out", () => {
+  test("explicit meta-theory with serial-agent complaint requires a direct parallel-agent authorization source", () => {
     const result = classifyMetaTheoryEntry(
       "你太慢了，没看到多个 agent 并行，critical and fetch thinking and review /meta-theory",
     );
@@ -93,8 +93,21 @@ describe("47 - Meta-theory entry classifier", () => {
     assert.equal(result.path, "regulated_path");
     assert.equal(result.fanoutEligible, true);
     assert.equal(result.requiresSubagentAuthorization, false);
-    assert.equal(result.subagentAuthorizationSource, "explicit_meta_theory");
+    assert.equal(result.subagentAuthorizationSource, "direct_parallel_agent_request");
     assert.ok(result.fanoutSignals.includes("user_reported_serial_or_slow_agent_route"));
+  });
+
+  test("explicit meta-theory without subagent wording is governed fan-out candidate, not live subagent authorization", () => {
+    const result = classifyMetaTheoryEntry(
+      "[$meta-theory](D:/KimProject/Meta_Kim/.agents/skills/meta-theory/SKILL.md) 帮我调整好，案例也需要对应检查，如果需要生成图片，用image2",
+    );
+
+    assert.equal(result.governedEntry, true);
+    assert.equal(result.path, "regulated_path");
+    assert.equal(result.fanoutEligible, true);
+    assert.equal(result.requiresSubagentAuthorization, true);
+    assert.equal(result.subagentAuthorizationSource, "native_choice_surface_required");
+    assert.ok(result.fanoutSignals.includes("explicit_meta_theory_trigger"));
   });
 
   test("subjective quality request asks through Critical before Fetch", () => {

@@ -12,6 +12,31 @@
 
 _留给下个版本。_
 
+## [2.8.73] - 2026-07-05
+
+### 解决的问题
+
+`meta-theory` 能进入治理 run，也能产出并行 worker lanes，但 Codex 里仍可能由主线程串行执行，因为文档和测试把 `meta-theory` 触发误当成了 live `spawn_agent` 授权。真实 Codex 会话里，这会让“多 agent 编排”只出现在协议文本里，实际没有任何宿主 subagent 调用。
+
+### 改动
+
+- **治理路由和 live subagent 授权分开。** `meta-theory` 只代表进入治理路由和可并行候选；Codex live subagent fan-out 现在必须有明确 subagent / delegation / parallel-agent 措辞，或已经完成命名 parallel-agent route 的 native choice。
+- **静默串行兜底会被 gate 抓住。** Codex 已选 `spawn_agent` lane 但 0 个实际 dispatch 时，除非有有效 degraded state，否则 fan-out completion gate 会触发。
+- **调用真值新增 `not_authorized` 状态。** capability truth packets、contracts、reports 和产品目标校验现在区分“未授权”“宿主工具不可用”和“被阻断”。
+- **Codex command/runtime 文档不再过度承诺 `/meta-theory`。** command adapter 现在明确：`/meta-theory` 授权的是治理路由；live delegation 仍取决于明确授权和可调用宿主工具。
+
+### 验证
+
+- `node --test tests/meta-theory/32-meta-theory-four-product-targets.test.mjs tests/meta-theory/34-run-deliverables.test.mjs tests/governance/fanout-completion-gate.test.mjs tests/meta-theory/47-meta-theory-entry-classifier.test.mjs` -> 48/48 通过。
+- `node scripts/validate-product-experience-core-goals.mjs` -> 通过；默认 run 显示 `not_authorized`，trusted self-test 达到 product-experience pass。
+- `node scripts/validate-runtime-matrix.mjs` -> 通过。
+- `npm run meta:sync -- --targets claude,codex,cursor,openclaw` -> 项目运行时镜像已更新。
+- `npm run meta:sync:global:release` 和 `npm run meta:check:global:release` -> Claude Code 和 Codex 全局 skills、hooks、commands 已同步并检查通过。
+- `npm run meta:check` -> 通过。
+- `npm run meta:release:smoke` -> 1104 通过，0 失败，5 跳过；integration 通过。
+- `npm run meta:graphify:check` -> graph matches HEAD。
+- `git diff --check` -> 通过。
+
 ## [2.8.72] - 2026-07-05
 
 ### 解决的问题

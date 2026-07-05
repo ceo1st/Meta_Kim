@@ -78,7 +78,7 @@ function estimateIndependentLaneCount(text, {
 
 function buildFanoutSignals(text, context) {
   const signals = [];
-  if (context.explicitMetaTheory) signals.push("explicit_meta_theory_authorization");
+  if (context.explicitMetaTheory) signals.push("explicit_meta_theory_trigger");
   if (/critical\s+and\s+fetch\s+thinking\s+and\s+review/iu.test(text)) {
     signals.push("critical_fetch_thinking_review_requested");
   }
@@ -108,15 +108,13 @@ function buildFanoutMetadata(text, context) {
   );
   return {
     fanoutEligible,
-    fanoutSignals: fanoutEligible ? signals : signals.filter((signal) => signal !== "explicit_meta_theory_authorization"),
+    fanoutSignals: fanoutEligible ? signals : signals.filter((signal) => signal !== "explicit_meta_theory_trigger"),
     expectedIndependentLaneCount,
     requiresSubagentAuthorization:
-      fanoutEligible && !context.explicitMetaTheory && !directParallelAgentRequest,
+      fanoutEligible && !directParallelAgentRequest,
     subagentAuthorizationSource: !fanoutEligible
       ? "not_required"
-      : context.explicitMetaTheory
-        ? "explicit_meta_theory"
-        : directParallelAgentRequest
+      : directParallelAgentRequest
           ? "direct_parallel_agent_request"
           : "native_choice_surface_required",
   };

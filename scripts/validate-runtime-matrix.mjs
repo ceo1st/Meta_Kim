@@ -44,7 +44,7 @@ assert(codexCapabilities.get("subagent")?.support === "native", "Codex subagents
 assert(codexCapabilities.get("subagent")?.confidence === "verified_docs", "Codex subagents must cite official docs evidence");
 assert(JSON.stringify(codex).includes("host spawn_agent evidence must be attached separately"), "Codex matrix must not overclaim attached host spawn evidence");
 assert(JSON.stringify(codex).includes("explicitly requested"), "Codex subagent constraint must require explicit trigger");
-assert(JSON.stringify(codex).includes("/meta-theory"), "Codex subagent record must treat explicit /meta-theory as a user-visible authorization source");
+assert(JSON.stringify(codex).includes("meta-theory trigger alone authorizes governed routing, not live subagent dispatch"), "Codex subagent record must not treat meta-theory trigger alone as live subagent authorization");
 assert(JSON.stringify(codex).includes("native choice surface"), "Codex subagent record must support native choice confirmation as an authorization source");
 assert(JSON.stringify(codex).includes("hidden-auto-spawn"), "Codex subagent record must forbid hidden auto-spawn");
 assert(JSON.stringify(codex).includes("agents.max_threads"), "Codex subagent record must preserve thread-cap boundary");

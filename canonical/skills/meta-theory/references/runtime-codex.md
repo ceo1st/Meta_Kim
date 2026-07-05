@@ -1,6 +1,6 @@
 # Codex Runtime Adapter
 
-In Codex, `/meta-theory` is user-visible authorization to use available subagent/delegation tools when the task has multiple independent worker lanes. A prompt that explicitly asks for subagents, parallel agents, one-agent-per-point review, or `/meta-theory` may satisfy Codex's explicit subagent trigger; a hidden governance-only inference does not. Only claim delegation when a real tool was called successfully.
+In Codex, `meta-theory` is user-visible authorization for governed routing, not automatic authorization for live subagent dispatch. Live Codex subagent fan-out requires the user to explicitly ask for subagents, delegation, parallel agents, one-agent-per-point review, or to complete a native choice surface that names the parallel-agent route. A hidden governance-only inference or plain `meta-theory` trigger does not satisfy Codex's explicit subagent trigger. Only claim delegation when a real tool was called successfully.
 
 Codex must not self-degrade to "single-thread dispatcher" merely because it is running in Codex App. If `spawn_agent` / subagent tooling is exposed, Thinking may select it after Fetch evidence and the dispatcher must show which temporary workers were spawned. If the tool is absent or fails, record `subagentCapabilityStatus=unavailable` and a concrete `degradationReason`.
 
@@ -46,7 +46,7 @@ If Fetch/Thinking selected an existing Codex global or project owner, that owner
 
 Recovery rule: if a `spawn_agent` call fails with a parameter/fork error, retry without `agent_type` (full-context mode) before declaring `subagentCapabilityStatus=unavailable`. Record the retry in `runtimeInvocationPlanPacket` so Meta-Review can see the runner was respected, not worked around.
 
-When `spawn_agent` is available and the user authorized fan-out, the Codex main thread MUST spawn all independent workers (same `parallelGroup`) in one assistant turn — not one per turn. Per-turn serial spawning in `fan_out_ready` state is fake parallelism.
+When `spawn_agent` is available and the user authorized fan-out through direct subagent/delegation/parallel-agent wording or a completed native choice surface, the Codex main thread MUST spawn all independent workers (same `parallelGroup`) in one assistant turn — not one per turn. Per-turn serial spawning in authorized `fan_out_ready` state is fake parallelism. If the route is fan-out eligible but authorization is missing, stop before live subagent dispatch and record the native choice or degraded/blocked state instead of silently serializing.
 
 ## Codex Durable Agent Projection
 
