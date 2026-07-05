@@ -251,6 +251,17 @@ describe("SKILL.md structural integrity", async () => {
       assert.match(command, /omit `agent_type`/);
       assert.match(command, /Never pass `fork_context: true` together with `agent_type`/);
       assert.match(command, /retry once without `agent_type`/);
+      assert.match(command, /owner discovery selects an existing Codex global or project `agent_type`/);
+      assert.match(command, /bounded context from the worker packet/);
+      assert.match(command, /Do not choose a full-context fork merely to preserve context/);
+    });
+
+    test("Codex runtime reference makes global agent reuse a typed-spawn binding", async () => {
+      const reference = await readFile("canonical/skills/meta-theory/references/runtime-codex.md");
+      assert.match(reference, /existing Codex global or project owner/);
+      assert.match(reference, /typed-spawn binding/);
+      assert.match(reference, /agent_type=<selected owner>/);
+      assert.match(reference, /A full-context fork is not the normal way to reuse a global agent/);
     });
 
     test("Claude Code /meta-theory command passes Claude runtime and requires live Agent Task dispatch", async () => {

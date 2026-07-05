@@ -171,7 +171,23 @@ function implicitScriptCapabilityGapRequested() {
   return recurrenceSignal && deterministicSignal && noAgentSignal;
 }
 
+function agentProviderReuseConcernRequested() {
+  const agentTarget = /agent|subagent|owner|智能体|代理/.test(taskText);
+  if (!agentTarget) return false;
+  const creationComplaint =
+    /一直创建|反复创建|不断创建|重复创建|老是创建|总是创建|创建.*太多|keeps?\s+creating|creating\s+agents?|always\s+creates?/.test(taskText);
+  const globalReuseSignal =
+    /global|全局|已有|现有|复用|reuse|existing|找/.test(taskText);
+  return creationComplaint || globalReuseSignal;
+}
+
 function explicitCapabilityGapRequested() {
+  if (
+    agentProviderReuseConcernRequested() &&
+    !/capability gap|missing capability|missing dependency|缺能力|能力缺口|缺少能力|缺少依赖/.test(taskText)
+  ) {
+    return false;
+  }
   return [
     "capability gap",
     "missing capability",
@@ -1360,11 +1376,14 @@ function buildCapabilityTeamBlueprint(lanes, omittedLanesWithReason, evidence) {
       ownerFamily: lane.roleDisplayName,
       selectedOwner: lane.ownerAgent,
       providerBindingPolicy: "capability_need_runtime_match",
+      codexSpawnBinding: lane.codexSpawnBinding ?? codexSpawnBindingForOwner(lane.ownerAgent, lane.ownerKind),
       dependsOn: lane.dependsOn,
       parallelGroup: lane.parallelGroup,
       runtimeExecutionSurface:
-        lanes.length >= 2
-          ? "host subagent/custom-agent when available; otherwise workerTaskPacket"
+        runtime === "codex" && (lane.codexSpawnBinding ?? codexSpawnBindingForOwner(lane.ownerAgent, lane.ownerKind))
+          ? "Codex typed spawn_agent with selectedOwner as agent_type; full-context fork only after parameter/fork error"
+          : lanes.length >= 2
+            ? "host subagent/custom-agent when available; otherwise workerTaskPacket"
           : "single workerTaskPacket",
     })),
     omittedCapabilitySlots: omittedLanesWithReason,
@@ -1374,6 +1393,26 @@ function buildCapabilityTeamBlueprint(lanes, omittedLanesWithReason, evidence) {
 function selectOwner(preferredOwners = []) {
   const available = new Set(ownerDiscoveryPacket.candidateExistingExecutionOwners);
   return preferredOwners.find((owner) => available.has(owner)) ?? null;
+}
+
+function codexSpawnBindingForOwner(ownerId, ownerKind = "agent") {
+  if (runtime !== "codex" || ownerKind !== "agent" || !ownerId) return null;
+  const provider = [
+    ...runtimeScopedProjectExecutionAgents,
+    ...runtimeScopedLocalGlobalAgents,
+  ].find((agent) => agent.id === ownerId);
+  if (!provider) return null;
+  return {
+    hostSurface: "multi_agent_v1.spawn_agent",
+    spawnMode: "typed_spawn",
+    agent_type: ownerId,
+    fork_context: false,
+    ownerSource: provider.source,
+    sourceRef: provider.sourceRef,
+    fallbackMode: "full_context_fork_without_agent_type",
+    fallbackRule:
+      "Prefer typed spawn for a selected Codex global/project agent_type; retry as full-context fork only after a spawn parameter/fork error or when no typed owner is selected.",
+  };
 }
 
 function selectExecutionOwner() {
@@ -1447,9 +1486,9 @@ function selectExecutionOwner() {
 }
 
 function capabilityDiscoveryTaskRequested() {
-  const discoveryVerb = /find|discover|search|match|route|寻找|发现|搜索|检索|匹配|路由/.test(taskText);
+  const discoveryVerb = /find|discover|search|match|route|寻找|找|发现|搜索|检索|匹配|路由/.test(taskText);
   const discoveryTarget = /agent|subagent|owner|skill|provider|capability|mcp|tool|智能体|代理|技能|能力|工具/.test(taskText);
-  return discoveryVerb && discoveryTarget;
+  return (discoveryVerb && discoveryTarget) || agentProviderReuseConcernRequested();
 }
 
 // 9 类 owner 池（agent / skill / mcp / command / runtimeTool / hook / plugin / memory / dependency）。
@@ -1585,6 +1624,7 @@ function buildParallelExecutionLanes() {
       roleDisplayName: segment.laneHint,
       ownerKind: provider.kind,
       ownerAgent: provider.id,
+      codexSpawnBinding: codexSpawnBindingForOwner(provider.id, provider.kind),
       purpose: `并行执行 "${segment.terms.trim().slice(0, 60)}"；独立交付，由 ${provider.kind}/${provider.id} owner 负责`,
       capabilityProvider: null,
       decisionImpact: `${provider.kind}/${provider.id} 是 runtime-scoped 真 owner，匹配到 lane terms：${segment.terms.trim().slice(0, 40)}`,
@@ -1694,6 +1734,7 @@ function executionCapabilityDiscoveryRoute() {
       providerEvidenceRef: "ownerDiscoveryPacket.candidateReusableCapabilityProviders",
       ownerDiscoveryRef: "ownerDiscoveryPacket",
     },
+    codexSpawnBinding: codexSpawnBindingForOwner(selectedOwner, "agent"),
     selectedCapabilityProviders: {
       agentOwner: selectedOwner,
       agent: selectedAgentProvider,
@@ -2403,6 +2444,7 @@ const output = {
         mergeOwner: "meta-conductor",
         purpose: lane.purpose,
         decisionImpact: lane.decisionImpact,
+        codexSpawnBinding: lane.codexSpawnBinding ?? codexSpawnBindingForOwner(lane.ownerAgent, lane.ownerKind ?? "agent"),
       }))
     : recommendedRoute ? [{
         ownerAgent: recommendedRoute.owner,
@@ -2414,6 +2456,12 @@ const output = {
         verificationOwner: recommendedRoute.verificationOwner,
         dependsOn: [],
         mergeOwner: "meta-conductor",
+        codexSpawnBinding:
+          recommendedRoute.codexSpawnBinding ??
+          codexSpawnBindingForOwner(
+            recommendedRoute.selectedCapabilityProviders?.agent?.id ?? recommendedRoute.owner,
+            "agent",
+          ),
       }] : [],
   capabilityGapPacket,
   verificationPlan: {

@@ -411,6 +411,47 @@ test("routing fixtures recall internal patterns and platform/OS matrices", () =>
     "Claude Code agent search must not select .codex/agents adapters as callable Claude agents",
   );
 
+  const codexAgentReuseComplaint = route(
+    "Critical Thinking Fetch Deep Thinking Review 为什么 Codex 一直创建 agent 而不是找全局 agent",
+    "codex",
+    "windows",
+  );
+  assert.equal(
+    codexAgentReuseComplaint.recommendedRoute?.id,
+    "execution-capability-discovery:codex:windows",
+    "Codex agent-creation complaints must route to execution capability discovery before dependency/project registry",
+  );
+  assert.equal(
+    codexAgentReuseComplaint.recommendedRoute?.selectedCapabilityProviders?.agent?.platformId,
+    "codex",
+    "Codex owner discovery must bind a Codex-callable global/project agent provider",
+  );
+  assert.equal(
+    codexAgentReuseComplaint.recommendedRoute?.codexSpawnBinding?.spawnMode,
+    "typed_spawn",
+    "Codex global agent reuse must produce a typed spawn binding",
+  );
+  assert.equal(
+    codexAgentReuseComplaint.recommendedRoute?.codexSpawnBinding?.agent_type,
+    codexAgentReuseComplaint.recommendedRoute?.owner,
+    "Codex typed spawn must use the selected owner as agent_type",
+  );
+  assert.equal(
+    codexAgentReuseComplaint.recommendedRoute?.codexSpawnBinding?.fork_context,
+    false,
+    "Codex typed global agent reuse must not request a full-context fork",
+  );
+  assert.equal(
+    codexAgentReuseComplaint.workerTaskPacketDrafts?.[0]?.codexSpawnBinding?.agent_type,
+    codexAgentReuseComplaint.recommendedRoute?.owner,
+    "Worker task packets must carry the same Codex typed agent binding",
+  );
+  assert.equal(
+    codexAgentReuseComplaint.capabilityGapDetected,
+    false,
+    "A complaint about repeated agent creation must not be misread as a create-agent capability gap request",
+  );
+
   const hook = route("platform hook install");
   assert.ok(hook.candidateWeapons.includes("runtime-capability-matrix"));
 

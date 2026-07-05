@@ -42,6 +42,8 @@ Codex `spawn_agent` has a hard parameter rule the dispatcher must follow:
 - **Typed spawn** (separate agent identity): pass `agent_type`, but the worker does NOT inherit full main context.
 - These two modes are mutually exclusive. Mixing them is the most common Codex fan-out failure.
 
+If Fetch/Thinking selected an existing Codex global or project owner, that owner is a typed-spawn binding: call `multi_agent_v1.spawn_agent` with `agent_type=<selected owner>` and pass only the bounded context in the worker packet. A full-context fork is not the normal way to reuse a global agent; it is for same-context continuation or for the retry after a typed-spawn parameter/fork error.
+
 Recovery rule: if a `spawn_agent` call fails with a parameter/fork error, retry without `agent_type` (full-context mode) before declaring `subagentCapabilityStatus=unavailable`. Record the retry in `runtimeInvocationPlanPacket` so Meta-Review can see the runner was respected, not worked around.
 
 When `spawn_agent` is available and the user authorized fan-out, the Codex main thread MUST spawn all independent workers (same `parallelGroup`) in one assistant turn — not one per turn. Per-turn serial spawning in `fan_out_ready` state is fake parallelism.

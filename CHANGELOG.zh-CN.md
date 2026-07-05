@@ -12,6 +12,31 @@
 
 _留给下个版本。_
 
+## [2.8.72] - 2026-07-05
+
+### 解决的问题
+
+Codex 执行派发仍然像是在不断新建 agent，而不是先从全局/项目 agent 清单里找可复用 owner。同时，Meta_Kim 的 observed hook 模式也不该再承担第二套“高风险关键词拦截”：用户明确要求的 Git、删除、GitHub API、安装、发布、release 命令，不应该因为 Meta_Kim 自己的流程 hook 又被挡一次。通用 keyword 风险拦截属于宿主/运行时安全层，Meta_Kim 只应该管自己的流程闸门。
+
+### 改动
+
+- **Codex 派发改为 global-first，并区分 typed spawn。** Codex `/meta-theory` 路由和 runtime reference 现在优先复用已发现的全局/项目 owner；指定类型派发用 `agent_type`，完整上下文 fork 才用 `fork_context`，两者不再混用。
+- **执行 owner 兜底更严格。** 能力路由不再拿第一个候选硬顶，而是为 implementation、verification、research、provider、test 等 lane 记录匹配证据后再选 owner。
+- **observed hook 不再重复 keyword 安全拦截。** `enforce-agent-dispatch.mjs` 删除 observed 模式下的命令黑名单，也删除 GitHub Git Data API 发布特批支路。observed 模式下，Meta_Kim 不再按命令类别拦截；release 是否真实、rollback 证据是否够、策略是否遵守、公示是否达标，交给 Review 和 Verification 判断。
+- **Meta_Kim 流程 gate 仍保留。** managed 阶段 readiness、choice/capability/owner evidence、meta-agent 直接改业务文件、`queryBypass` 写入、已知 unsupported runtime/OS 等仍会拦，因为它们是 Meta_Kim 流程设计本身的问题。
+
+### 验证
+
+- `npm run meta:setup:update` -> 全局更新完成；全局 skills、依赖、MCP memory hooks、能力索引已刷新。
+- `npm run meta:sync:global:release` -> Claude Code 和 Codex 全局 skills、commands、hooks 已同步。
+- `git fetch --tags origin` -> 全局 hook 同步后成功，确认 Git 不再被 Meta_Kim observed hook 策略阻拦。
+- `node --test tests/governance/capability-routing.test.mjs tests/meta-theory/01-structural.test.mjs tests/meta-theory/11-eight-stage-spine.test.mjs` -> 199/199 通过。
+- `node scripts/validate-stage-runtime-control.mjs` -> 通过。
+- `npm run meta:route:validate` -> 通过。
+- `npm run meta:release:smoke` -> 1103 通过，0 失败，5 跳过；integration 通过。
+- `npm run meta:graphify:check` -> graph matches HEAD。
+- `git diff --check` -> 通过。
+
 ## [2.8.71] - 2026-07-05
 
 ### 解决的问题

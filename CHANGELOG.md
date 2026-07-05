@@ -12,6 +12,31 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 _Reserved for the next release._
 
+## [2.8.72] - 2026-07-05
+
+### Solved Problem
+
+Codex execution dispatch still felt like it was creating new agents repeatedly instead of finding and reusing the global/project agent inventory. At the same time, Meta_Kim's observed hook mode had grown into a second high-risk keyword gate: user-explicit Git, delete, GitHub API, install, publish, and release commands could be blocked by Meta_Kim even though generic keyword safety belongs to the host/runtime safety layer, not the Meta_Kim flow gate.
+
+### Changes
+
+- **Codex dispatch is global-first and typed-spawn aware.** The Codex `/meta-theory` route and runtime reference now prefer discovered global/project owners, bind typed `spawn_agent` calls with `agent_type`, and keep `fork_context` only for full-context forks where no durable agent type is being requested.
+- **Execution owner fallback is stricter.** Capability routing now avoids arbitrary "first candidate" ownership and records fit evidence for implementation, verification, research, provider, and test lanes before selecting an owner.
+- **Observed hooks no longer duplicate keyword safety.** `enforce-agent-dispatch.mjs` removed the observed-mode command blacklist and the GitHub Git Data API release-approval side path. In observed mode, Meta_Kim no longer blocks commands by class; Review and Verification judge release truth, rollback evidence, policy adherence, and public-ready claims.
+- **Meta_Kim flow gates stay intact.** Managed-stage readiness, choice/capability/owner evidence, meta-agent direct mutation boundaries, `queryBypass` mutation limits, and known unsupported runtime/OS checks still block because they are Meta_Kim flow-design concerns.
+
+### Verification
+
+- `npm run meta:setup:update` -> global update completed; global skills, dependencies, MCP memory hooks, and capability inventory refreshed.
+- `npm run meta:sync:global:release` -> Claude Code and Codex global skills, commands, and hooks synced.
+- `git fetch --tags origin` -> succeeds after global hook sync, confirming Git is no longer blocked by Meta_Kim observed hook policy.
+- `node --test tests/governance/capability-routing.test.mjs tests/meta-theory/01-structural.test.mjs tests/meta-theory/11-eight-stage-spine.test.mjs` -> 199/199 pass.
+- `node scripts/validate-stage-runtime-control.mjs` -> pass.
+- `npm run meta:route:validate` -> pass.
+- `npm run meta:release:smoke` -> 1103 pass, 0 fail, 5 skipped; integration pass.
+- `npm run meta:graphify:check` -> graph matches HEAD.
+- `git diff --check` -> pass.
+
 ## [2.8.71] - 2026-07-05
 
 ### Solved Problem
