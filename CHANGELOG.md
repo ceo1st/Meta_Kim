@@ -8,6 +8,25 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## Unreleased
 
+## [2.8.81] - 2026-07-12
+
+### Solved Problem
+
+Meta_Kim could treat a business content request as runtime-platform governance and relied on specific content-platform names in route selection, research detection, and product naming. That made a reusable governance layer behave differently just because a user named one brand. GoalPro and Kim_Decision were also installed dependencies without a clear product-facing route boundary.
+
+### Fixed
+
+- **Business intent is now separated from runtime-platform governance.** Runtime governance requires technical signals such as hooks, adapters, permissions, MCP, installation, or configuration; content and growth work no longer becomes a runtime route merely because it mentions a platform.
+- **Removed named content-platform routing.** Product orchestration, external-research detection, release-risk recognition, and project identifiers now use general intent signals such as third-party service, current rules, publishing, authorization, or content automation instead of brand names.
+- **Kim_Decision is a decision lens, not an executor.** Explicit decision requests can use it across Critical, Fetch, and Thinking to frame the problem, identify evidence, and choose a path; it cannot become an implementation worker, scheduler, or code executor.
+- **GoalPro remains opt-in and prompt-only.** It is selected only for an explicit Goal Prompt, Loop Prompt, or goal-contract request; Evolution does not create user goals and a Loop starts only after a Goal result exists.
+- **GoalPro and Kim_Decision are registered dependencies.** Provider, dependency, installation, compatibility, and routing records now expose their boundaries across Claude Code, Codex, Cursor, and OpenClaw.
+
+### Verification
+
+- Standard full release gate: `npm run meta:verify:all`.
+- Focused routing, dependency, entry-classifier, governed-deliverable, and product-experience checks cover the new decision route and generic content-automation behavior.
+
 ## [2.8.80] - 2026-07-11
 
 ### Solved Problem

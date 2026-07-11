@@ -142,6 +142,23 @@ test("routing fixtures recall internal patterns and platform/OS matrices", () =>
   assert.equal(codeRefactor.taskShape, "engineering_execution");
   assert.equal(codeRefactor.rankedRoutes.some((candidate) => candidate.dependencyProject === "kim-decision" && candidate.scoreBand === "execute"), false);
 
+  const contentGrowthDecision = route("内容营销中，标题文案和封面设计怎样提升转化，帮我判断怎么改", "codex", "windows");
+  assert.equal(contentGrowthDecision.taskShape, "strategy_product_decision");
+  assert.equal(contentGrowthDecision.recommendedRoute?.id, "kim-decision-lens:codex:windows");
+  assert.equal(contentGrowthDecision.recommendedRoute?.dependency, null);
+  assert.equal(contentGrowthDecision.recommendedRoute?.decisionLensProvider, "kim-decision");
+  assert.equal(contentGrowthDecision.recommendedRoute?.boundary?.executionMode, "model_context");
+  assert.equal(contentGrowthDecision.recommendedRoute?.boundary?.notExecutor, true);
+  assert.deepEqual(
+    contentGrowthDecision.decisionExperiencePlan?.sequence?.map((step) => step.step),
+    ["critical_decision", "fetch_evidence_decision", "thinking_path_decision"],
+  );
+  assert.match(contentGrowthDecision.decisionExperiencePlan?.goalProBoundary ?? "", /not triggered by this route/i);
+  assert.match(contentGrowthDecision.decisionExperiencePlan?.evolutionBoundary ?? "", /not the place that creates user Goals/i);
+
+  const contentAutomationBuild = route("帮我做一个内容营销自动发布器，需要内容策略、前端界面、后端 API、数据模型、平台集成、权限风控、测试验收和发布运维", "codex", "windows");
+  assert.equal(contentAutomationBuild.recommendedRoute?.id, "product-build-orchestration:codex:windows");
+
   const product = route("product monetization task");
   assert.ok(product.internalDecisionPatterns.includes("thinking-minimum-test"));
 

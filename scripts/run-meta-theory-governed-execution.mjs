@@ -6089,7 +6089,6 @@ function buildNoHardcodedFixtureGate({ goalContractPacket }) {
     "WPF",
     "Electron",
     "Tauri",
-    "小红书营销自动发布器",
   ];
   const detectedForbiddenBindings = forbiddenFixtureBindings.filter((item) =>
     durableGoalText.toLowerCase().includes(item.toLowerCase())
@@ -7404,7 +7403,7 @@ function buildWorkflowContractPackets({
       },
     ],
   };
-  const externalEvidenceRequired = /小红书|抖音|快手|微信|公众号|视频号|微博|淘宝|京东|shopify|stripe|openai|api|sdk|oauth|授权|接口|平台|发布|自动发|风控|规则|限流|价格|合规/i.test(
+  const externalEvidenceRequired = /third[-\s]?party|external|provider|service|api|sdk|oauth|integration|webhook|授权|接口|外部|第三方|服务商|集成|平台规则|发布|自动发|风控|规则|限流|价格|合规/i.test(
     task,
   );
   const contentEvidencePacket = {

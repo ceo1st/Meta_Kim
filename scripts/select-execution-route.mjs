@@ -235,6 +235,12 @@ function taskTerms() {
   return ["governance", "capability", "workflow", "治理", "能力"];
 }
 
+function decisionAdjustmentRequested() {
+  if (taskShape !== "strategy_product_decision") return false;
+  if (productBuildExecutionRequested()) return false;
+  return /decision|judge|判断|决策|选择|取舍|pass.?kill|要不要|值不值得|怎么改|怎么做|路径|方案|策略|高流量|标题|文案|封面/.test(taskText);
+}
+
 function fitsTask(entry) {
   const terms = taskTerms();
   if (taskShape === "fuzzy_complex_task") return true;
@@ -943,6 +949,9 @@ function routeForWeapon(weapon) {
   if (weapon.ownerCandidates?.some((owner) => owner === "general-purpose")) blockedReasons.push("general-purpose fallback");
   if (weapon.ownerCandidates?.some((owner) => /runtimeInstanceAlias|nickname/i.test(owner))) blockedReasons.push("runtime alias as durable owner");
   if (taskShape === "engineering_execution" && selectedOwner && GOVERNANCE_OWNERS.includes(selectedOwner)) blockedReasons.push("governance agent as implementation worker");
+  if (productBuildExecutionRequested() && weapon.id === "meta-kim-decision-patterns") {
+    blockedReasons.push("product build requires multi-lane orchestration; decision patterns remain a lens inside Thinking");
+  }
   if (dep && !dependencyExecutable(dep)) {
     if (dep.routeEligibility === "reference_only" || dep.invokeAs === "reference") blockedReasons.push("dependency reference_only");
     if (!dep.invocationPath) blockedReasons.push("dependency missing invocationPath");
@@ -1260,7 +1269,7 @@ const PRODUCT_BUILD_INTENT_SIGNALS = {
   ],
   currentResearch: [
     /market|research|competitor|policy|platform|rule|current/i,
-    /市场|研究|竞品|平台|规则|最新|调研|小红书|抖音|公众号|视频号/,
+    /市场|研究|竞品|平台|规则|最新|调研|内容渠道|外部服务|第三方/,
   ],
   interface: [
     /app|web|site|dashboard|frontend|ui|ux|interface|page|tool|product|mvp/i,
@@ -1329,6 +1338,11 @@ function productBuildLaneEvidence() {
     verification,
     contentOnly,
   };
+}
+
+function productBuildExecutionRequested() {
+  const evidence = productBuildLaneEvidence();
+  return evidence.implementation || evidence.automationIntegration || (evidence.interfaceNeeded && evidence.dataState);
 }
 
 function productRouteDecisionRequested() {
@@ -2036,6 +2050,96 @@ function goalProContractRoute() {
   };
 }
 
+function kimDecisionExperienceRoute() {
+  if (!decisionAdjustmentRequested()) return null;
+  const selectedSkill = selectProvider("skills", ["kim-decision"]);
+  const dependency = dependencyRecords.find((dep) => dep.id === "kim-decision") ?? null;
+  const blockedReasons = [];
+  if (!selectedSkill) blockedReasons.push("kim-decision skill provider missing");
+  if (!dependency) blockedReasons.push("kim-decision dependency project missing");
+  const score = blockedReasons.length ? 49 : 93;
+  return {
+    id: `kim-decision-lens:${runtime}:${osTarget}`,
+    owner: "meta-warden",
+    weapon: "meta-kim-decision-patterns",
+    dependency: null,
+    dependencyProject: null,
+    decisionLensProvider: selectedSkill?.id ?? "kim-decision",
+    runtime,
+    os: osTarget,
+    verificationOwner: "meta-prism",
+    verificationMethod: "npm run meta:route:validate",
+    verification: {
+      command: "npm run meta:route:validate",
+      artifact: "route JSON",
+      passCondition: "Decision tasks expose a Kim_Decision decision lens without promoting it to code executor, then offer GoalPro only after the decision is ready to become a goal.",
+    },
+    score,
+    scoreBand: score >= 85 ? "execute" : "blocked",
+    routeScoreBreakdown: {
+      intentFitWeight: 20,
+      ownerFitWeight: 15,
+      weaponFitWeight: 15,
+      dependencyFitWeight: 15,
+      runtimeSupportWeight: 10,
+      osSupportWeight: 10,
+      verificationStrengthWeight: 10,
+      riskRollbackClarityWeight: 5,
+      runtimeSupport: "native",
+      osSupport: "supported",
+      dependencyFit: dependency ? 90 : 0,
+    },
+    ownerBinding: {
+      selectedOwner: "meta-warden",
+      source: "decision_adjustment_task_shape",
+      existingOwnerMatched: true,
+      bindingStage: "Thinking",
+      providerEvidenceRef: "candidateDependencyProjects.kim-decision",
+      ownerDiscoveryRef: "ownerDiscoveryPacket",
+    },
+    selectedCapabilityProviders: selectedSkill ? [selectedSkill] : [],
+    boundary: {
+      invokeAs: "decision_lens",
+      executionMode: "model_context",
+      notExecutor: true,
+      notImplementationWorker: true,
+      notAutomationScheduler: true,
+    },
+    decisionExperiencePlan: {
+      userVisibleActivation: "Kim_Decision decision lens",
+      scope:
+        "Decision support only during Critical, Fetch, and Thinking. It does not create a Goal, run execution, schedule automation, or start a Loop.",
+      sequence: [
+        {
+          step: "critical_decision",
+          provider: "kim-decision",
+          stage: "Critical",
+          purpose: "锁定真问题、成功标准、非目标、关键取舍和 pass/kill 判断，不急着写执行目标。",
+        },
+        {
+          step: "fetch_evidence_decision",
+          provider: "kim-decision",
+          stage: "Fetch",
+          purpose: "判断哪些证据会改变路线，哪些外部/本地事实必须先查，避免拍脑袋决策。",
+        },
+        {
+          step: "thinking_path_decision",
+          provider: "kim-decision",
+          stage: "Thinking",
+          purpose: "比较候选路径，选择最小 MVP / 最小验证 / 执行路线，并记录为什么不走其他路。",
+        },
+      ],
+      goalProBoundary:
+        "GoalPro is not triggered by this route. It is selected only when the user explicitly asks for Goal Prompt, Loop Prompt, goal contract, or prompt-only goal packaging.",
+      loopBoundary:
+        "Loop belongs after a Goal has produced a result and the user wants a next-round review/continuation prompt; it is not part of Critical, Fetch, Thinking, or Evolution writeback.",
+      evolutionBoundary:
+        "Evolution records Meta_Kim system writeback or none-with-reason; it is not the place that creates user Goals.",
+    },
+    blockedReasons,
+  };
+}
+
 function subjectiveUiDesignRoute() {
   if (!subjectiveRouteChoice) return null;
   const selectedProviders = {
@@ -2491,6 +2595,7 @@ function productBuildOrchestrationRoute() {
 
 const syntheticRoutes = [
   goalProContractRoute(),
+  kimDecisionExperienceRoute(),
   productBuildOrchestrationRoute(),
   subjectiveUiDesignRoute(),
   executionCapabilityDiscoveryRoute(),
@@ -2827,6 +2932,7 @@ const output = {
   osFilterResult: { requested: osArg, applied: osTarget, unsupported: !OS_TARGETS.includes(osTarget) },
   rankedRoutes,
   recommendedRoute,
+  decisionExperiencePlan: recommendedRoute?.decisionExperiencePlan ?? null,
   subjectiveUiCapabilityAmplification: recommendedRoute?.subjectiveUiCapabilityAmplification ?? null,
   decisionCheckpoints: recommendedRoute?.subjectiveUiCapabilityAmplification?.decisionCheckpoints ?? [],
   capabilityGapDetected,
