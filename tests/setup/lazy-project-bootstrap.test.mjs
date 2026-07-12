@@ -305,6 +305,10 @@ test("lazy project bootstrap apply preserves user text/config, skips Codex proje
       true,
     );
     assert.equal(
+      existsSync(path.join(projectDir, ".codex", "hooks", "project-root.mjs")),
+      true,
+    );
+    assert.equal(
       existsSync(path.join(projectDir, ".codex", "hooks", "enforce-agent-dispatch.mjs")),
       true,
     );
@@ -739,6 +743,20 @@ test("lazy project bootstrap projects Codex hook files and preserves user hooks"
       existsSync(path.join(projectDir, ".codex", "hooks", "graphify-context.mjs")),
       true,
     );
+    const hookResult = spawnSync(
+      process.execPath,
+      [path.join(projectDir, ".codex", "hooks", "activate-meta-theory-spine.mjs")],
+      {
+        cwd: projectDir,
+        input: JSON.stringify({
+          tool_name: "Skill",
+          tool_input: { skill_name: "meta-theory" },
+        }),
+        encoding: "utf8",
+        env: { ...process.env, META_KIM_POST_COPY_AUTO: "off" },
+      },
+    );
+    assert.equal(hookResult.status, 0, hookResult.stderr || hookResult.stdout);
   } finally {
     rmSync(projectDir, { recursive: true, force: true });
   }
@@ -773,6 +791,13 @@ test("lazy project bootstrap apply restores managed project hooks instead of pru
     assert.equal(existsSync(path.join(projectDir, ".claude", "hooks")), true);
     assert.equal(existsSync(path.join(projectDir, ".codex", "hooks")), true);
     assert.equal(existsSync(path.join(projectDir, ".cursor", "hooks")), true);
+    for (const runtimeDir of [".claude", ".codex", ".cursor"]) {
+      assert.equal(
+        existsSync(path.join(projectDir, runtimeDir, "hooks", "project-root.mjs")),
+        true,
+        `${runtimeDir} must project the spine hook project-root dependency`,
+      );
+    }
     assert.notEqual(
       readFileSync(path.join(projectDir, ".codex", "hooks", "activate-meta-theory-spine.mjs"), "utf8"),
       "console.log('legacy');\n",

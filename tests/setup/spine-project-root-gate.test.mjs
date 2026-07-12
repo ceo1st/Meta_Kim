@@ -19,9 +19,10 @@ import path from "node:path";
 // only project at a *legitimate* project root, resolved by the same rule in both
 // entry points:
 //   1. CLAUDE_PROJECT_DIR, trusted only when it resolves to a real directory;
-//   2. else a strong cwd marker (.git or the meta-kim project-bootstrap
+//   2. a runtime payload root, accepted only when marker-backed;
+//   3. else a strong cwd marker (.git or the meta-kim project-bootstrap
 //      manifest), found by walking up from cwd;
-//   3. else nothing — skip projection.
+//   4. else nothing — skip projection.
 // Tests exercise real runtime behaviour (they run the hook / the script), and a
 // stubbed, network-free "python" is used where the script's success path would
 // otherwise shell out to pip/graphify.
@@ -80,6 +81,7 @@ function stageActivateHook(dir) {
   mkdirSync(hookDir, { recursive: true });
   for (const fileName of [
     "activate-meta-theory-spine.mjs",
+    "project-root.mjs",
     "spine-state.mjs",
     "spine-state-utils.mjs",
     "utils.mjs",
@@ -109,7 +111,7 @@ function runActivate(hookPath, cwd, extraEnv = {}) {
 
 // Like runActivate, but sends a custom activation payload (still triggering
 // meta-theory via the Skill path) so a test can inject extra top-level payload
-// fields — e.g. a would-be project-root declaration the gate must ignore.
+// fields — e.g. a host-provided cross-runtime project-root declaration.
 function runActivateWithPayload(hookPath, cwd, extraPayload = {}, extraEnv = {}) {
   const env = { ...process.env };
   delete env.CLAUDE_PROJECT_DIR;
@@ -273,17 +275,13 @@ describe("meta-theory spine activate project-root gate", () => {
     }
   });
 
-  test("ignores payload-declared project roots (no CLAUDE_PROJECT_DIR)", () => {
-    // The activator must not accept a project root that only appears as a
-    // payload field. post-copy has no such declaration source, so honoring any
-    // of these here re-introduces the entry-point split-brain. Each field
-    // points at a real directory with NO marker; without a marker or a valid
-    // CLAUDE_PROJECT_DIR, the gate must skip projection entirely — not into the
-    // declared dir, and not into the cwd. Looped over every removed field so no
-    // single field can silently remain honored.
+  test("accepts marker-backed cross-runtime payload roots", () => {
     const payloadRootFields = [
+      "cwd",
       "workspace_root",
       "workspaceRoot",
+      "workspace_dir",
+      "workspaceDir",
       "project_dir",
       "projectDir",
       "project_root",
@@ -293,13 +291,14 @@ describe("meta-theory spine activate project-root gate", () => {
       const projectDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-payloadroot-"));
       const cwd = mkdtempSync(path.join(os.tmpdir(), "meta-kim-payloadcwd-"));
       try {
+        mkdirSync(path.join(projectDir, ".git"), { recursive: true });
         const hookPath = stageActivateHook(cwd);
         const result = runActivateWithPayload(hookPath, cwd, { [field]: projectDir });
         assert.equal(result.status, 0, result.stderr || result.stdout);
         assert.equal(
-          existsSync(path.join(projectDir, ".meta-kim")),
-          false,
-          `payload field "${field}" must not be adopted as a project root`,
+          existsSync(spineStatePath(projectDir)),
+          true,
+          `marker-backed payload field "${field}" must resolve the project root`,
         );
         assert.equal(
           existsSync(path.join(cwd, ".meta-kim")),
@@ -310,6 +309,57 @@ describe("meta-theory spine activate project-root gate", () => {
         rmSync(projectDir, { recursive: true, force: true });
         rmSync(cwd, { recursive: true, force: true });
       }
+    }
+  });
+
+  test("rejects an unmarked payload directory", () => {
+    const projectDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-payload-unmarked-"));
+    const cwd = mkdtempSync(path.join(os.tmpdir(), "meta-kim-payloadcwd-"));
+    try {
+      const hookPath = stageActivateHook(cwd);
+      const result = runActivateWithPayload(hookPath, cwd, { workspaceRoot: projectDir });
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.equal(existsSync(path.join(projectDir, ".meta-kim")), false);
+      assert.equal(existsSync(path.join(cwd, ".meta-kim")), false);
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test("does not let payload redirect a valid cwd project to another repository", () => {
+    const cwdProject = mkdtempSync(path.join(os.tmpdir(), "meta-kim-payload-cwd-project-"));
+    const otherProject = mkdtempSync(path.join(os.tmpdir(), "meta-kim-payload-other-project-"));
+    try {
+      mkdirSync(path.join(cwdProject, ".git"), { recursive: true });
+      mkdirSync(path.join(otherProject, ".git"), { recursive: true });
+      const hookPath = stageActivateHook(cwdProject);
+      const result = runActivateWithPayload(hookPath, cwdProject, {
+        workspaceRoot: otherProject,
+      });
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.equal(existsSync(spineStatePath(cwdProject)), true);
+      assert.equal(existsSync(path.join(otherProject, ".meta-kim")), false);
+    } finally {
+      rmSync(cwdProject, { recursive: true, force: true });
+      rmSync(otherProject, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects relative payload project roots", () => {
+    const cwd = mkdtempSync(path.join(os.tmpdir(), "meta-kim-payload-relative-"));
+    try {
+      const relativeProject = path.join(cwd, "other-project");
+      mkdirSync(path.join(relativeProject, ".git"), { recursive: true });
+      const hookPath = stageActivateHook(cwd);
+      const result = runActivateWithPayload(hookPath, cwd, {
+        workspaceRoot: "other-project",
+      });
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.equal(existsSync(path.join(relativeProject, ".meta-kim")), false);
+      assert.equal(existsSync(path.join(cwd, ".meta-kim")), false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 });
@@ -397,6 +447,44 @@ describe("project-post-copy-init project-root gate", () => {
         ),
         true,
         "post-copy init must adopt CLAUDE_PROJECT_DIR and initialize there",
+      );
+      assert.equal(existsSync(path.join(cwd, ".meta-kim")), false);
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(fakeBin, { recursive: true, force: true });
+    }
+  });
+
+  test("adopts an explicit --project-root from an unrelated unmarked cwd", () => {
+    const projectDir = mkdtempSync(path.join(os.tmpdir(), "meta-kim-pc-cli-project-"));
+    const cwd = mkdtempSync(path.join(os.tmpdir(), "meta-kim-pc-cli-cwd-"));
+    const fakeBin = mkdtempSync(path.join(os.tmpdir(), "meta-kim-pc-cli-bin-"));
+    try {
+      for (const name of ["py", "python", "python3"]) {
+        writeFakeExecutable(fakeBin, name, FAKE_PYTHON);
+      }
+      const env = { ...process.env };
+      delete env.CLAUDE_PROJECT_DIR;
+      env.PATH = `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`;
+      env.Path = `${fakeBin}${path.delimiter}${process.env.Path ?? ""}`;
+      const result = spawnSync(
+        process.execPath,
+        [POST_COPY_SCRIPT, "--project-root", projectDir],
+        {
+          cwd,
+          encoding: "utf8",
+          timeout: 30000,
+          windowsHide: true,
+          env,
+        },
+      );
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      assert.equal(
+        existsSync(
+          path.join(projectDir, ".meta-kim", "state", "default", "post-copy-init.json"),
+        ),
+        true,
       );
       assert.equal(existsSync(path.join(cwd, ".meta-kim")), false);
     } finally {

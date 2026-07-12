@@ -2,9 +2,13 @@ import process from "node:process";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readJsonFromStdin } from "./utils.mjs";
+import {
+  projectRootCandidatesFromPayload,
+  resolveProjectRoot,
+} from "./project-root.mjs";
 import {
   readSpineState,
   readSpineStateIncludingInactive,
@@ -40,45 +44,6 @@ const rawPackageRoot =
     ? process.argv[packageRootArgIndex + 1]
     : process.env.META_KIM_PACKAGE_ROOT || null;
 const packageRoot = resolvePackageRoot(rawPackageRoot);
-
-// Never bootstrap/project spine + post-copy state into an arbitrary cwd (e.g.
-// a temp dir a stray hook invocation happens to run in). Resolve a legitimate
-// project root first; if none is found, the caller skips all projection. This
-// is the single project-root rule shared with scripts/project-post-copy-init.mjs
-// so both entry points agree on the project root — neither may be more lenient:
-//   1. CLAUDE_PROJECT_DIR — the runtime's explicit project declaration, trusted
-//      only when it is a non-empty string resolving to a real existing directory;
-//   2. an invalid or absent declaration falls back to the cwd marker walk-up;
-//   3. walk up from cwd for a strong marker (.git or the meta-kim
-//      project-bootstrap manifest);
-//   4. otherwise null. process.cwd() itself is deliberately NOT a trusted
-//      marker — trusting a bare cwd is exactly the defect this guards against.
-// A payload-declared root is intentionally NOT accepted: post-copy has no such
-// declaration source, so honoring it here would re-introduce the split-brain.
-function resolveProjectRoot() {
-  const declared = process.env.CLAUDE_PROJECT_DIR;
-  if (typeof declared === "string" && declared.trim()) {
-    try {
-      const resolved = resolve(declared.trim());
-      if (existsSync(resolved) && statSync(resolved).isDirectory()) return resolved;
-    } catch {
-      // Unusable declaration; fall through to the project-marker walk-up.
-    }
-  }
-  let dir = resolve(cwd);
-  for (let i = 0; i < 40; i++) {
-    if (
-      existsSync(join(dir, ".git")) ||
-      existsSync(join(dir, ".meta-kim", "state", "default", "project-bootstrap.json"))
-    ) {
-      return dir;
-    }
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return null;
-}
 
 // 多 agent / 军团 / fan-out 触发词只说明任务可能适合拆分。它不能证明
 // capability discovery 已执行，也不能替 Critical/Fetch/Thinking 推进阶段。
@@ -318,7 +283,7 @@ function startPostCopyAutoInit(root) {
   if (!existsSync(scriptPath)) return;
 
   try {
-    spawnSync(process.execPath, [scriptPath, "--auto"], {
+    spawnSync(process.execPath, [scriptPath, "--auto", "--project-root", root], {
       cwd: root,
       stdio: "ignore",
       timeout: 4000,
@@ -339,10 +304,14 @@ if (!activation.triggered) {
   process.exit(0);
 }
 
-const projectRoot = resolveProjectRoot();
+const projectRoot = resolveProjectRoot({
+  cwd,
+  explicitDeclarations: [process.env.CLAUDE_PROJECT_DIR],
+  runtimeCandidates: projectRootCandidatesFromPayload(payload),
+});
 if (!projectRoot) {
   // No legitimate project root (e.g. hook invoked from a temp dir with no
-  // .git / project-bootstrap manifest and no CLAUDE_PROJECT_DIR). Never
+  // .git / project-bootstrap manifest and no valid explicit declaration). Never
   // bootstrap an arbitrary cwd — skip spine-state + post-copy projection.
   process.exit(0);
 }

@@ -136,6 +136,10 @@ describe("runtime hook sync contract", () => {
       ),
       true,
     );
+    assert.match(
+      source,
+      /GLOBAL_HOOK_PACKAGE_FILES = new Set\(\[[\s\S]*"project-root\.mjs"/,
+    );
   });
 
   test("Codex global sync writes hooks and hook config to the Codex home", () => {
@@ -158,6 +162,10 @@ describe("runtime hook sync contract", () => {
         existsSync(
           join(codexHome, "hooks", "meta-kim", "activate-meta-theory-spine.mjs"),
         ),
+        true,
+      );
+      assert.equal(
+        existsSync(join(codexHome, "hooks", "meta-kim", "project-root.mjs")),
         true,
       );
       assert.equal(existsSync(join(codexHome, "hooks.json")), true);

@@ -922,6 +922,12 @@ const canonicalSharedSpineHookPath = path.join(
   "hooks",
   "activate-meta-theory-spine.mjs",
 );
+const canonicalSharedProjectRootHookPath = path.join(
+  canonicalRuntimeAssetsDir,
+  "shared",
+  "hooks",
+  "project-root.mjs",
+);
 const canonicalClaudeEnforceDispatchHookPath = path.join(
   canonicalRuntimeAssetsDir,
   "claude",
@@ -964,6 +970,7 @@ const canonicalSharedMemorySaveHookPath = path.join(
 );
 const GLOBAL_META_KIM_HOOK_PACKAGE_FILES = new Set([
   "activate-meta-theory-spine.mjs",
+  "project-root.mjs",
   "bash-readonly-whitelist.mjs",
   "block-dangerous-bash.mjs",
   "ecc-permission-cache-wrapper.mjs",
@@ -2194,6 +2201,7 @@ async function pruneNonProjectedRuntimeSkills(
 // (i.e. user-authored files) are never touched.
 const CLAUDE_PROJECT_HOOK_FILES = new Set([
   "activate-meta-theory-spine.mjs",
+  "project-root.mjs",
   "bash-readonly-whitelist.mjs",
   "block-dangerous-bash.mjs",
   "ecc-permission-cache-wrapper.mjs",
@@ -2221,6 +2229,7 @@ const CLAUDE_PROJECT_HOOK_FILES = new Set([
 // files match the same basename as global hooks dir.
 const CODEX_PROJECT_HOOK_FILES = new Set([
   "activate-meta-theory-spine.mjs",
+  "project-root.mjs",
   "bash-readonly-whitelist.mjs",
   "codex_hook_adapter.py",
   "codex_hook_runner.mjs",
@@ -2251,6 +2260,7 @@ const CODEX_PROJECT_HOOK_FILES = new Set([
 
 const CODEX_ACTIVE_PROJECT_HOOK_FILES = new Set([
   "activate-meta-theory-spine.mjs",
+  "project-root.mjs",
   "bash-readonly-whitelist.mjs",
   "enforce-agent-dispatch.mjs",
   "graphify-context.mjs",
@@ -2271,6 +2281,7 @@ const CODEX_ACTIVE_PROJECT_HOOK_FILES = new Set([
 // Cursor hook files (.ps1/.sh variants under ~/.cursor/hooks/).
 const CURSOR_PROJECT_HOOK_FILES = new Set([
   "activate-meta-theory-spine.mjs",
+  "project-root.mjs",
   "bash-readonly-whitelist.mjs",
   "enforce-agent-dispatch.mjs",
   "graphify-context.mjs",
@@ -2294,6 +2305,7 @@ const CURSOR_PROJECT_HOOK_FILES = new Set([
 
 const CURSOR_ACTIVE_PROJECT_HOOK_FILES = new Set([
   "activate-meta-theory-spine.mjs",
+  "project-root.mjs",
   "bash-readonly-whitelist.mjs",
   "enforce-agent-dispatch.mjs",
   "graphify-context.mjs",
@@ -3029,6 +3041,20 @@ Examples:
       ) {
         changedFiles.push(`${dp.codexHooks}/activate-meta-theory-spine.mjs`);
       }
+      const projectRootHookContent = await tryReadCanonical(
+        canonicalSharedProjectRootHookPath,
+      );
+      if (
+        projectRootHookContent &&
+        (
+          await writeGeneratedFile(
+            path.join(dirs.codexHooksDir, "project-root.mjs"),
+            projectRootHookContent,
+          )
+        ).changed
+      ) {
+        changedFiles.push(`${dp.codexHooks}/project-root.mjs`);
+      }
       // Sync the dispatch-enforcement gate + its bash-readonly classifier from
       // the Claude canonical hooks directory. These two files implement the
       // capability-first gate and meta-readonly contract; they share a deny()
@@ -3334,6 +3360,20 @@ Examples:
         ).changed
       ) {
         changedFiles.push(`${dp.cursorHooks}/activate-meta-theory-spine.mjs`);
+      }
+      const cursorProjectRootHookContent = await tryReadCanonical(
+        canonicalSharedProjectRootHookPath,
+      );
+      if (
+        cursorProjectRootHookContent &&
+        (
+          await writeGeneratedFile(
+            path.join(dirs.cursorHooksDir, "project-root.mjs"),
+            cursorProjectRootHookContent,
+          )
+        ).changed
+      ) {
+        changedFiles.push(`${dp.cursorHooks}/project-root.mjs`);
       }
       // Sync the dispatch-enforcement gate + its bash-readonly classifier from
       // the Claude canonical hooks directory. deny() output adapts to Cursor's

@@ -411,7 +411,12 @@ function runActivateHook(existingState, payload, options = {}) {
     // spine here instead of correctly skipping an unmarked temp dir.
     mkdirSync(join(cwd, ".git"), { recursive: true });
     const sourceDir = "canonical/runtime-assets/shared/hooks";
-    for (const fileName of ["activate-meta-theory-spine.mjs", "spine-state.mjs", "utils.mjs"]) {
+    for (const fileName of [
+      "activate-meta-theory-spine.mjs",
+      "project-root.mjs",
+      "spine-state.mjs",
+      "utils.mjs",
+    ]) {
       copyFileSync(
         join(REPO_ROOT, sourceDir, fileName),
         join(hookDir, fileName),

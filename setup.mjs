@@ -977,6 +977,7 @@ const PROJECT_BOOTSTRAP_MERGED_CONFIG_PATHS = new Set([
 
 const GLOBAL_HOOK_PACKAGE_FILES_LIST = [
   "activate-meta-theory-spine.mjs",
+  "project-root.mjs",
   "bash-readonly-whitelist.mjs",
   "block-dangerous-bash.mjs",
   "ecc-permission-cache-wrapper.mjs",
@@ -1054,6 +1055,7 @@ const PROJECT_HOOK_SOURCE_CANDIDATES = {
   ],
   codex: [
     "activate-meta-theory-spine.mjs",
+    "project-root.mjs",
     "bash-readonly-whitelist.mjs",
     "enforce-agent-dispatch.mjs",
     "graphify-context.mjs",
@@ -1072,6 +1074,7 @@ const PROJECT_HOOK_SOURCE_CANDIDATES = {
   ],
   cursor: [
     "activate-meta-theory-spine.mjs",
+    "project-root.mjs",
     "bash-readonly-whitelist.mjs",
     "enforce-agent-dispatch.mjs",
     "graphify-context.mjs",
@@ -3206,6 +3209,7 @@ const PROJECT_HOOK_DIRS_BY_PLATFORM = {
 const PROJECT_HOOK_FILE_WHITELIST_BY_PLATFORM = {
   claude: new Set([
     "activate-meta-theory-spine.mjs",
+    "project-root.mjs",
     "bash-readonly-whitelist.mjs",
     "block-dangerous-bash.mjs",
     "ecc-permission-cache-wrapper.mjs",
@@ -3230,6 +3234,7 @@ const PROJECT_HOOK_FILE_WHITELIST_BY_PLATFORM = {
   ]),
   codex: new Set([
     "activate-meta-theory-spine.mjs",
+    "project-root.mjs",
     "bash-readonly-whitelist.mjs",
     "codex_hook_adapter.py",
     "codex_hook_runner.mjs",
@@ -3267,6 +3272,7 @@ const PROJECT_HOOK_FILE_WHITELIST_BY_PLATFORM = {
   ]),
   cursor: new Set([
     "activate-meta-theory-spine.mjs",
+    "project-root.mjs",
     "bash-readonly-whitelist.mjs",
     "enforce-agent-dispatch.mjs",
     "graphify-context.mjs",
