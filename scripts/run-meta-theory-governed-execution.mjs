@@ -49,6 +49,8 @@ const CONVERSATION_NOTICE_SCHEMA_VERSION = "conversation-notice-v0.1";
 const CONVERSATION_NOTICE_ADAPTER = "meta-theory-governed-execution-cli";
 const RUN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const SELECT_EXECUTION_ROUTE_SCRIPT = path.join(scriptDir, "select-execution-route.mjs");
+const WINDOWS_TRANSIENT_RENAME_ERRORS = new Set(["EACCES", "EBUSY", "EPERM"]);
+const WINDOWS_RENAME_RETRY_DELAYS_MS = Object.freeze([10, 25, 50, 100]);
 
 const RUNTIME_FAILURE_TAXONOMY = Object.freeze({
   pass: "pass",
@@ -850,6 +852,35 @@ function resolveOutputFile(outputDir, fileName) {
   return resolved;
 }
 
+export async function renameWithTransientWindowsRetry(
+  sourcePath,
+  targetPath,
+  {
+    platform = process.platform,
+    rename = fs.rename,
+    retryDelaysMs = WINDOWS_RENAME_RETRY_DELAYS_MS,
+    sleep = (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs)),
+  } = {},
+) {
+  let retryIndex = 0;
+  while (true) {
+    try {
+      await rename(sourcePath, targetPath);
+      return;
+    } catch (error) {
+      const retryDelayMs = retryDelaysMs[retryIndex];
+      const retryable =
+        platform === "win32" &&
+        WINDOWS_TRANSIENT_RENAME_ERRORS.has(error?.code) &&
+        Number.isFinite(retryDelayMs) &&
+        retryDelayMs >= 0;
+      if (!retryable) throw error;
+      retryIndex += 1;
+      await sleep(retryDelayMs);
+    }
+  }
+}
+
 async function atomicWriteFile(filePath, content) {
   const tempPath = path.join(
     path.dirname(filePath),
@@ -857,7 +888,7 @@ async function atomicWriteFile(filePath, content) {
   );
   try {
     await fs.writeFile(tempPath, content);
-    await fs.rename(tempPath, filePath);
+    await renameWithTransientWindowsRetry(tempPath, filePath);
   } finally {
     await fs.rm(tempPath, { force: true }).catch(() => {});
   }

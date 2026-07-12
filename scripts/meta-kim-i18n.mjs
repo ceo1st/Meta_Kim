@@ -152,6 +152,114 @@ export function resolveOutputLanguage({
   return { language: "en", source: "default" };
 }
 
+/** One CLI-language resolver for summary and detailed status surfaces. */
+export function resolveMetaKimCliLanguage(cliLanguage = null, options = {}) {
+  const environmentLanguage = [
+    options.environmentLanguage,
+    process.env.META_KIM_OUTPUT_LANGUAGE,
+    process.env.METAKIM_LANG,
+    process.env.LC_ALL,
+    process.env.LC_MESSAGES,
+    process.env.LANG,
+  ].find((value) => value != null && String(value).trim() !== "");
+  return resolveOutputLanguage({
+    cliLanguage,
+    environmentLanguage,
+    systemLanguage: options.systemLanguage ?? null,
+  });
+}
+
+const STATUS_CLI_COPY = Object.freeze({
+  en: {
+    usageHeading: "Usage", optionsHeading: "Options",
+    hooksNote: "Global hooks are opt-in. Pass --with-global-hooks only when Meta_Kim may update\nClaude Code, Codex, or Cursor user-level hook wiring.",
+    helpOption: "Show this help without changing files", versionOption: "Show the installed package version",
+    usage: "meta-kim status [--lang <en|zh|ja|ko>] [--details|--verbose|--json|--diff] [--scope=global|project|both]",
+    unknown: (option) => `unknown status option '${option}'`,
+    invalidScope: (scope) => `invalid scope '${scope}'; expected global, project, or both`,
+    missingLang: "missing value for '--lang'", usageHint: "Run 'meta-kim --help' for usage.",
+    title: "Meta_Kim status", scope: "Scope", found: "Managed items found", manifest: "Manifest entries",
+    runtimes: "Runtimes", portable: "Portable between machines", yes: "yes", no: "no", none: "none",
+    portabilityReason: "Local .meta-kim/state may contain machine-specific profile, host, and absolute-path history; exclude it from zip/package handoff.",
+    uninstallDryRun: "Safe cleanup preview: npm run meta:uninstall",
+    uninstallApply: "Apply reviewed cleanup: npm run meta:uninstall:yes",
+    details: "Full file-level details: meta-kim status --details", machine: "Machine-readable status: meta-kim status --json",
+    diff: "Manifest drift check: meta-kim status --diff",
+  },
+  "zh-CN": {
+    usageHeading: "用法", optionsHeading: "选项",
+    hooksNote: "全局 Hook 默认不启用。仅当允许 Meta_Kim 更新 Claude Code、Codex 或 Cursor\n的用户级 Hook 配置时，才传入 --with-global-hooks。",
+    helpOption: "显示帮助且不修改文件", versionOption: "显示已安装的软件包版本",
+    usage: "meta-kim status [--lang <en|zh|ja|ko>] [--details|--verbose|--json|--diff] [--scope=global|project|both]",
+    unknown: (option) => `未知的状态选项 '${option}'`, invalidScope: (scope) => `无效范围 '${scope}'；应为 global、project 或 both`,
+    missingLang: "'--lang' 缺少语言值", usageHint: "运行 'meta-kim --help' 查看用法。",
+    title: "Meta_Kim 状态", scope: "检查范围", found: "发现的受管项目", manifest: "清单记录",
+    runtimes: "运行时", portable: "可跨机器直接迁移", yes: "是", no: "否", none: "无",
+    portabilityReason: "本地 .meta-kim/state 可能包含本机 profile、host 和绝对路径历史；打包或迁移时请排除。",
+    uninstallDryRun: "安全清理预览：npm run meta:uninstall",
+    uninstallApply: "确认预览后执行清理：npm run meta:uninstall:yes",
+    details: "查看文件级完整明细：meta-kim status --details", machine: "查看机器可读状态：meta-kim status --json",
+    diff: "检查清单漂移：meta-kim status --diff",
+  },
+  "ja-JP": {
+    usageHeading: "使い方", optionsHeading: "オプション",
+    hooksNote: "グローバル Hook は任意です。Meta_Kim に Claude Code、Codex、Cursor の\nユーザーレベル Hook 更新を許可する場合のみ --with-global-hooks を指定してください。",
+    helpOption: "ファイルを変更せずヘルプを表示", versionOption: "インストール済みパッケージのバージョンを表示",
+    usage: "meta-kim status [--lang <en|zh|ja|ko>] [--details|--verbose|--json|--diff] [--scope=global|project|both]",
+    unknown: (option) => `不明な status オプション '${option}'`, invalidScope: (scope) => `無効な範囲 '${scope}'。global、project、both のいずれかを指定してください`,
+    missingLang: "'--lang' の値がありません", usageHint: "使い方は 'meta-kim --help' を実行してください。",
+    title: "Meta_Kim ステータス", scope: "対象範囲", found: "検出した管理対象", manifest: "マニフェスト項目",
+    runtimes: "ランタイム", portable: "別マシンへそのまま移行可能", yes: "はい", no: "いいえ", none: "なし",
+    portabilityReason: "ローカル .meta-kim/state には端末固有の profile、host、絶対パス履歴が含まれる場合があります。zip/package から除外してください。",
+    uninstallDryRun: "安全なクリーンアップ確認：npm run meta:uninstall",
+    uninstallApply: "確認後にクリーンアップ実行：npm run meta:uninstall:yes",
+    details: "ファイル単位の詳細：meta-kim status --details", machine: "機械可読ステータス：meta-kim status --json",
+    diff: "マニフェスト差分：meta-kim status --diff",
+  },
+  "ko-KR": {
+    usageHeading: "사용법", optionsHeading: "옵션",
+    hooksNote: "전역 Hook은 선택 사항입니다. Meta_Kim이 Claude Code, Codex 또는 Cursor의\n사용자 수준 Hook 설정을 업데이트해도 될 때만 --with-global-hooks를 지정하세요.",
+    helpOption: "파일을 변경하지 않고 도움말 표시", versionOption: "설치된 패키지 버전 표시",
+    usage: "meta-kim status [--lang <en|zh|ja|ko>] [--details|--verbose|--json|--diff] [--scope=global|project|both]",
+    unknown: (option) => `알 수 없는 status 옵션 '${option}'`, invalidScope: (scope) => `잘못된 범위 '${scope}'입니다. global, project, both 중 하나여야 합니다`,
+    missingLang: "'--lang' 값이 없습니다", usageHint: "사용법은 'meta-kim --help'를 실행하세요.",
+    title: "Meta_Kim 상태", scope: "검사 범위", found: "발견된 관리 항목", manifest: "매니페스트 항목",
+    runtimes: "런타임", portable: "다른 컴퓨터로 바로 이동 가능", yes: "예", no: "아니요", none: "없음",
+    portabilityReason: "로컬 .meta-kim/state에는 컴퓨터별 profile, host, 절대 경로 기록이 포함될 수 있으므로 zip/package 전달에서 제외하세요.",
+    uninstallDryRun: "안전한 정리 미리보기: npm run meta:uninstall",
+    uninstallApply: "검토 후 정리 실행: npm run meta:uninstall:yes",
+    details: "파일별 전체 상세 보기: meta-kim status --details", machine: "기계 판독 상태 보기: meta-kim status --json",
+    diff: "매니페스트 차이 확인: meta-kim status --diff",
+  },
+});
+
+export function getStatusCliCopy(language) {
+  return STATUS_CLI_COPY[normalizeOutputLanguage(language) ?? "en"] ?? STATUS_CLI_COPY.en;
+}
+
+const META_RUN_STATUS_COPY = Object.freeze({
+  en: {
+    labels: { inactive: "meta_governance_status=inactive", active: "meta_governance_active", completed: "completed", current: "current", next: "next", blocked: "blocked", none: "none", separator: "=", listSeparator: ",", missing: "meta_governance_latest=missing", latestRun: "latest_run", task: "task", status: "status", publicReady: "public_ready", summary: "summary", ownerHandoff: "owner_handoff", runtimeEvidence: "runtime_evidence", releaseBoundary: "release_boundary", report: "report", nextCommand: "next_command", title: "Latest governed run" },
+    values: { pass: "passed", partial: "partially complete", failed: "failed", blocked: "blocked", pending: "pending", unknown: "unknown", true: "yes", false: "no", none: "none", inactive: "inactive", session_stop: "session stopped", local_continuity_or_new_run_only: "continue from local context or start a new run" },
+  },
+  "zh-CN": {
+    labels: { inactive: "Meta_Kim 治理状态：未运行", active: "Meta_Kim 治理进行中", completed: "已完成", current: "当前", next: "下一步", blocked: "阻塞", none: "无", reason: "原因", continuation: "如何继续", separator: "：", listSeparator: "、", title: "最近一次治理运行", missing: "最近没有治理运行", latestRun: "运行编号", task: "任务", status: "状态", publicReady: "可交付", summary: "结果摘要", ownerHandoff: "负责人交接", runtimeEvidence: "运行时证据", releaseBoundary: "剩余风险", report: "详细报告", nextCommand: "查看详情" },
+    values: { pass: "通过", partial: "部分完成", failed: "失败", blocked: "受阻", pending: "等待中", unknown: "未知", true: "是", false: "否", none: "无", inactive: "未运行", session_stop: "会话已停止", local_continuity_or_new_run_only: "从本地上下文继续或开始新运行" },
+  },
+  "ja-JP": {
+    labels: { inactive: "Meta_Kim ガバナンス：停止中", active: "Meta_Kim ガバナンス実行中", completed: "完了", current: "現在", next: "次", blocked: "ブロック", none: "なし", reason: "理由", continuation: "再開方法", separator: "：", listSeparator: "、", title: "最新のガバナンス実行", missing: "ガバナンス実行はまだありません", latestRun: "実行 ID", task: "タスク", status: "状態", publicReady: "公開準備", summary: "結果概要", ownerHandoff: "担当引き継ぎ", runtimeEvidence: "ランタイム証拠", releaseBoundary: "残るリスク", report: "詳細レポート", nextCommand: "詳細を開く" },
+    values: { pass: "合格", partial: "一部完了", failed: "失敗", blocked: "ブロック中", pending: "保留中", unknown: "不明", true: "はい", false: "いいえ", none: "なし", inactive: "停止中", session_stop: "セッション停止", local_continuity_or_new_run_only: "ローカル文脈から再開するか新規実行を開始" },
+  },
+  "ko-KR": {
+    labels: { inactive: "Meta_Kim 거버넌스: 비활성", active: "Meta_Kim 거버넌스 진행 중", completed: "완료", current: "현재", next: "다음", blocked: "차단", none: "없음", reason: "이유", continuation: "계속하는 방법", separator: ": ", listSeparator: ", ", title: "최근 거버넌스 실행", missing: "아직 거버넌스 실행이 없습니다", latestRun: "실행 ID", task: "작업", status: "상태", publicReady: "공개 준비", summary: "결과 요약", ownerHandoff: "담당자 인계", runtimeEvidence: "런타임 증거", releaseBoundary: "남은 위험", report: "상세 보고서", nextCommand: "상세 보기" },
+    values: { pass: "통과", partial: "부분 완료", failed: "실패", blocked: "차단됨", pending: "대기 중", unknown: "알 수 없음", true: "예", false: "아니요", none: "없음", inactive: "비활성", session_stop: "세션 중지", local_continuity_or_new_run_only: "로컬 컨텍스트에서 계속하거나 새 실행 시작" },
+  },
+});
+
+export function getMetaRunStatusCopy(language) {
+  return META_RUN_STATUS_COPY[normalizeOutputLanguage(language) ?? "en"] ?? META_RUN_STATUS_COPY.en;
+}
+
 const GOVERNED_RUN_SURFACE_LABELS = Object.freeze({
   en: {
     invocationPresentation: {

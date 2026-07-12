@@ -8,6 +8,7 @@ import path from "node:path";
 import process from "node:process";
 import {
   readGovernedExecutionRun,
+  renameWithTransientWindowsRetry,
   runMetaTheoryGovernedExecution,
 } from "../../scripts/run-meta-theory-governed-execution.mjs";
 import {
@@ -31,6 +32,67 @@ function loadPrivatePresentationClassifier() {
 }
 
 describe("55 - governed run identity, language, and chat surface", () => {
+  test("Windows atomic report rename retries only bounded transient lock errors", async () => {
+    const delays = [];
+    let attempts = 0;
+    await renameWithTransientWindowsRetry("source.tmp", "target.json", {
+      platform: "win32",
+      retryDelaysMs: [1, 2, 3],
+      rename: async () => {
+        attempts += 1;
+        if (attempts <= 2) {
+          const error = new Error("temporarily locked");
+          error.code = "EPERM";
+          throw error;
+        }
+      },
+      sleep: async (delayMs) => delays.push(delayMs),
+    });
+    assert.equal(attempts, 3);
+    assert.deepEqual(delays, [1, 2]);
+
+    const exhaustedDelays = [];
+    let exhaustedAttempts = 0;
+    await assert.rejects(
+      renameWithTransientWindowsRetry("source.tmp", "target.json", {
+        platform: "win32",
+        retryDelaysMs: [0, 0],
+        rename: async () => {
+          exhaustedAttempts += 1;
+          const error = new Error("still locked");
+          error.code = "EBUSY";
+          throw error;
+        },
+        sleep: async (delayMs) => exhaustedDelays.push(delayMs),
+      }),
+      { code: "EBUSY" },
+    );
+    assert.equal(exhaustedAttempts, 3);
+    assert.deepEqual(exhaustedDelays, [0, 0]);
+
+    for (const [platform, code] of [
+      ["win32", "EINVAL"],
+      ["linux", "EPERM"],
+    ]) {
+      let rejectedAttempts = 0;
+      await assert.rejects(
+        renameWithTransientWindowsRetry("source.tmp", "target.json", {
+          platform,
+          retryDelaysMs: [0, 0],
+          rename: async () => {
+            rejectedAttempts += 1;
+            const error = new Error(`non-retryable ${code}`);
+            error.code = code;
+            throw error;
+          },
+          sleep: async () => assert.fail("non-transient rename failures must not sleep"),
+        }),
+        { code },
+      );
+      assert.equal(rejectedAttempts, 1);
+    }
+  });
+
   test("private presentation classifier preserves strict cross-packet priority", () => {
     const classify = loadPrivatePresentationClassifier();
     const packet = ({

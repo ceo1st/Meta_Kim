@@ -8,6 +8,28 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## Unreleased
 
+## [2.8.84] - 2026-07-13
+
+### Solved Problem
+
+Meta_Kim's install, update, and cleanup paths still had several ways to confuse "not tracked by Git" with "owned by Meta_Kim." A renamed Hook could remain as a ghost file, an already-correct managed file could be backed up and rewritten again, malformed user settings could be overwritten, and a partial cleanup or runtime mismatch could still look successful. Concurrent setup/cleanup, interrupted writes, Windows Junctions and NTFS alternate data streams also needed one shared safety boundary. At the same time, long release probes could appear stuck and important recovery guidance was not consistently available in the user's language and chat-facing status.
+
+### Fixed
+
+- **Managed files now use one safe transaction lifecycle.** Exact manifest and prior-hash ownership, root/Junction containment, conflict preflight, verified backups, staging, atomic commit, rollback, receipt-bound recovery journals, deterministic paths, and cross-process locks protect install, update, sync, and cleanup operations.
+- **Cleanup is resumable and preserves user state.** Removed or renamed managed entries are retired only with exact ownership proof; drifted, unknown, malformed, seed-only, and user-authored files are preserved with an actionable `partial` or blocked result. Already-correct managed files are true no-ops without backup, rewrite, or mtime churn.
+- **Cross-runtime checks report the real result.** Claude, Codex, Cursor, and OpenClaw Hook/config writes share the safe boundary; `global_only` validates every required Hook dependency pair, OpenClaw check mode exits nonzero on mismatch, and failed setup sync or backup work can no longer be summarized as success.
+- **User guidance stays visible and localized.** Setup, cleanup, status, details, failures, choices, and recovery steps are consistent across English, Simplified Chinese, Japanese, and Korean. Redundant update confirmation was removed, while migration, safety, and next-action guidance remains available in the chat/terminal surface instead of being hidden in generated files.
+- **Release evidence and Windows report writes are more reliable.** Standard verification binds the isolated four-runtime install/update probes to stable source snapshots, emits progress before long operations, and reports a recovery action on failure. Governed-run report replacement now applies a short bounded retry only to transient Windows lock errors and still fails immediately for other error classes.
+- **Large setup safety policy was split into focused modules.** Managed-file transaction and project-bootstrap file-safety logic now live in narrow reusable modules instead of further expanding `setup.mjs` or duplicating call-site guards.
+
+### Verification
+
+- Focused governed-run surface checks passed `12/12`; the full Meta-Theory suite passed `1137/1142` with `0` failures and `5` expected conditional skips.
+- The full setup suite passed `641/642` with `0` failures and `1` expected POSIX-only skip on Windows; integration checks passed `6/6`.
+- Claude Code, Codex, Cursor, and OpenClaw project projections, global Meta-Theory skills/commands, and Claude/Codex global Hooks were synchronized and checked; Graphify was rebuilt and passed freshness verification.
+- One complete `npm run meta:verify:all` run passed all `11/11` standard release-grade stages with `releaseGrade=true`; isolated install and update probes each verified four runtime artifacts. Optional private-attested `live-certified` verification was not requested and remains separate from the ordinary release gate.
+
 ## [2.8.83] - 2026-07-12
 
 ### Solved Problem
