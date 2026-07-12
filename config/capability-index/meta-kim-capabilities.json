@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-12T14:42:11.421Z",
+  "generatedAt": "2026-07-12T15:07:43.537Z",
   "registryName": "meta-kim-capabilities",
   "scope": "repo-canonical",
   "canonicalProjection": "config/capability-index/meta-kim-capabilities.json",
@@ -38,7 +38,7 @@
       },
       "claude": {
         "projectionPresent": true,
-        "hookCommandEntries": 12,
+        "hookCommandEntries": 14,
         "hookFiles": 17,
         "commandFiles": 3
       },

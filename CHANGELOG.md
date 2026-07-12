@@ -8,6 +8,26 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## Unreleased
 
+## [2.8.83] - 2026-07-12
+
+### Solved Problem
+
+A stray meta-theory activation could previously treat an arbitrary working directory as a project and create `.meta-kim` or `graphify-out` state there. The initial PR fix removed that unsafe fallback, but its project-root logic was duplicated between the activation hook and post-copy initializer, accepted only a Claude-specific explicit root, and did not yet guarantee that every Claude, Codex, Cursor, global-sync, and project-bootstrap path shipped the resolver dependency with the activator. Maintainer entry documents also did not describe the new stable boundary.
+
+### Fixed
+
+- **Project-root resolution now has one shared implementation.** The activation hook and post-copy initializer use `project-root.mjs` instead of maintaining two copies that can drift.
+- **Cross-runtime fallback is safe and ordered.** Trusted explicit declarations win first, a marker-backed cwd project wins over payload input, and only absolute marker-backed runtime payload roots may be used as a final fallback. Relative payload paths and unmarked arbitrary directories are rejected.
+- **Post-copy receives the already resolved root.** The activation hook passes `--project-root` explicitly, so post-copy does not guess a second project location.
+- **Every projection ships a complete dependency set.** Claude, Codex, and Cursor project hooks, global Hook packages, `setup.mjs --project-bootstrap`, package inventory, and managed cleanup include `project-root.mjs` with the activator.
+- **Maintainer guides match runtime truth.** `AGENTS.md` and `CLAUDE.md` now document the resolver priority, no-write fallback, and shared dependency rule without expanding user-facing setup complexity.
+
+### Verification
+
+- Real subprocess tests cover arbitrary temp directories, `.git` and bootstrap markers, nested directories, invalid declarations, cross-runtime payload fields, cross-repository redirect attempts, relative payload rejection, Hook-to-post-copy argument binding, and startup from an actually generated Codex Hook directory.
+- Project and global runtime projections were synchronized for Claude Code, Codex, OpenClaw, and Cursor; Claude/Codex global Hook packages were refreshed with backups.
+- One complete standard release-grade verification run passed all `11/11` stages with `releaseGrade=true`; optional private-attested `live-certified` verification remains a separate, unrequested assurance layer.
+
 ## [2.8.82] - 2026-07-12
 
 ### Solved Problem

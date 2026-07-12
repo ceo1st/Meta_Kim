@@ -8,6 +8,26 @@
 
 ## Unreleased
 
+## [2.8.83] - 2026-07-12
+
+### 解决的问题
+
+Meta-Theory 激活 Hook 曾可能把任意工作目录误当成项目，并在那里生成 `.meta-kim` 或 `graphify-out`。PR 的第一版修复移除了这个不安全兜底，但项目根解析仍分别存在于激活 Hook 与 post-copy 初始化器中，只接受 Claude 专属的显式根目录，而且还没有保证 Claude、Codex、Cursor、全局同步和项目 bootstrap 的每条投影路径都会把解析器依赖与激活器一起安装。维护者入口文档也尚未说明这条新的稳定边界。
+
+### 修复内容
+
+- **项目根解析统一为一份共享实现。** 激活 Hook 和 post-copy 初始化器共同使用 `project-root.mjs`，不再维护两份可能漂移的逻辑。
+- **跨运行时兜底顺序安全且明确。** 可信显式声明优先；当前 cwd 已由 marker 证明为项目时优先于 payload；只有绝对路径且有 marker 证明的运行时 payload 才能作为最后兜底。相对 payload 和无 marker 的任意目录都会被拒绝。
+- **post-copy 直接接收已确认的项目根。** 激活 Hook 显式传递 `--project-root`，post-copy 不再自行猜测第二个项目位置。
+- **所有投影都携带完整依赖。** Claude、Codex、Cursor 项目 Hook、全局 Hook 包、`setup.mjs --project-bootstrap`、包清单与托管文件清理都会让 `project-root.mjs` 和激活器一起安装、一起退役。
+- **维护者文档与运行时事实一致。** `AGENTS.md` 与 `CLAUDE.md` 已补充解析优先级、无合法根时不写入，以及共享依赖必须成组投影的规则，没有给普通用户增加额外安装步骤。
+
+### 验证
+
+- 真实子进程测试覆盖任意临时目录、`.git` 与 bootstrap marker、嵌套目录、无效声明、跨运行时 payload 字段、跨仓库重定向、相对路径拒绝、Hook 到 post-copy 参数绑定，以及从实际生成的 Codex Hook 目录启动。
+- Claude Code、Codex、OpenClaw、Cursor 的项目与全局投影已同步；Claude/Codex 全局 Hook 包已备份并刷新。
+- 一次完整标准发布级验证通过全部 `11/11` 阶段，`releaseGrade=true`；可选的私有签名 `live-certified` 验证仍是独立且本次未请求的保障层。
+
 ## [2.8.82] - 2026-07-12
 
 ### 解决的问题
