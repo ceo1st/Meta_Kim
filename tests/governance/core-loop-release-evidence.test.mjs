@@ -55,8 +55,12 @@ test("docs PDR stays local-private and public fixtures avoid private paths", () 
 
 test("release verification path includes governance tests", () => {
   assert.match(packageJson.scripts["meta:verify:all"], /node scripts\/run-verify-all\.mjs/);
-  assert.match(verifyRunnerSource, /npm run meta:verify:governance/);
-  assert.match(packageJson.scripts["meta:verify:governance"], /npm run meta:test:governance/);
+  assert.match(verifyRunnerSource, /npm run meta:verify:governance:core/);
+  assert.match(packageJson.scripts["meta:verify:governance:core"], /npm run meta:test:governance/);
+  assert.match(packageJson.scripts["meta:verify:governance"], /meta:open-source-boundary:validate/);
+  assert.match(packageJson.scripts["meta:verify:governance"], /meta:test:integration/);
+  assert.doesNotMatch(packageJson.scripts["meta:verify:governance:core"], /meta:open-source-boundary:validate/);
+  assert.doesNotMatch(packageJson.scripts["meta:verify:governance:core"], /meta:test:integration/);
   assert.match(verifyRunnerSource, /npm run meta:graphify:check/);
   assert.match(verifyRunnerSource, /node scripts\/eval-meta-agents\.mjs --require-all-runtimes/);
   assert.match(verifyRunnerSource, /npm run meta:acceptance:clean-room:require/);
@@ -76,7 +80,7 @@ test("release verification path includes governance tests", () => {
     "existing live runtime evaluation command must remain compatible",
   );
   for (const requiredStage of [
-    "meta:verify:governance",
+    "meta:verify:governance:core",
     "meta:test:inventory",
     "meta:test:unit",
     "meta:test:setup",
@@ -92,6 +96,35 @@ test("release verification path includes governance tests", () => {
   assert.match(
     packageJson.scripts["meta:acceptance:clean-room:require"],
     /require-clean-room-live-evidence\.mjs/,
+  );
+});
+
+test("verify-all owns one stage manifest and expands deterministic checks once", () => {
+  assert.equal(packageJson.scripts["meta:verify:all:chain"], "npm run meta:verify:all");
+  const expandCommand = (command, ancestry = []) =>
+    command.split(/\s*&&\s*/u).flatMap((part) => {
+      const trimmed = part.trim();
+      const npmRun = trimmed.match(/^npm run ([^\s]+)(?:\s+--(?:\s+.*)?)?$/u);
+      if (!npmRun) return [trimmed];
+      const scriptId = npmRun[1];
+      assert.equal(ancestry.includes(scriptId), false, `script cycle: ${[...ancestry, scriptId].join(" -> ")}`);
+      assert.equal(typeof packageJson.scripts[scriptId], "string", `missing script: ${scriptId}`);
+      return expandCommand(packageJson.scripts[scriptId], [...ancestry, scriptId]);
+    });
+  const expandedIds = STAGES.flatMap((stage) => expandCommand(stage.cmd));
+  assert.notDeepEqual(
+    expandCommand("npm run meta:check -- --json"),
+    ["npm run meta:check -- --json"],
+    "npm argument forwarding must still expand the referenced script",
+  );
+  assert.equal(new Set(expandedIds).size, expandedIds.length, expandedIds.join("\n"));
+  assert.equal(
+    expandedIds.filter((id) => id.includes("validate-open-source-boundary.mjs")).length,
+    1,
+  );
+  assert.equal(
+    expandedIds.filter((id) => id.includes('tests/integration/*.test.mjs')).length,
+    1,
   );
 });
 

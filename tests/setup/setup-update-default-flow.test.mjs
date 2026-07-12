@@ -299,7 +299,10 @@ describe("setup update default flow", () => {
     assert.match(source, /runProjectCleanupCli/);
     assert.match(source, /--cleanup-projects/);
     assert.doesNotMatch(source, /includeSelfCleanup/);
-    assert.match(source, /if \(deployDirs\.length > 0\) \{\s*await copyToDeployDirs\(activeTargets, deployDirs\);/);
+    assert.match(
+      source,
+      /if \(deployDirs\.length > 0\) \{\s*const deployResults = await copyToDeployDirs\(activeTargets, deployDirs\);[\s\S]*?deployResults\.length === deployDirs\.length &&\s*deployResults\.every\(\(item\) => item\.status === "ok"\)/,
+    );
     assert.match(source, /copyToDeployDirs\(activeTargets, targetDirs\)/);
     assert.match(source, /projectDeployProtectionNote/);
     assert.match(source, /projectCleanupProtectionNote/);

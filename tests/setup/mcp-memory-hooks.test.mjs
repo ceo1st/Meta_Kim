@@ -1544,9 +1544,10 @@ describe("MCP memory cross-runtime hooks", () => {
     );
     assert.ok(
       fn.indexOf("askYesNo(t.askMcpMemoryInstall") <
-        fn.indexOf("startMcpMemoryServiceBackground(resolved, memoryEndpoint)"),
+        fn.indexOf("startMcpMemoryServiceBackground("),
       "MCP Memory prompt must run before background autostart",
     );
+    assert.match(fn, /return registrationOk && hooksOk && backgroundOk;/);
   });
 
   test("installer uses PATH-resolved node for shell-portable hook commands", () => {

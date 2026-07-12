@@ -8,6 +8,27 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## Unreleased
 
+## [2.8.82] - 2026-07-12
+
+### Solved Problem
+
+Meta_Kim could report a Codex or Claude subagent capability as unavailable even when the current chat had already shown successful native calls, because user execution truth was flattened together with exact-binding and optional external-certification state. Important run progress also remained too dependent on generated artifacts, while install/update failures, run identity, host-observer evidence, and duplicated verification paths could still produce confusing or unsafe completion claims.
+
+### Fixed
+
+- **User execution truth is separate from internal assurance.** Current native results now drive the chat status: completed, called, partially failed, failed, denied, blocked, genuinely unavailable, and pending are distinct. Missing exact audit association can no longer erase a successful call, and `unavailable` is reserved for an unsupported surface or missing provider with no successful or strictly failed binding.
+- **Chat is the primary human-readable run surface.** Start, route, execution, review, verification, risk, owner handoff, and next action are emitted in the user's language. English, Simplified Chinese, Japanese, and Korean reports and panels avoid raw packet names, provider ids, lane enums, and certification jargon without removing useful guidance.
+- **Editable artifacts cannot certify themselves.** Caller JSON, environment hints, public trust flags, UI badges, fixtures, and ordinary run files cannot mint called/completed or independent-review status. Codex/Claude host observations, content-addressed candidate bundles, pinned trust roots, and the optional private-attested verifier remain fail-closed and separate from the standard release gate.
+- **Governed runs and installers fail closed.** Run ids are path-safe and collision-resistant, explicit overwrites require authorization, latest pointers are atomic, and readback is bound to the requested run. Setup aggregates deployment, MCP, Graphify, and optional-step failures so partial installation cannot report success.
+- **Routing and verification are less fragile.** Natural-language classification covers multilingual UX requests without content-brand hardcoding, visible consumers read the user presentation while strict validators read the top-level audit packet, and the standard verification chain has one canonical orchestrator instead of recursively duplicating stages.
+
+### Verification
+
+- Project and global Meta-Theory projections were synchronized for Claude Code, Codex, OpenClaw, and Cursor; Claude/Codex global hooks were synchronized with backups.
+- Graphify was rebuilt and passed freshness verification.
+- One complete `npm run meta:verify:all` run passed all `11/11` standard release-grade stages with `releaseGrade=true`.
+- Optional private-attested `live-certified` verification was not requested; this does not invalidate the standard release or the actual current-chat call results.
+
 ## [2.8.81] - 2026-07-12
 
 ### Solved Problem

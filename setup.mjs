@@ -88,6 +88,12 @@ import {
   normalizeSetupCliArgs,
   validateSetupCliArgs,
 } from "./scripts/setup-cli-policy.mjs";
+import {
+  INSTALL_STEP_CLASSIFICATION,
+  INSTALL_STEP_OUTCOME,
+  installStep,
+  summarizeInstallStatus,
+} from "./scripts/install-status-semantics.mjs";
 
 // ── Config ──────────────────────────────────────────────
 
@@ -902,8 +908,7 @@ async function withProgress(label, fn) {
   console.log(`${C.dim}→${C.reset} ${label}`);
 
   try {
-    await fn();
-    return true;
+    return await fn();
   } catch (err) {
     console.log(`${C.red}✗${C.reset}`);
     throw err;
@@ -4544,6 +4549,8 @@ function runNodeScript(scriptRelative, extraArgs = [], envOverrides = {}) {
   return spawnSync(spawnConfig.command, spawnConfig.args, mergedOptions);
 }
 
+let lastGlobalCapabilityInventoryResult = true;
+
 function refreshGlobalCapabilityInventory(activeTargets = []) {
   info(t.refreshGlobalCapabilityInventory);
   const targetArgs =
@@ -4554,9 +4561,11 @@ function refreshGlobalCapabilityInventory(activeTargets = []) {
     META_KIM_LANG: currentLangCode,
   });
   if (result.status === 0) {
+    lastGlobalCapabilityInventoryResult = true;
     ok(t.globalCapabilityInventoryRefreshed);
     return true;
   }
+  lastGlobalCapabilityInventoryResult = false;
   warn(t.globalCapabilityInventoryFailed);
   return false;
 }
@@ -5097,6 +5106,8 @@ async function installPythonTools(
     return true;
   }
 
+  let wiringOk = true;
+
   // Idempotent wiring: register graphify skill for each active target + git hooks once.
   // git hooks are cross-platform (commit/checkout trigger), install once.
   // If the repo wasn't cloned via git (e.g. extracted from a zip), `.git` won't
@@ -5116,6 +5127,7 @@ async function installPythonTools(
     if (hookResult.status === 0) {
       ok(t.graphifyHookInstalled);
     } else {
+      wiringOk = false;
       warn(t.graphifyHookFailed);
       const hookStdout = readProcessText(hookResult);
       const hookStderr = (hookResult.stderr || "").toString().trim();
@@ -5151,6 +5163,7 @@ async function installPythonTools(
     if (skillResult.status === 0) {
       ok(t.graphifySkillRegistered(platform));
     } else {
+      wiringOk = false;
       warn(t.graphifySkillFailed(platform));
     }
   }
@@ -5163,7 +5176,7 @@ async function installPythonTools(
   );
   if (rebuildResult.status === 0) {
     ok(t.graphifyCodeGraphGenerated);
-    return true;
+    return wiringOk;
   } else {
     warn(t.graphifyCodeGraphGenerationFailed);
     const rebuildOutput = readProcessText(rebuildResult);
@@ -5334,7 +5347,7 @@ async function runMcpMemoryHookInstaller(activeTargets = DEFAULT_TARGETS.map((ta
   );
   if (!existsSync(hookScript)) {
     warn(`Hook installer missing: ${hookScript}`);
-    return;
+    return false;
   }
 
   const spawnDesc = buildNodeScriptSpawn(
@@ -5354,12 +5367,14 @@ async function runMcpMemoryHookInstaller(activeTargets = DEFAULT_TARGETS.map((ta
 
   if (result.status === 0) {
     ok(t.mcpMemoryHookInstalled);
+    return true;
   } else {
     warn(t.mcpMemoryHookWarnings);
     const stderrText = (result.stderr || "").trim();
     if (stderrText) {
       console.log(`${C.dim}${stderrText}${C.reset}`);
     }
+    return false;
   }
 }
 
@@ -5465,6 +5480,52 @@ function isLegacyMcpMemoryServerConfig(config) {
   );
 }
 
+function registerMcpMemoryServer({
+  mcpPath,
+  memoryServerConfig,
+  fileExists = existsSync,
+  readText = readFileSync,
+  writeText = writeFileSync,
+  isLegacy = isLegacyMcpMemoryServerConfig,
+  onRegistered = () => {},
+  onExisting = () => {},
+  onFailure = () => {},
+}) {
+  try {
+    if (fileExists(mcpPath)) {
+      const mcpConfig = JSON.parse(readText(mcpPath, "utf8"));
+      if (mcpConfig.mcpServers?.["mcp-memory-service"] && !isLegacy(
+        mcpConfig.mcpServers["mcp-memory-service"],
+      )) {
+        onExisting();
+        return true;
+      }
+      const nextConfig = {
+        ...mcpConfig,
+        mcpServers: {
+          ...(mcpConfig.mcpServers ?? {}),
+          "mcp-memory-service": memoryServerConfig,
+        },
+      };
+      writeText(mcpPath, JSON.stringify(nextConfig, null, 2) + "\n");
+      onRegistered();
+      return true;
+    }
+
+    const newConfig = {
+      mcpServers: {
+        "mcp-memory-service": memoryServerConfig,
+      },
+    };
+    writeText(mcpPath, JSON.stringify(newConfig, null, 2) + "\n");
+    onRegistered();
+    return true;
+  } catch (error) {
+    onFailure(error);
+    return false;
+  }
+}
+
 function stopMcpMemoryService() {
   const plat = platform();
   try {
@@ -5516,13 +5577,13 @@ function isMcpMemoryProcessRunning() {
 async function startMcpMemoryServiceBackground(resolved, endpoint = resolveMemoryEndpoint()) {
   if (!endpoint.canAutoStart) {
     info(t.mcpMemoryRemoteEndpointNoAutoStart(endpoint.endpointUrl));
-    return;
+    return true;
   }
   const memoryBin = findMemoryBinPath(resolved);
   if (!memoryBin) {
     warn(t.mcpMemoryAutoStartFailed);
     info(t.mcpMemoryAutoStartManual);
-    return;
+    return false;
   }
 
   info(t.mcpMemoryAutoStarting);
@@ -5586,7 +5647,7 @@ async function startMcpMemoryServiceBackground(resolved, endpoint = resolveMemor
     ok(t.mcpMemoryAutoStarted(endpoint.endpointUrl));
     const bootOk = configureBootAutoStart(memoryBin, endpoint);
     if (bootOk) ok(t.mcpMemoryAutoStartBoot);
-    return;
+    return bootOk;
   }
 
   if (isMcpMemoryProcessRunning()) {
@@ -5595,6 +5656,7 @@ async function startMcpMemoryServiceBackground(resolved, endpoint = resolveMemor
 
   warn(t.mcpMemoryAutoStartFailed);
   info(t.mcpMemoryAutoStartManual);
+  return false;
 }
 
 function configureBootAutoStart(memoryBin, endpoint = resolveMemoryEndpoint()) {
@@ -5814,7 +5876,7 @@ async function installMcpMemoryServiceStep(inUpdateMode = false, activeTargets =
     memoryEndpoint = resolveMemoryEndpoint();
   } catch (error) {
     warn(t.mcpMemoryEndpointInvalid(error.message));
-    return;
+    return false;
   }
   info(t.mcpMemoryEndpointSelected(memoryEndpoint.endpointUrl));
 
@@ -5823,7 +5885,7 @@ async function installMcpMemoryServiceStep(inUpdateMode = false, activeTargets =
   if (!detected) {
     warn(t.pythonNotFound);
     info(t.pythonHint);
-    return;
+    return false;
   }
 
   // Resolve Python for mcp-memory-service (safetensors prefers 3.11/3.12).
@@ -5858,7 +5920,7 @@ async function installMcpMemoryServiceStep(inUpdateMode = false, activeTargets =
         if (stderr) {
           console.log(`${C.dim}${t.pipErrorDetail(stderr)}${C.reset}`);
         }
-        return;
+        return false;
       }
       const newVersion = checkMcpMemoryService(python).version ?? "latest";
       ok(t.mcpMemoryUpgraded(newVersion));
@@ -5880,7 +5942,7 @@ async function installMcpMemoryServiceStep(inUpdateMode = false, activeTargets =
       if (stderr) {
         console.log(`${C.dim}${t.pipErrorDetail(stderr)}${C.reset}`);
       }
-      return;
+      return false;
     } else {
       ok(t.mcpMemoryInstalled);
     }
@@ -5892,59 +5954,29 @@ async function installMcpMemoryServiceStep(inUpdateMode = false, activeTargets =
   const memoryServerConfig = buildMcpMemoryServerConfig(resolved);
 
   const mcpPath = join(PROJECT_DIR, ".mcp.json");
-  if (existsSync(mcpPath)) {
-    try {
-      const mcpConfig = JSON.parse(readFileSync(mcpPath, "utf8"));
-      if (
-        isLegacyMcpMemoryServerConfig(
-          mcpConfig.mcpServers?.["mcp-memory-service"],
-        )
-      ) {
-        const nextConfig = {
-          ...mcpConfig,
-          mcpServers: {
-            ...(mcpConfig.mcpServers ?? {}),
-            "mcp-memory-service": memoryServerConfig,
-          },
-        };
-        writeFileSync(mcpPath, JSON.stringify(nextConfig, null, 2) + "\n");
-        ok(t.mcpMemoryServerRegistered);
-      } else if (mcpConfig.mcpServers?.["mcp-memory-service"]) {
-        ok(t.mcpMemoryServerExists);
-      } else {
-        const nextConfig = {
-          ...mcpConfig,
-          mcpServers: {
-            ...(mcpConfig.mcpServers ?? {}),
-            "mcp-memory-service": memoryServerConfig,
-          },
-        };
-        writeFileSync(mcpPath, JSON.stringify(nextConfig, null, 2) + "\n");
-        ok(t.mcpMemoryServerRegistered);
-      }
-    } catch {
-      warn(t.mcpMemoryServerExists);
-    }
-  } else {
-    // Create minimal .mcp.json with just the memory service
-    const newConfig = {
-      mcpServers: {
-        "mcp-memory-service": memoryServerConfig,
-      },
-    };
-    writeFileSync(mcpPath, JSON.stringify(newConfig, null, 2) + "\n");
-    ok(t.mcpMemoryServerRegistered);
-  }
+  const registrationOk = registerMcpMemoryServer({
+    mcpPath,
+    memoryServerConfig,
+    onRegistered: () => ok(t.mcpMemoryServerRegistered),
+    onExisting: () => ok(t.mcpMemoryServerExists),
+    onFailure: (error) =>
+      warn(`${t.setupError} MCP Memory server registration: ${error.message}`),
+  });
+  if (!registrationOk) return false;
 
   info(t.mcpMemoryServerStartHint);
 
   // Step 4.7 — auto-install runtime memory hooks so the full pipeline
   // (pip package → .mcp.json → hook files → runtime registration →
   // health check) runs from a single `node setup.mjs` invocation.
-  await runMcpMemoryHookInstaller(activeTargets);
+  const hooksOk = await runMcpMemoryHookInstaller(activeTargets);
 
   // Step 4.8 — start the HTTP server in background and configure boot auto-start
-  await startMcpMemoryServiceBackground(resolved, memoryEndpoint);
+  const backgroundOk = await startMcpMemoryServiceBackground(
+    resolved,
+    memoryEndpoint,
+  );
+  return registrationOk && hooksOk && backgroundOk;
 }
 
 function ensureNetworkxCompatibility(python) {
@@ -6007,8 +6039,29 @@ async function validate() {
     validateSpawn.args,
     validateSpawn.options,
   );
-  if (validateResult.status === 0) ok(t.validationPassed);
-  else warn(t.validationWarnings);
+  if (validateResult.status === 0) {
+    ok(t.validationPassed);
+    return true;
+  }
+  warn(`${t.setupError} ${t.stepValidate}`);
+  return false;
+}
+
+function printInstallResult(result, completeMessage) {
+  if (result.status === "complete") {
+    console.log(`\n${C.bold}${C.green}✓ ${completeMessage}${C.reset}\n`);
+    return;
+  }
+
+  const failedLabels = result.failedSteps.map((step) => step.id).join(", ");
+  if (result.status === "partial") {
+    console.log(`\n${C.bold}${C.yellow}⚠ ${t.validationWarnings}${C.reset}`);
+    console.log(`${C.dim}  ${failedLabels}${C.reset}\n`);
+    return;
+  }
+
+  console.log(`\n${C.bold}${C.red}✗ ${t.setupError} ${failedLabels}${C.reset}`);
+  console.log("");
 }
 
 function showNextSteps(runtimes, selectedTargets = detectedTargetIds(runtimes)) {
@@ -6476,13 +6529,13 @@ async function main() {
   }
 
   if (updateMode) {
-    await runUpdate();
-    process.exit(0);
+    const result = await runUpdate();
+    process.exit(result.exitCode);
   }
 
   if (silentMode) {
-    await runInstall();
-    process.exit(0);
+    const result = await runInstall();
+    process.exit(result.exitCode);
   }
 
   // ── Interactive: choose action ──
@@ -6494,15 +6547,18 @@ async function main() {
   ];
   const actionIdx = await askSelect(t.actionPrompt, actionLabels);
 
-  if (actionIdx === 0) await runInstall();
-  else if (actionIdx === 1) await runUpdate();
+  let result = null;
+  if (actionIdx === 0) result = await runInstall();
+  else if (actionIdx === 1) result = await runUpdate();
   else if (actionIdx === 2) await runCheck();
   else process.exit(0);
+  if (result?.exitCode) process.exitCode = result.exitCode;
 }
 
 // ── Action runners ──────────────────────────────────────
 
 async function runInstall() {
+  const stepResults = [];
   const runtimes = await detectRuntimes();
   const activeTargets = await selectActiveTargets(runtimes);
 
@@ -6557,7 +6613,7 @@ async function runInstall() {
   // 项目目录更新
   if (needProject) {
     stepNum++;
-    await withProgress(t.stepLabel(stepNum, t.progressNpmInstall), async () => {
+    const npmOk = await withProgress(t.stepLabel(stepNum, t.progressNpmInstall), async () => {
       if (
         existsSync(join(PROJECT_DIR, "node_modules", "@modelcontextprotocol"))
       ) {
@@ -6576,6 +6632,7 @@ async function runInstall() {
       warn(t.npmFailed);
       return false;
     });
+    stepResults.push(installStep(t.progressNpmInstall, npmOk));
 
     stepNum++;
     await withProgress(t.stepLabel(stepNum, t.progressCleanupLegacy), () => {
@@ -6585,13 +6642,14 @@ async function runInstall() {
     });
 
     stepNum++;
-    await withProgress(t.stepLabel(stepNum, t.progressSyncConfig), async () => {
+    const configOk = await withProgress(t.stepLabel(stepNum, t.progressSyncConfig), async () => {
       const configResult = await autoConfigure(installScope, activeTargets);
       if (!configResult) {
         warn(t.warnConfigSyncFailed);
       }
       return configResult;
     });
+    stepResults.push(installStep(t.progressSyncConfig, configOk));
   }
 
   // 全局安装
@@ -6609,7 +6667,7 @@ async function runInstall() {
 
     // 安装全局技能
     stepNum++;
-    await withProgress(
+    const skillsOk = await withProgress(
       t.stepLabel(stepNum, t.progressInstallSkills),
       async () => {
         const localOverrides = await loadLocalOverrides();
@@ -6638,10 +6696,11 @@ async function runInstall() {
         return installResult.status === 0;
       },
     );
+    stepResults.push(installStep(t.progressInstallSkills, skillsOk));
 
     // 同步全局 meta-theory
     stepNum++;
-    await withProgress(t.stepLabel(stepNum, t.progressSyncMeta), () => {
+    const metaSyncOk = await withProgress(t.stepLabel(stepNum, t.progressSyncMeta), () => {
       const syncResult = runNodeScript(
         "scripts/sync-global-meta-theory.mjs",
         metaTheoryGlobalSyncArgs(activeTargets, setupWithGlobalHooks),
@@ -6655,61 +6714,98 @@ async function runInstall() {
       }
       return syncResult.status === 0 && runtimeHooksOk;
     });
+    stepResults.push(installStep(t.progressSyncMeta, metaSyncOk));
   }
 
   if (needGlobal) {
     stepNum++;
-    await withProgress(
+    const inventoryOk = await withProgress(
       t.stepLabel(stepNum, t.refreshGlobalCapabilityInventory),
       async () => refreshGlobalCapabilityInventory(activeTargets),
     );
+    stepResults.push(installStep(t.refreshGlobalCapabilityInventory, inventoryOk));
   }
 
   // [Optional] Python tools (graphify)
   stepNum++;
-  await withProgress(
+  const pythonToolsOk = await withProgress(
     t.stepLabel(stepNum, t.progressInstallPython),
     async () => {
       const wantPython = await askYesNo(t.askPythonToolsUpdate, true);
       if (wantPython) {
-        await installPythonTools(activeTargets, false, PROJECT_DIR, {
+        return await installPythonTools(activeTargets, false, PROJECT_DIR, {
           projectWiring: needProject,
         });
       } else {
         skip(`${C.dim}${t.pythonToolsSkipped}${C.reset}`);
+        return INSTALL_STEP_OUTCOME.SKIPPED;
       }
     },
+  );
+  stepResults.push(
+    installStep(
+      t.progressInstallPython,
+      pythonToolsOk,
+      INSTALL_STEP_CLASSIFICATION.OPTIONAL,
+    ),
   );
 
   // [Optional] MCP Memory Service (Layer 3)
   stepNum++;
-  await withProgress(
+  const mcpMemoryOk = await withProgress(
     t.stepLabel(stepNum, t.progressInstallMcpMemory),
     async () => {
-      await installMcpMemoryServiceStep(false, activeTargets);
+      return await installMcpMemoryServiceStep(false, activeTargets);
     },
+  );
+  stepResults.push(
+    installStep(
+      t.progressInstallMcpMemory,
+      mcpMemoryOk === undefined ? INSTALL_STEP_OUTCOME.SKIPPED : mcpMemoryOk,
+      INSTALL_STEP_CLASSIFICATION.OPTIONAL,
+    ),
   );
 
   // 验证：项目路径检查 repo-local；全局路径只跑项目完整性校验
   stepNum++;
-  await withProgress(t.stepLabel(stepNum, t.progressValidate), async () => {
+  let runtimeSyncOk = true;
+  const validationOk = await withProgress(t.stepLabel(stepNum, t.progressValidate), async () => {
     if (needProject) {
-      checkSync(runtimes, activeTargets);
+      runtimeSyncOk = checkSync(runtimes, activeTargets);
     }
-    await validate();
+    return await validate();
   });
-
-  console.log(`\n${C.bold}${C.green}✓ ${t.installComplete}${C.reset}\n`);
+  if (needProject) {
+    stepResults.push(installStep(t.syncHeading, runtimeSyncOk));
+  }
+  stepResults.push(installStep(t.progressValidate, validationOk));
 
   // Copy runtime files to user-chosen project directories (if opted in earlier)
   if (deployDirs.length > 0) {
-    await copyToDeployDirs(activeTargets, deployDirs);
+    const deployResults = await copyToDeployDirs(activeTargets, deployDirs);
+    stepResults.push(
+      installStep(
+        t.projectDeployBatchHeading(deployDirs.length),
+        deployResults.length === deployDirs.length &&
+          deployResults.every((item) => item.status === "ok"),
+      ),
+    );
+  }
+
+  const result = summarizeInstallStatus(stepResults);
+
+  if (result.status === "complete") {
+    console.log(`\n${C.bold}${C.green}✓ ${t.installComplete}${C.reset}\n`);
+  } else {
+    printInstallResult(result, t.installComplete);
   }
 
   showNextSteps(runtimes, activeTargets);
+  return result;
 }
 
 async function runUpdate() {
+  const stepResults = [];
   heading(t.updateHeading);
   const runtimes = await detectRuntimes();
   const reselectTargets = await askYesNo(t.askReselectRuntimes, true);
@@ -6746,21 +6842,37 @@ async function runUpdate() {
   });
   if (npmResult.status === 0) ok(t.npmDone);
   else warn(t.npmFailed);
+  stepResults.push(installStep(t.updateNpm, npmResult.status === 0));
 
   // ── 2. [Optional] Python tools (graphify) ─────────────────────────
   console.log("");
   const wantPython = await askYesNo(t.askPythonToolsUpdate, true);
+  let pythonToolsOutcome = INSTALL_STEP_OUTCOME.SKIPPED;
   if (wantPython) {
-    await installPythonTools(activeTargets, true, PROJECT_DIR, {
+    pythonToolsOutcome = await installPythonTools(activeTargets, true, PROJECT_DIR, {
       projectWiring: needProject,
     });
   } else {
     skip(`${C.dim}${t.pythonToolsSkipped}${C.reset}`);
   }
+  stepResults.push(
+    installStep(
+      t.progressInstallPython,
+      pythonToolsOutcome,
+      INSTALL_STEP_CLASSIFICATION.OPTIONAL,
+    ),
+  );
 
   // ── 2.5 [Optional] MCP Memory Service (Layer 3) ─────────────────
   console.log("");
-  await installMcpMemoryServiceStep(true, activeTargets);
+  const mcpMemoryOk = await installMcpMemoryServiceStep(true, activeTargets);
+  stepResults.push(
+    installStep(
+      t.progressInstallMcpMemory,
+      mcpMemoryOk === undefined ? INSTALL_STEP_OUTCOME.SKIPPED : mcpMemoryOk,
+      INSTALL_STEP_CLASSIFICATION.OPTIONAL,
+    ),
+  );
 
   // ── 2.8. Clean up legacy skill files ───────────────────────────────
   const legacyCount = cleanupLegacySkills(updateScope);
@@ -6777,6 +6889,7 @@ async function runUpdate() {
     ]);
     if (syncResult.status === 0) ok(t.updateSyncDone);
     else warn(t.updateSyncSkip);
+    stepResults.push(installStep(t.updateSyncProjectFiles, syncResult.status === 0));
   }
 
   // ── 4. Global skills update ───────────────────────────────────────
@@ -6808,6 +6921,9 @@ async function runUpdate() {
       warn(t.warnSkillsUpdateFailed);
       warn(`${C.dim}${t.warnSkillsUpdateFailedHint}${C.reset}`);
     }
+    stepResults.push(
+      installStep(t.progressInstallSkills, updateInstallResult.status === 0),
+    );
   }
 
   // ── 5. Global meta-theory sync ────────────────────────────────────
@@ -6824,6 +6940,12 @@ async function runUpdate() {
     if (updateSyncResult.status === 0 && runtimeHooksOk)
       ok(t.updateMetaTheoryDone);
     else warn(t.warnMetaTheoryUpdateFailed);
+    stepResults.push(
+      installStep(
+        t.progressSyncMeta,
+        updateSyncResult.status === 0 && runtimeHooksOk,
+      ),
+    );
   }
 
   // ── 5.5. Refresh global capability inventory ───────────────────────
@@ -6833,15 +6955,39 @@ async function runUpdate() {
   }
 
   // ── 6. checkSync (repo-local, project scope) ───────────────────────
-  if (needProject) {
-    checkSync(runtimes, activeTargets);
+  if (needGlobal) {
+    stepResults.push(
+      installStep(
+        t.refreshGlobalCapabilityInventory,
+        lastGlobalCapabilityInventoryResult,
+      ),
+    );
   }
-  console.log(`\n${C.bold}${C.green}✓ ${t.updateComplete}${C.reset}\n`);
+  let updateRuntimeSyncOk = true;
+  if (needProject) {
+    updateRuntimeSyncOk = checkSync(runtimes, activeTargets);
+    stepResults.push(installStep(t.syncHeading, updateRuntimeSyncOk));
+  }
+  stepResults.push(installStep(t.progressValidate, await validate()));
 
   // Copy runtime files to user-chosen project directories (if opted in earlier)
   if (deployDirs.length > 0) {
-    await copyToDeployDirs(activeTargets, deployDirs);
+    const deployResults = await copyToDeployDirs(activeTargets, deployDirs);
+    stepResults.push(
+      installStep(
+        t.projectDeployBatchHeading(deployDirs.length),
+        deployResults.length === deployDirs.length &&
+          deployResults.every((item) => item.status === "ok"),
+      ),
+    );
   }
+  const result = summarizeInstallStatus(stepResults);
+  if (result.status === "complete") {
+    console.log(`\n${C.bold}${C.green}✓ ${t.updateComplete}${C.reset}\n`);
+  } else {
+    printInstallResult(result, t.updateComplete);
+  }
+  return result;
 }
 
 async function runCheck() {

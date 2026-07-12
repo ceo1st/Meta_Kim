@@ -21,7 +21,7 @@ import { createReportContext } from "./report-context.mjs";
 export const STAGES = [
   { name: "discover:global", cmd: "npm run discover:global", timeoutMs: 120_000 },
   { name: "meta:check", cmd: "npm run meta:check", timeoutMs: 120_000 },
-  { name: "meta:verify:governance", cmd: "npm run meta:verify:governance", timeoutMs: 300_000 },
+  { name: "meta:verify:governance:core", cmd: "npm run meta:verify:governance:core", timeoutMs: 300_000 },
   { name: "meta:graphify:check", cmd: "npm run meta:graphify:check", timeoutMs: 60_000 },
   { name: "meta:check:global:release", cmd: "npm run meta:check:global:release", timeoutMs: 120_000 },
   { name: "eval-meta-agents", cmd: "node scripts/eval-meta-agents.mjs --require-all-runtimes", timeoutMs: 300_000 },
