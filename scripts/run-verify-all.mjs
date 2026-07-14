@@ -561,7 +561,7 @@ export function packedProductProofComplete(packedUserProof) {
     portableRuntime.portability?.status === "passed" &&
     portableRuntime.portability?.packExtractionDeletedBeforeTransport === true &&
     portableRuntime.portability?.tarballDeletedBeforeInstalledChecks === true &&
-    portableRuntime.portability?.installedCliCheckAfterSourceDeletion === true
+    portableRuntime.portability?.installedPackageChecksAfterSourceDeletion === true
   );
 }
 

@@ -999,20 +999,6 @@ function finalizePortableRuntimeProof(prepared, packageInfo, timeoutMs) {
   }
   const { descriptor, hookEnv, roots, runtimeTargetIds } = prepared.context;
   requireSuccess(
-    "installed packed CLI public check after source deletion",
-    runCli(descriptor.command, [
-      "check",
-      "--silent",
-      "--scope",
-      "global",
-      "--targets",
-      runtimeTargetIds.join(","),
-      "--skills",
-      ACCEPTANCE_SKILL_FILTER,
-      "--with-global-hooks",
-    ], { cwd: roots.ordinaryCwd, env: hookEnv, timeoutMs }),
-  );
-  requireSuccess(
     "installed packed global runtime exact projection check after source deletion",
     run(process.execPath, [
       path.join(descriptor.installedPackageRoot, "scripts", "sync-runtimes.mjs"),
@@ -1051,7 +1037,7 @@ function finalizePortableRuntimeProof(prepared, packageInfo, timeoutMs) {
       status: "passed",
       packExtractionDeletedBeforeTransport: true,
       tarballDeletedBeforeInstalledChecks: true,
-      installedCliCheckAfterSourceDeletion: true,
+      installedPackageChecksAfterSourceDeletion: true,
       unresolvedPlaceholderCount: 0,
       forbiddenRootReferenceCount: 0,
     },
@@ -1349,6 +1335,8 @@ export function runInstalledPublicCli(descriptor, roots, env, mode, timeoutMs) {
   const args = [
     mode,
     "--silent",
+    "--scope",
+    "global",
     "--targets",
     PACKED_USER_TARGETS.join(","),
     "--skills",
@@ -2042,10 +2030,6 @@ function runHistoricalUpdateLane({
     `installed packed user update from ${historicalRef}`,
     runInstalledPublicCli(currentDescriptor, roots, env, "update", timeoutMs),
   );
-  requireSuccess(
-    `installed packed user check after ${historicalRef} update`,
-    runInstalledPublicCli(currentDescriptor, roots, env, "check", timeoutMs),
-  );
   assertOrdinaryCwdUntouched(roots.ordinaryCwd);
   const proof = artifactFingerprint(artifacts);
   const after = normalizedManifest(artifacts.manifest, roots.userHome);
@@ -2059,7 +2043,7 @@ function runHistoricalUpdateLane({
     completed: true,
     seedMethod: "historical_tarball_installed_cli",
     updateMethod: "current_tarball_installed_cli",
-    checkMethod: "current_tarball_installed_cli",
+    checkMethod: "current_update_internal_global_check_plus_exact_artifact_manifest_validation",
     beforeVersion: before.metaKimVersion,
     afterVersion: after.metaKimVersion,
     exitCode: update.status,

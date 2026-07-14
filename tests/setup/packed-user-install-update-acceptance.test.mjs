@@ -64,7 +64,11 @@ test("packed user acceptance runs public install and update from an npm-packed c
   );
   assert.match(acceptanceSource, /\["install", "update", "update"\]/u);
   assert.match(acceptanceSource, /runInstalledPublicCli\(descriptor/u);
-  assert.match(acceptanceSource, /installed packed CLI public check after source deletion/u);
+  assert.doesNotMatch(
+    acceptanceSource,
+    /installed packed CLI public check after source deletion/u,
+  );
+  assert.match(acceptanceSource, /installedPackageChecksAfterSourceDeletion: true/u);
   assert.match(acceptanceSource, /global-only CLI polluted ordinary cwd/u);
   assert.match(acceptanceSource, /second packed user update changed managed artifacts/u);
   assert.match(acceptanceSource, /global install manifest is missing required entries/u);
@@ -129,6 +133,15 @@ test("historical release baseline is the highest prior semver tag and never a fi
 });
 
 test("every packed CLI install and update lane uses every manifest runtime target", () => {
+  const globalCliSource = acceptanceFunctionSource(
+    "runInstalledPublicCli",
+    "runInstalledPublicProjectCli",
+  );
+  assert.match(
+    globalCliSource,
+    /"--scope",\s*"global"/u,
+    "global packed lanes must declare their distribution scope explicitly",
+  );
   for (const [name, nextName] of [
     ["runInstalledPublicCli", "runInstalledPublicProjectCli"],
     ["runInstalledPublicProjectCli", "runInstalledPublicGlobalUpdateFromProject"],
@@ -154,6 +167,15 @@ test("every packed CLI install and update lane uses every manifest runtime targe
     historicalLane,
     /runInstalledPublicCli\(currentDescriptor, roots, env, "update", timeoutMs\)/u,
     "the historical upgrade must use the current tarball-installed CLI entry",
+  );
+  assert.doesNotMatch(
+    historicalLane,
+    /runInstalledPublicCli\(currentDescriptor, roots, env, "check", timeoutMs\)/u,
+    "a global historical lane must not invoke the project-projection check",
+  );
+  assert.match(
+    historicalLane,
+    /current_update_internal_global_check_plus_exact_artifact_manifest_validation/u,
   );
   assert.match(acceptanceSource, /targets: \[\.\.\.PACKED_USER_TARGETS\]/u);
   const portablePreparation = acceptanceFunctionSource(

@@ -78,7 +78,7 @@ function completePackedProductProof() {
           status: "passed",
           packExtractionDeletedBeforeTransport: true,
           tarballDeletedBeforeInstalledChecks: true,
-          installedCliCheckAfterSourceDeletion: true,
+          installedPackageChecksAfterSourceDeletion: true,
         },
       },
     },
