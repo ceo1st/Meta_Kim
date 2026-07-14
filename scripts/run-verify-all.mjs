@@ -544,7 +544,8 @@ export function packedProductProofComplete(packedUserProof) {
     historicalUpdate.beforeVersion !== historicalUpdate.afterVersion &&
     historicalUpdate?.seedMethod === "historical_tarball_installed_cli" &&
     historicalUpdate?.updateMethod === "current_tarball_installed_cli" &&
-    historicalUpdate?.checkMethod === "current_tarball_installed_cli" &&
+    historicalUpdate?.checkMethod ===
+      "current_update_internal_global_check_plus_exact_artifact_manifest_validation" &&
     portableRuntime?.status === "passed" &&
     portableRuntime.agentProjection?.status === "passed" &&
     portableRuntime.ownershipManifest?.status === "passed" &&

@@ -94,7 +94,7 @@ function completePackedProductProof() {
       afterVersion: "4.2.0",
       seedMethod: "historical_tarball_installed_cli",
       updateMethod: "current_tarball_installed_cli",
-      checkMethod: "current_tarball_installed_cli",
+      checkMethod: "current_update_internal_global_check_plus_exact_artifact_manifest_validation",
     },
   };
 }
