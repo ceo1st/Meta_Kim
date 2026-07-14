@@ -44,8 +44,30 @@ function expandPattern(pattern) {
     .map((entry) => dir + "/" + entry);
 }
 
-const patterns = process.argv.slice(2);
-const files = patterns.flatMap(expandPattern);
+function parsePatterns(argv) {
+  const include = [];
+  const exclude = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (value === "--exclude") {
+      if (!argv[index + 1]) throw new Error("--exclude requires a file or glob pattern");
+      exclude.push(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+    if (value.startsWith("--exclude=")) {
+      exclude.push(value.slice("--exclude=".length));
+      continue;
+    }
+    include.push(value);
+  }
+  return { include, exclude };
+}
+
+const patterns = parsePatterns(process.argv.slice(2));
+const excludedFiles = new Set(patterns.exclude.flatMap(expandPattern));
+const files = [...new Set(patterns.include.flatMap(expandPattern))]
+  .filter((file) => !excludedFiles.has(file));
 
 if (files.length === 0) {
   console.error("No test files matched.");

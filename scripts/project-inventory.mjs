@@ -33,7 +33,15 @@ export const TEST_SUITES = Object.freeze({
   setup: {
     prefix: "tests/setup/",
     packageScript: "meta:test:setup",
-    command: 'node scripts/run-node-tests.mjs "tests/setup/*.test.mjs"',
+    command:
+      'node scripts/run-node-tests.mjs "tests/setup/*.test.mjs" --exclude "tests/setup/global-runtime-bundle.test.mjs"',
+    excludePaths: ["tests/setup/global-runtime-bundle.test.mjs"],
+  },
+  setupPacked: {
+    paths: ["tests/setup/global-runtime-bundle.test.mjs"],
+    packageScript: "meta:test:setup:packed",
+    command:
+      'node scripts/run-node-tests.mjs "tests/setup/global-runtime-bundle.test.mjs"',
   },
   unit: {
     prefix: "tests/unit/",
@@ -69,7 +77,11 @@ export function classifyTrackedTests(trackedTests, suites = TEST_SUITES) {
   const unmatched = [];
   for (const testPath of trackedTests) {
     const suite = Object.entries(suites).find(([, definition]) =>
-      testPath.startsWith(definition.prefix),
+      definition.paths?.includes(testPath),
+    ) ?? Object.entries(suites).find(([, definition]) =>
+      definition.prefix &&
+      testPath.startsWith(definition.prefix) &&
+      !definition.excludePaths?.includes(testPath),
     );
     if (!suite) {
       unmatched.push(testPath);
