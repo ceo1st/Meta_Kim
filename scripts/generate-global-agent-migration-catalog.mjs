@@ -22,6 +22,7 @@ import {
 } from "./sync-runtimes.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+export const GENERATOR_OUTPUT_CLASS = "canonical_source";
 const catalogPath = path.join(
   repoRoot,
   "config",

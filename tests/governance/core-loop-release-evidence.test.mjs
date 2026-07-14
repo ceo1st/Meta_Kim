@@ -192,7 +192,6 @@ test("release verification path includes governance tests", () => {
     "meta:test:inventory",
     "meta:test:unit",
     "meta:test:setup",
-    "meta:test:setup:packed",
     "meta:test:meta-theory",
     "meta:test:integration",
   ]) {
@@ -211,16 +210,21 @@ test("release verification path includes governance tests", () => {
 test("release stages derive runtime targets and timeout budgets from canonical policy", () => {
   const syncManifest = JSON.parse(readFileSync("config/sync.json", "utf8"));
   assert.deepEqual(RELEASE_RUNTIME_TARGETS, syncManifest.supportedTargets);
-  const packedStage = STAGES.find((stage) => stage.name === "meta:test:setup:packed");
-  assert.equal(packedStage?.cmd, "npm run meta:test:setup:packed");
-  assert.ok(packedStage.timeoutMs > STAGES.find((stage) => stage.name === "meta:test:setup").timeoutMs);
+  const setupStage = STAGES.find((stage) => stage.name === "meta:test:setup");
+  assert.equal(setupStage?.cmd, "npm run meta:test:setup");
+  assert.ok(setupStage.timeoutMs > 0);
+  assert.equal(
+    STAGES.some((stage) => stage.name === "meta:test:setup:packed"),
+    false,
+    "the standard gate must not repeat the packed CLI acceptance preflight",
+  );
   const overridden = buildVerificationStages({
-    META_KIM_VERIFY_TIMEOUT_META_TEST_SETUP_PACKED_MS: "12345",
-  }).find((stage) => stage.name === "meta:test:setup:packed");
+    META_KIM_VERIFY_TIMEOUT_META_TEST_SETUP_MS: "12345",
+  }).find((stage) => stage.name === "meta:test:setup");
   assert.equal(overridden.timeoutMs, 12345);
   assert.throws(
     () => buildVerificationStages({
-      META_KIM_VERIFY_TIMEOUT_META_TEST_SETUP_PACKED_MS: "0",
+      META_KIM_VERIFY_TIMEOUT_META_TEST_SETUP_MS: "0",
     }),
     /must be a positive integer/u,
   );

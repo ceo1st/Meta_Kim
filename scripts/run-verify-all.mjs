@@ -101,7 +101,6 @@ const STANDARD_STAGE_COMMANDS = Object.freeze([
   ["meta:test:inventory", "npm run meta:test:inventory"],
   ["meta:test:unit", "npm run meta:test:unit"],
   ["meta:test:setup", "npm run meta:test:setup"],
-  ["meta:test:setup:packed", "npm run meta:test:setup:packed"],
   ["meta:test:meta-theory", "npm run meta:test:meta-theory"],
   ["meta:test:integration", "npm run meta:test:integration"],
 ]);
