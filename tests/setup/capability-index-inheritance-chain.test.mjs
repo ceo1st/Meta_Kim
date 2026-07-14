@@ -1,14 +1,19 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import {
+  checkCanonicalCapabilityIndex,
+  deriveCapabilityIndexMirrorTargets,
   formatTableOutput,
   mergeCanonicalHookSources,
   preserveGeneratedAtWhenUnchanged,
+  writeCanonicalCapabilityIndex,
 } from "../../scripts/discover-global-capabilities.mjs";
 import {
+  loadSyncManifest,
   repoRoot,
   resolveRuntimeProjection,
 } from "../../scripts/meta-kim-sync-config.mjs";
@@ -19,13 +24,6 @@ const canonicalIndexPath = path.join(
   "capability-index",
   "meta-kim-capabilities.json",
 );
-
-const mirrorIndexPaths = [
-  ".claude/capability-index/meta-kim-capabilities.json",
-  ".codex/capability-index/meta-kim-capabilities.json",
-  "openclaw/capability-index/meta-kim-capabilities.json",
-  ".cursor/capability-index/meta-kim-capabilities.json",
-].map((relativePath) => path.join(repoRoot, relativePath));
 
 async function readJson(relativePath) {
   return JSON.parse(await fs.readFile(path.join(repoRoot, relativePath), "utf8"));
@@ -261,6 +259,10 @@ describe("capability index inheritance chain", () => {
       return;
     }
 
+    const index = await readJson("config/capability-index/meta-kim-capabilities.json");
+    const mirrorIndexPaths = (index.mirroredTo ?? []).map((relativePath) =>
+      path.join(repoRoot, relativePath),
+    );
     const canonical = await fs.readFile(canonicalIndexPath, "utf8");
     for (const mirrorPath of mirrorIndexPaths) {
       try {
@@ -274,6 +276,115 @@ describe("capability index inheritance chain", () => {
         `${path.relative(repoRoot, mirrorPath).replace(/\\/g, "/")} must exactly mirror the canonical capability index`,
       );
     }
+  });
+
+  test("capability mirror metadata is derived from the sync manifest runtime layouts", async () => {
+    const manifest = await loadSyncManifest();
+    const actual = await deriveCapabilityIndexMirrorTargets({ manifest });
+    const fileName = path.basename(canonicalIndexPath);
+    const expected = manifest.supportedTargets.map((runtimeId) => {
+      const projection = resolveRuntimeProjection(runtimeId, "project");
+      return path
+        .relative(
+          repoRoot,
+          path.join(projection.capabilityIndexDir, fileName),
+        )
+        .replace(/\\/g, "/");
+    });
+
+    assert.deepEqual(actual, expected);
+    assert.equal(new Set(actual).size, actual.length);
+  });
+
+  test("discovery canonical writes never create, rewrite, or delete runtime mirrors", async () => {
+    const tempRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "meta-kim-capability-discovery-"),
+    );
+    try {
+      const manifest = await loadSyncManifest();
+      const mirroredTo = await deriveCapabilityIndexMirrorTargets({
+        projectRoot: tempRoot,
+        manifest,
+      });
+      const canonicalPath = path.join(
+        tempRoot,
+        "config",
+        "capability-index",
+        path.basename(canonicalIndexPath),
+      );
+      const sentinelMirrors = mirroredTo.filter((_, index) => index % 2 === 0);
+      const absentMirrors = mirroredTo.filter((_, index) => index % 2 === 1);
+
+      for (const relativePath of sentinelMirrors) {
+        const mirrorPath = path.join(tempRoot, relativePath);
+        await fs.mkdir(path.dirname(mirrorPath), { recursive: true });
+        await fs.writeFile(mirrorPath, `user-owned:${relativePath}\n`, "utf8");
+      }
+
+      const index = {
+        registryName: "test-capability-index",
+        mirroredTo,
+        byCapabilityType: {},
+      };
+      await writeCanonicalCapabilityIndex(canonicalPath, index);
+
+      assert.deepEqual(
+        JSON.parse(await fs.readFile(canonicalPath, "utf8")),
+        index,
+      );
+      for (const relativePath of sentinelMirrors) {
+        assert.equal(
+          await fs.readFile(path.join(tempRoot, relativePath), "utf8"),
+          `user-owned:${relativePath}\n`,
+        );
+      }
+      for (const relativePath of absentMirrors) {
+        await assert.rejects(
+          fs.access(path.join(tempRoot, relativePath)),
+          (error) => error?.code === "ENOENT",
+        );
+      }
+    } finally {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("canonical discovery check is read-only and detects stale content", async () => {
+    const tempRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "meta-kim-capability-check-"),
+    );
+    try {
+      const canonicalPath = path.join(tempRoot, "meta-kim-capabilities.json");
+      const current = {
+        generatedAt: "2026-07-14T00:00:00.000Z",
+        registryName: "test-capability-index",
+        mirroredTo: [],
+      };
+      await writeCanonicalCapabilityIndex(canonicalPath, current);
+
+      const matching = await checkCanonicalCapabilityIndex(canonicalPath, current);
+      assert.equal(matching.ok, true);
+
+      const staleExpected = { ...current, registryName: "changed-capability-index" };
+      const before = await fs.readFile(canonicalPath, "utf8");
+      const stale = await checkCanonicalCapabilityIndex(canonicalPath, staleExpected);
+      const after = await fs.readFile(canonicalPath, "utf8");
+      assert.equal(stale.ok, false);
+      assert.equal(after, before, "--check semantics must not rewrite canonical source");
+    } finally {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("global discovery leaves runtime mirror convergence to sync", async () => {
+    const source = await fs.readFile(
+      path.join(repoRoot, "scripts", "discover-global-capabilities.mjs"),
+      "utf8",
+    );
+
+    assert.match(source, /Project mirrors are generated by sync-runtimes\.mjs/);
+    assert.doesNotMatch(source, /platformIndexDirs/);
+    assert.doesNotMatch(source, /canonicalIndexMirrored\(/);
   });
 
   test("capability index covers every canonical agent and root skill", async () => {
@@ -417,17 +528,20 @@ describe("capability index inheritance chain", () => {
     );
   });
 
-  test("release verification refreshes global capability discovery before checks while live eval stays live-only", async () => {
+  test("release verification checks canonical discovery read-only before mirror sync", async () => {
     const pkg = await readJson("package.json");
     const releaseScript = await fs.readFile(
       path.join(repoRoot, "scripts", "run-verify-all.mjs"),
       "utf8",
     );
     assert.match(pkg.scripts?.["meta:verify:all"] ?? "", /run-verify-all\.mjs/);
-    assert.match(releaseScript, /npm run discover:global/);
+    assert.match(releaseScript, /npm run discover:global -- --check/u);
+    assert.match(releaseScript, /npm run meta:sync/u);
     assert.ok(
-      releaseScript.indexOf("npm run discover:global") < releaseScript.indexOf("npm run meta:check"),
-      "meta:verify:all must refresh capability indexes before validation checks",
+      releaseScript.indexOf("npm run discover:global -- --check") <
+        releaseScript.indexOf("npm run meta:sync") &&
+        releaseScript.indexOf("npm run meta:sync") < releaseScript.indexOf("npm run meta:check"),
+      "meta:verify:all must check canonical source read-only, sync mirrors, then validate",
     );
 
     const liveScript = pkg.scripts?.["meta:verify:all:live"] ?? "";
