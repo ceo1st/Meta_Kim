@@ -696,7 +696,7 @@ function seedPortableRuntimeUserState(
       mcpServers: {
         "user-owned-server": unknownServer,
         meta_kim_runtime: {
-          command: process.execPath,
+          command: path.basename(process.execPath),
           args: [path.join(legacyPackageRoot, "scripts", "mcp", "meta-runtime-server.mjs")],
         },
       },
