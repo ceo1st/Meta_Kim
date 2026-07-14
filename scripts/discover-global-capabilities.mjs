@@ -1643,7 +1643,11 @@ async function buildRuntimeActualCounts(capabilities) {
   };
 }
 
-async function buildGlobalCapabilityInventory(scannedResults, profile) {
+export async function buildGlobalCapabilityInventory(
+  scannedResults,
+  profile,
+  previousInventory = null,
+) {
   const index = {
     generatedAt: new Date().toISOString(),
     registryName: "global-capabilities",
@@ -1677,7 +1681,15 @@ async function buildGlobalCapabilityInventory(scannedResults, profile) {
     },
   };
 
-  for (const scan of scannedResults) {
+  const selectedPlatformIds = new Set(scannedResults.map((scan) => scan.platformId));
+  const retainedPlatformResults =
+    previousInventory?.profile === profile
+      ? Object.values(previousInventory.byPlatform ?? {}).filter(
+          (scan) => scan?.platformId && !selectedPlatformIds.has(scan.platformId),
+        )
+      : [];
+
+  for (const scan of [...retainedPlatformResults, ...scannedResults]) {
     index.byPlatform[scan.platformId] = scan;
 
     for (const [type, capabilities] of Object.entries(scan.capabilities)) {
@@ -2165,9 +2177,15 @@ async function main() {
         await readJsonIfExists(canonicalIndexPath),
       )
     : null;
+  const localInventoryPath = path.join(
+    profileState.profileDir,
+    "capability-index",
+    "global-capabilities.json",
+  );
   const globalInventory = await buildGlobalCapabilityInventory(
     scannedResults,
     profileState.profile,
+    await readJsonIfExists(localInventoryPath),
   );
 
   if (outputFormat === "json") {
@@ -2182,11 +2200,6 @@ async function main() {
     );
   }
 
-  const localInventoryPath = path.join(
-    profileState.profileDir,
-    "capability-index",
-    "global-capabilities.json",
-  );
   await fs.mkdir(path.dirname(localInventoryPath), { recursive: true });
   await fs.writeFile(
     localInventoryPath,

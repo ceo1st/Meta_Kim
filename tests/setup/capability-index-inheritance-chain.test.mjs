@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  buildGlobalCapabilityInventory,
   checkCanonicalCapabilityIndex,
   deriveCapabilityIndexMirrorTargets,
   formatTableOutput,
@@ -24,6 +25,24 @@ const canonicalIndexPath = path.join(
   "capability-index",
   "meta-kim-capabilities.json",
 );
+
+function platformScan(platformId, agentIds) {
+  return {
+    platformId,
+    capabilities: {
+      agents: agentIds.map((id) => ({ id, platformId })),
+      skills: [],
+      hooks: [],
+      mcpServers: [],
+      mcpTools: [],
+      plugins: [],
+      commands: [],
+      rules: [],
+      prompts: [],
+    },
+    errors: [],
+  };
+}
 
 async function readJson(relativePath) {
   return JSON.parse(await fs.readFile(path.join(repoRoot, relativePath), "utf8"));
@@ -229,6 +248,31 @@ describe("capability index inheritance chain", () => {
       /const platformsToScan = filterPlatform/,
       "global discovery must not use the old single-platform-only filter path",
     );
+  });
+
+  test("targeted global discovery refresh preserves unselected runtime inventories", async () => {
+    const initial = await buildGlobalCapabilityInventory(
+      [platformScan("claudeCode", ["claude-worker"])],
+      "default",
+    );
+    const withCodex = await buildGlobalCapabilityInventory(
+      [platformScan("codexApp", ["codex-worker"])],
+      "default",
+      initial,
+    );
+
+    assert.deepEqual(Object.keys(withCodex.byPlatform).sort(), ["claudeCode", "codexApp"]);
+    assert.ok(withCodex.byCapabilityType.agents["claudeCode:claude-worker"]);
+    assert.ok(withCodex.byCapabilityType.agents["codexApp:codex-worker"]);
+
+    const refreshedClaude = await buildGlobalCapabilityInventory(
+      [platformScan("claudeCode", ["claude-worker-v2"])],
+      "default",
+      withCodex,
+    );
+    assert.equal(refreshedClaude.byCapabilityType.agents["claudeCode:claude-worker"], undefined);
+    assert.ok(refreshedClaude.byCapabilityType.agents["claudeCode:claude-worker-v2"]);
+    assert.ok(refreshedClaude.byCapabilityType.agents["codexApp:codex-worker"]);
   });
 
   test("repo MCP discovery uses canonical runtime asset instead of project projection", async () => {
