@@ -15,6 +15,10 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  atomicWriteJson,
+  withFileLock,
+} from "../canonical/runtime-assets/shared/hooks/spine-state-utils.mjs";
+import {
   ensureProfileState,
   SHARED_RUNTIME_FAMILY,
 } from "./meta-kim-local-state.mjs";
@@ -1706,6 +1710,22 @@ export async function buildGlobalCapabilityInventory(
   return index;
 }
 
+export async function updateGlobalCapabilityInventory({
+  scannedResults,
+  profile,
+  localInventoryPath,
+}) {
+  return withFileLock(`${localInventoryPath}.lock`, async () => {
+    const inventory = await buildGlobalCapabilityInventory(
+      scannedResults,
+      profile,
+      await readJsonIfExists(localInventoryPath),
+    );
+    await atomicWriteJson(localInventoryPath, inventory);
+    return inventory;
+  });
+}
+
 // ========== 输出格式 ==========
 
 const META_KIM_HOOK_FILE_NAMES = new Set([
@@ -2182,11 +2202,11 @@ async function main() {
     "capability-index",
     "global-capabilities.json",
   );
-  const globalInventory = await buildGlobalCapabilityInventory(
+  const globalInventory = await updateGlobalCapabilityInventory({
     scannedResults,
-    profileState.profile,
-    await readJsonIfExists(localInventoryPath),
-  );
+    profile: profileState.profile,
+    localInventoryPath,
+  });
 
   if (outputFormat === "json") {
     console.log(JSON.stringify(globalInventory, null, 2));
@@ -2199,12 +2219,6 @@ async function main() {
       }),
     );
   }
-
-  await fs.mkdir(path.dirname(localInventoryPath), { recursive: true });
-  await fs.writeFile(
-    localInventoryPath,
-    `${JSON.stringify(globalInventory, null, 2)}\n`,
-  );
 
   if (writeCanonicalIndex) {
     // Discovery owns the canonical index and local runtime inventory only.

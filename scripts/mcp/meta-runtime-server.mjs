@@ -244,6 +244,7 @@ if (process.argv.includes("--self-test")) {
         ok: true,
         agentCount: runtimeData.agents.length,
         agentIds: runtimeData.agents.map((agent) => agent.id),
+        agentSources: runtimeData.agents.map((agent) => agent.sourceFile),
         resources: [
           "meta://theory",
           "meta://runtime-matrix",

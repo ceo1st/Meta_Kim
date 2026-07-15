@@ -11,6 +11,7 @@ import {
   formatTableOutput,
   mergeCanonicalHookSources,
   preserveGeneratedAtWhenUnchanged,
+  updateGlobalCapabilityInventory,
   writeCanonicalCapabilityIndex,
 } from "../../scripts/discover-global-capabilities.mjs";
 import {
@@ -273,6 +274,34 @@ describe("capability index inheritance chain", () => {
     assert.equal(refreshedClaude.byCapabilityType.agents["claudeCode:claude-worker"], undefined);
     assert.ok(refreshedClaude.byCapabilityType.agents["claudeCode:claude-worker-v2"]);
     assert.ok(refreshedClaude.byCapabilityType.agents["codexApp:codex-worker"]);
+  });
+
+  test("concurrent targeted refreshes publish complete JSON without losing another runtime", async () => {
+    const tempRoot = await fs.mkdtemp(
+      path.join(os.tmpdir(), "meta-kim-capability-inventory-race-"),
+    );
+    const inventoryPath = path.join(tempRoot, "global-capabilities.json");
+    try {
+      await Promise.all([
+        updateGlobalCapabilityInventory({
+          scannedResults: [platformScan("claudeCode", ["claude-worker"])],
+          profile: "concurrency-test",
+          localInventoryPath: inventoryPath,
+        }),
+        updateGlobalCapabilityInventory({
+          scannedResults: [platformScan("codexApp", ["codex-worker"])],
+          profile: "concurrency-test",
+          localInventoryPath: inventoryPath,
+        }),
+      ]);
+
+      const inventory = JSON.parse(await fs.readFile(inventoryPath, "utf8"));
+      assert.deepEqual(Object.keys(inventory.byPlatform).sort(), ["claudeCode", "codexApp"]);
+      assert.ok(inventory.byCapabilityType.agents["claudeCode:claude-worker"]);
+      assert.ok(inventory.byCapabilityType.agents["codexApp:codex-worker"]);
+    } finally {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
   });
 
   test("repo MCP discovery uses canonical runtime asset instead of project projection", async () => {
