@@ -8,6 +8,28 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## Unreleased
 
+## [2.8.87] - 2026-07-15
+
+### Solved Problem
+
+Global runtime installation, update, and cleanup still depended on fixed assumptions about runtime profiles, historical Agent paths, package locations, and prior release versions. Those assumptions could make a valid future runtime profile fail, leave obsolete projections behind, or mistake a plausible path for an actually owned asset. Codex configuration changes were safe to retain when ownership was uncertain, but they were not yet recorded as an exact reversible delta. The bundled MCP runtime could also return structurally valid placeholder resources instead of proving that its capability matrix, Agents, and Meta-Theory guidance came from the installed package. Separately, setup and test subprocesses could pollute real user inventory state, while packed release verification still mixed repository-source evidence with installed-product truth and fixed historical baselines.
+
+### Fixed
+
+- **Runtime projection and migration are now source-driven.** Runtime profiles declare their own projection outputs, renderers, and retirement boundaries. Historical Agent fingerprints are generated from repository history in a canonical migration catalog instead of being maintained as fixed path or Agent lists, and unknown future profile shapes fail closed.
+- **Install ownership is exact and reversible.** Manifest policy binds category, source, runtime, asset type, purpose, and path before cleanup is allowed. Codex `config.toml` changes record only the real byte-preserving mutation delta, retain comments and line endings, use atomic compare-and-swap writes, and can be inverted without removing unrelated user edits. Drift, ambiguous TOML, symlink escapes, forged purposes, and legacy command-only ownership records are preserved or blocked rather than guessed.
+- **MCP runtime truth comes from the installed package.** Global sync installs a versioned durable bundle with exact package identity and layout checks. The server validates and serves the full runtime capability matrix plus canonical Agent and Meta-Theory resources from that package; transport acceptance rejects placeholder, partial, duplicated, empty, or out-of-package payloads. Runtime startup no longer depends on the source checkout, `npx`, or ambient `PATH`.
+- **Discovery and local state no longer leak across runtimes or tests.** Claude and Codex share an intentional runtime-family inventory profile without colliding through incidental entrypoint names. Targeted refreshes preserve unselected runtime inventories, concurrent refreshes use locked atomic publication, Setup owns one final inventory refresh, subprocess tests use isolated user homes, and the new project-registry repair command removes only exact missing temporary-project records with dry-run and backup safeguards.
+- **Global cleanup follows declared ownership instead of plausible paths.** `global_only` retirement, OpenClaw workspace selection, Memory Hook assets, durable MCP bundles, Agents, Skills, Commands, Hooks, and capability indexes all use profile- or contract-derived allowlists with most-specific matching. Unknown files, user drift, runtime-sedimented project copies, and third-party configuration remain untouched.
+- **Release verification now proves the packed product dynamically.** The isolated installed tarball runs real install, update, repeated-update, project, MCP, and historical-upgrade paths. The prior stable baseline is selected from repository tags instead of a fixed version, timeouts come from a release policy contract, slow packed acceptance has its own lane, and missing history fails release-grade verification unless an explicit diagnostic-only override is used.
+- **Release tests now show real progress without duplicate packed CLI work.** The Node test runner streams child output, derives fast versus subprocess-heavy setup groups from imports instead of fixed file lists, and keeps packed CLI acceptance in the release preflight rather than repeating it inside the standard setup stage.
+
+### Verification
+
+- Focused suites for Codex TOML planning and inversion, manifest and uninstall safety, MCP package/resource contracts, global Agent migration, project-registry isolation, setup orchestration, and packed-package boundaries passed during implementation.
+- One complete `npm run meta:verify:all` run passed all `13/13` standard release-grade stages with `releaseGrade=true`, `packedProductProofComplete=true`, and a stable source snapshot. The Meta-Theory stage completed with 1,190 tests, 1,185 passed, 0 failed, and 5 skipped.
+- Optional private-attested `live-certified` verification was not requested and remains separate from the standard release gate.
+
 ## [2.8.86] - 2026-07-14
 
 ### Solved Problem
