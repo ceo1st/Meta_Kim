@@ -164,6 +164,32 @@ function isStrictLegacyMetaKimMcpDefinition(definition, legacyScriptSuffix) {
   return isAbsolute && normalizedArg.endsWith(`/${normalizedSuffix}`);
 }
 
+function isExactWindowsCmdWrapperOf(definition, expectedDefinition) {
+  if (!isPlainObject(definition) || !isPlainObject(expectedDefinition)) return false;
+  if (definition.type !== undefined && definition.type !== expectedDefinition.type) return false;
+  if (!isPlainObject(definition.env) || !isPlainObject(expectedDefinition.env)) return false;
+  if (mcpDefinitionFingerprint(definition.env) !== mcpDefinitionFingerprint(expectedDefinition.env)) {
+    return false;
+  }
+  if (!Array.isArray(definition.args) || !Array.isArray(expectedDefinition.args)) return false;
+
+  const commandBase = path.win32.basename(String(definition.command ?? "")).toLowerCase();
+  if (commandBase !== "cmd" && commandBase !== "cmd.exe") return false;
+
+  const args = [...definition.args];
+  const seenFlags = new Set();
+  while (/^\/(?:d|s)$/iu.test(args[0] ?? "")) {
+    const flag = args.shift().toLowerCase();
+    if (seenFlags.has(flag)) return false;
+    seenFlags.add(flag);
+  }
+  if (!/^\/c$/iu.test(args.shift() ?? "")) return false;
+
+  return args.length === expectedDefinition.args.length + 1 &&
+    args[0] === expectedDefinition.command &&
+    args.slice(1).every((value, index) => value === expectedDefinition.args[index]);
+}
+
 export function mergeClaudeUserMcpConfig(base, {
   canonicalName,
   portableDefinition,
@@ -178,21 +204,32 @@ export function mergeClaudeUserMcpConfig(base, {
   const next = structuredClone(base);
   next.mcpServers = { ...(base.mcpServers ?? {}) };
   const collisions = [];
+  let canonicalEquivalent = false;
   for (const alias of legacyMetaKimMcpAliases(canonicalName)) {
     if (!Object.hasOwn(next.mcpServers, alias)) continue;
     const existing = next.mcpServers[alias];
     const fingerprint = isPlainObject(existing) ? mcpDefinitionFingerprint(existing) : null;
+    const exactWindowsWrapper = alias === canonicalName &&
+      isExactWindowsCmdWrapperOf(existing, portableDefinition);
     const proven = alias === canonicalName
-      ? fingerprint === mcpDefinitionFingerprint(portableDefinition) || managedFingerprints.has(fingerprint)
+      ? fingerprint === mcpDefinitionFingerprint(portableDefinition) ||
+        managedFingerprints.has(fingerprint) ||
+        exactWindowsWrapper
       : isStrictLegacyMetaKimMcpDefinition(existing, legacyScriptSuffix);
     if (!proven) {
       collisions.push(alias);
       continue;
     }
+    if (exactWindowsWrapper) {
+      canonicalEquivalent = true;
+      continue;
+    }
     delete next.mcpServers[alias];
   }
-  if (collisions.length === 0) next.mcpServers[canonicalName] = structuredClone(portableDefinition);
-  return { config: next, collisions };
+  if (collisions.length === 0 && !canonicalEquivalent) {
+    next.mcpServers[canonicalName] = structuredClone(portableDefinition);
+  }
+  return { config: next, collisions, canonicalEquivalent };
 }
 
 export function removeExactManagedMcpFragment(base, name, expectedFingerprint) {

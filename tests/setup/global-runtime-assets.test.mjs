@@ -171,6 +171,33 @@ test("MCP merge migrates proven legacy entry and preserves unrelated config", ()
   assert.equal(wrappedLegacy.config.mcpServers.meta_kim_runtime, undefined);
   assert.deepEqual(wrappedLegacy.config.mcpServers["meta-kim-runtime"], portable);
 
+  const wrappedCurrentDefinition = {
+    type: portable.type,
+    command: "cmd",
+    args: ["/c", portable.command, ...portable.args],
+    env: {},
+  };
+  const wrappedCurrent = mergeClaudeUserMcpConfig({
+    auth: { retained: true },
+    mcpServers: {
+      user: { command: "user-tool", env: { TOKEN: "preserve" } },
+      "meta-kim-runtime": wrappedCurrentDefinition,
+    },
+  }, {
+    canonicalName: "meta-kim-runtime",
+    portableDefinition: portable,
+    identity: PACKAGE_IDENTITY,
+    legacyScriptSuffix: LEGACY_MCP_SUFFIX,
+  });
+  assert.deepEqual(wrappedCurrent.collisions, []);
+  assert.equal(wrappedCurrent.config.auth.retained, true);
+  assert.equal(wrappedCurrent.config.mcpServers.user.env.TOKEN, "preserve");
+  assert.equal(wrappedCurrent.canonicalEquivalent, true);
+  assert.deepEqual(
+    wrappedCurrent.config.mcpServers["meta-kim-runtime"],
+    wrappedCurrentDefinition,
+  );
+
   const fingerprint = mcpDefinitionFingerprint(portable);
   const removed = removeExactManagedMcpFragment(result.config, "meta-kim-runtime", fingerprint);
   assert.equal(removed.removed, true);
@@ -211,6 +238,22 @@ test("MCP merge blocks non-plain maps, unknown canonical collisions, and loose l
         args,
       } } }, options).collisions,
       ["meta_kim_runtime"],
+    );
+  }
+
+  for (const args of [
+    ["/c", portable.command, ...portable.args, "--extra"],
+    ["/c", portable.command, `${portable.args[0]}.user-change`, ...portable.args.slice(1)],
+    ["/c", `${portable.command} ${portable.args.join(" ")}`],
+  ]) {
+    assert.deepEqual(
+      mergeClaudeUserMcpConfig({ mcpServers: { "meta-kim-runtime": {
+        type: portable.type,
+        command: "cmd.exe",
+        args,
+        env: {},
+      } } }, options).collisions,
+      ["meta-kim-runtime"],
     );
   }
 });

@@ -8,6 +8,27 @@
 
 ## Unreleased
 
+## [2.8.88] - 2026-07-16
+
+### 解决的问题
+
+跨运行时的 dispatch Hook 仍把普通本地文件与命令工具当成阶段推进器。用户只是让 Meta_Kim 修改业务文件，也可能因为当前处于 Fetch、Thinking 或其他治理阶段而被拦截或警告；严重时连修复状态的命令本身也会被拦住，形成自锁。但这个 Hook 真正需要治理的是 Agent dispatch，而不是普通项目操作。另一方面，Windows 上的 Claude Code 会把 Meta_Kim 持久 MCP 的精确启动命令规范化为等价的 `cmd /c` 形式。全局安装与更新因此把 Meta_Kim 自己的条目误判为“用户未归属冲突”，无法完成 Claude 用户级全局安装。
+
+### 修复内容
+
+- **`enforce-agent-dispatch` 不再按阶段限制普通项目操作。** 本地文件修改和命令执行不再因为 Meta_Kim 当前阶段而被拒绝或警告。Agent dispatch 治理、明确的只读查询承诺，以及由运行时可信注入的 meta-agent 只读边界仍然保留。
+- **历史 dispatch 记录不再冒充当前调用者。** dispatch chain 里曾经出现过 meta-agent，不会再把主线程后续业务文件修改误认成 meta-agent 写入，也不会产生假警告。
+- **Claude 的精确 Windows MCP 包装形式会被识别为 Meta_Kim 自有条目。** 安装器只接受对预期可执行文件与参数进行精确包装的 `cmd`/`cmd.exe`；额外参数、路径变化、拼接命令、环境漂移和未知相似项仍按用户冲突保护。
+- **Claude 全局安装与清理 ownership 保持精确。** 检查和同步会保留等价包装形式，安装清单记录实际注册条目的指纹，后续更新或清理只处理 Meta_Kim 自己的片段，不会认领整份 `.claude.json`。
+- **真实打包生命周期覆盖 Claude 规范化行为。** 打包后的全局安装测试会把注册项改写为 Claude 的包装形式，验证检查与同步幂等、清单指纹一致，并证明无关用户配置不受影响。
+
+### 验证
+
+- Hook、阶段运行时、Claude 全局资产和打包运行时生命周期的聚焦回归全部通过，包含未知冲突拒绝、meta-agent 边界和只读查询边界。
+- Claude 用户级 Agent、Skill、Hook、settings 注册、commands、持久 MCP bundle 与安装清单已同步；全目标全局发布检查通过。
+- 一次不中断的 `npm run meta:verify:all` 完整通过全部 `13/13` 个标准发布级阶段，`releaseGrade=true`；Graphify 新鲜度与差异格式检查也通过。
+- 可选的私有签名 `live-certified` 验证未请求，它与标准发布门禁保持独立。
+
 ## [2.8.87] - 2026-07-15
 
 ### 解决的问题

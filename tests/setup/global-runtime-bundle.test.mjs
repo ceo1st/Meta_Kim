@@ -113,6 +113,17 @@ function runGlobalSync(workspace, runtime, extraEnv = {}) {
   );
 }
 
+function runGlobalCheck(workspace, runtime) {
+  return run(
+    process.execPath,
+    [path.join(workspace, "scripts", "sync-global-meta-theory.mjs"), "--check", "--targets", "claude"],
+    {
+      cwd: runtime.userHome,
+      env: runtime.env,
+    },
+  );
+}
+
 function sha256(content) {
   return createHash("sha256").update(content).digest("hex");
 }
@@ -296,6 +307,26 @@ function verifySuccessfulDurableBundleLifecycle() {
       firstBackups,
       "idempotent sync must not displace an already exact bundle into backups",
     );
+
+    const wrappedServer = {
+      ...server,
+      command: "cmd",
+      args: ["/c", server.command, ...server.args],
+    };
+    const wrappedConfig = JSON.parse(firstConfigRaw);
+    wrappedConfig.mcpServers["meta-kim-runtime"] = wrappedServer;
+    const wrappedConfigRaw = `${JSON.stringify(wrappedConfig, null, 2)}\n`;
+    writeFileSync(runtime.claudeConfig, wrappedConfigRaw, "utf8");
+    requireSuccess(
+      "Claude-normalized exact Windows wrapper check",
+      runGlobalCheck(candidate.workspace, runtime),
+    );
+    requireSuccess(
+      "Claude-normalized exact Windows wrapper sync",
+      runGlobalSync(candidate.workspace, runtime),
+    );
+    assert.equal(readFileSync(runtime.claudeConfig, "utf8"), wrappedConfigRaw);
+    assertManifestIdentity(runtime, layout, wrappedServer);
 
     const unknownBundleFile = path.join(layout.bundleDir, "user-added-runtime-file.txt");
     writeFileSync(unknownBundleFile, "preserve\n", "utf8");

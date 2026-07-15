@@ -941,11 +941,12 @@ async function syncClaudeUserMcp(plan) {
     }
     await writeUtf8FileAtomic(plan.configPath, promotedRaw, "claude-user-mcp");
   }
+  const registeredDefinition = merged.config.mcpServers?.[plan.name];
   recordSafe((rec) => rec.recordMcpServer(plan.configPath, plan.name, {
     source: "sync-global-meta-theory",
     purpose: "claude-global-mcp",
     category: CATEGORIES.C,
-    fingerprint: mcpDefinitionFingerprint(plan.definition),
+    fingerprint: mcpDefinitionFingerprint(registeredDefinition),
   }));
 }
 

@@ -8,6 +8,27 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## Unreleased
 
+## [2.8.88] - 2026-07-16
+
+### Solved Problem
+
+The cross-runtime dispatch Hook still treated ordinary local file and command tools as stage-transition drivers. A user could therefore ask Meta_Kim to edit a normal business file, but the Hook would block or warn because Fetch, Thinking, or another governance stage was active—even though Agent dispatch is the behavior the Hook is meant to govern. This could create a self-lock where even the state repair command was intercepted. Separately, Claude Code on Windows can normalize Meta_Kim's exact durable MCP launch command into an equivalent `cmd /c` form. Global install and update then misclassified Meta_Kim's own entry as an unowned user collision and refused to finish the required Claude user-level installation.
+
+### Fixed
+
+- **Ordinary project work is no longer stage-gated by `enforce-agent-dispatch`.** Local file edits and commands now proceed without stage-based denial or warning. The Hook still governs Agent dispatch, keeps explicit query-only runs read-only, and preserves the trusted runtime-injected meta-agent read-only boundary.
+- **Historical dispatch records can no longer impersonate the current caller.** A prior meta-agent entry in the dispatch chain does not turn later main-thread business edits into meta-agent mutations or produce false warnings.
+- **Claude's exact Windows MCP wrapper is recognized as Meta_Kim-owned.** The installer accepts only an exact `cmd`/`cmd.exe` wrapper around the expected executable and arguments. Extra flags, changed paths, joined command strings, environment drift, and unknown lookalikes remain protected collisions.
+- **Claude global install and cleanup ownership stay exact.** Check and sync preserve the equivalent wrapper, while the install manifest records the fingerprint of the definition that is actually registered. Future update and cleanup can therefore act on Meta_Kim's fragment without claiming the rest of `.claude.json`.
+- **Packed lifecycle coverage now includes Claude normalization.** The packed global install test rewrites the registration into Claude's wrapper form, proves check and sync idempotence, verifies the real manifest fingerprint, and keeps unrelated user configuration untouched.
+
+### Verification
+
+- Focused Hook, stage-runtime, Claude global asset, and packed runtime lifecycle regressions passed, including negative collision cases and the retained meta-agent/query-only safety boundaries.
+- Claude user-level Agent, Skill, Hook, settings registration, commands, durable MCP bundle, and install manifest were synchronized; the all-target global release check passed.
+- One uninterrupted `npm run meta:verify:all` run passed all `13/13` standard release-grade stages with `releaseGrade=true`; Graphify freshness and diff hygiene also passed.
+- Optional private-attested `live-certified` verification was not requested and remains separate from the standard release gate.
+
 ## [2.8.87] - 2026-07-15
 
 ### Solved Problem
