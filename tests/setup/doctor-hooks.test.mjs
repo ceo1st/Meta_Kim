@@ -11,9 +11,77 @@ import {
   findProjectSettings,
   projectRootFromArgs,
   removeZombies,
+  rewriteHookToDirectSpawn,
   resolveHookTargetPath,
   scanSettingsFile,
 } from "../../scripts/doctor-hooks.mjs";
+
+describe("rewriteHookToDirectSpawn()", () => {
+  test("rewrites a graphify Windows shell-form hook into command + args", () => {
+    const hook = {
+      type: "command",
+      command: String.raw`C:\Users\Kim\Python\Scripts\graphify.EXE hook-guard read`,
+    };
+    const next = rewriteHookToDirectSpawn(hook, "win32");
+    assert.deepEqual(next, {
+      type: "command",
+      command: String.raw`C:\Users\Kim\Python\Scripts\graphify.EXE`,
+      args: ["hook-guard", "read"],
+    });
+  });
+
+  test("rewrites a UNC graphify path into command + args", () => {
+    const hook = {
+      type: "command",
+      command: String.raw`\\server\share\graphify.EXE hook-guard search`,
+    };
+    const next = rewriteHookToDirectSpawn(hook, "win32");
+    assert.equal(next.command, String.raw`\\server\share\graphify.EXE`);
+    assert.deepEqual(next.args, ["hook-guard", "search"]);
+  });
+
+  test("leaves safe forms untouched", () => {
+    const safe = [
+      "C:/Users/Kim/Python/Scripts/graphify.EXE hook-guard read",
+      String.raw`"C:\Users\Kim\Python\Scripts\graphify.EXE" hook-guard read`,
+      "graphify hook-guard read",
+    ];
+    for (const command of safe) {
+      assert.equal(
+        rewriteHookToDirectSpawn({ type: "command", command }, "win32"),
+        null,
+      );
+    }
+    assert.equal(
+      rewriteHookToDirectSpawn(
+        {
+          type: "command",
+          command: String.raw`C:\Users\Kim\Python\Scripts\graphify.EXE`,
+          args: ["hook-guard", "read"],
+        },
+        "win32",
+      ),
+      null,
+    );
+  });
+
+  test("leaves non-graphify shell-form hooks untouched", () => {
+    const hook = {
+      type: "command",
+      command: String.raw`C:\Users\Kim\bin\other-tool.EXE run`,
+    };
+    assert.equal(rewriteHookToDirectSpawn(hook, "win32"), null);
+  });
+
+  test("is a no-op outside win32", () => {
+    const hook = {
+      type: "command",
+      command: String.raw`C:\Users\Kim\Python\Scripts\graphify.EXE hook-guard read`,
+    };
+    assert.equal(rewriteHookToDirectSpawn(hook, "linux"), null);
+    assert.equal(rewriteHookToDirectSpawn(hook, "darwin"), null);
+  });
+});
 
 function withTempProject(run) {
   const root = mkdtempSync(path.join(tmpdir(), "meta-kim-hook-doctor-"));

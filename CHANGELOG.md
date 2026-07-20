@@ -8,6 +8,22 @@ The changelog explains the user-facing problem or risk each release solved, what
 
 ## Unreleased
 
+## [2.8.90] - 2026-07-21
+
+### Solved Problem
+
+graphify's upstream installer writes Windows shell-form hook commands (`C:\Users\<user>\...\graphify.EXE hook-guard read`) into the project `.claude/settings.json`. Claude Code runs shell-form hooks through Git Bash, which consumes those backslashes as escapes and collapses the path to something like `C:UsersKim...graphify.EXE`, so every `Read`, `Glob`, and `Bash` tool call logged a non-blocking `command not found`. The Meta_Kim hook doctor could already diagnose this as a `windows_shell_backslash_path` incompatibility, but only as a diagnostic — the install and update flows kept regenerating the broken command, so anyone who cloned the repo on Windows hit the same noise on every fresh install.
+
+### Fixed
+
+- **graphify hook commands are repaired at install time, not just diagnosed.** After `graphify hook install` runs, both the setup flow (`setup.mjs`) and the `meta:graphify:install` / `meta:graphify:update` flows rewrite the Windows shell-form graphify command into the direct-spawn `command` + `args` form (for example `command: "C:\\...\\graphify.EXE"`, `args: ["hook-guard", "read"]`). Direct-spawn hooks bypass the Bash boundary, so the executable path survives verbatim. The repair is Windows-only, idempotent, writes a timestamped backup before changing anything, and only touches graphify-injected commands — unrelated user hooks are preserved for explicit review.
+
+### Verification
+
+- New `rewriteHookToDirectSpawn` unit tests (in `doctor-hooks`) cover drive-letter and UNC shell-form rewrites, safe-form passthrough (forward slashes, quoted, already-split `args`, bare `graphify`), non-graphify preservation, and non-win32 no-op.
+- New `sanitizeGraphifyWindowsHooks` unit tests cover the file round-trip, non-win32 no-op, idempotency, backup creation, missing-file handling, non-graphify preservation, and permissions/sibling-hook preservation.
+- Full `npm run meta:test:setup` passed with 409 tests, 0 failures.
+
 ## [2.8.89] - 2026-07-16
 
 ### Solved Problem

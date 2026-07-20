@@ -392,6 +392,35 @@ export function detectHookCommandIncompatibility(
   };
 }
 
+/**
+ * Rewrite a Windows shell-form hook that Git Bash would mangle into the
+ * direct-spawn `command` + `args` form. Direct-spawn hooks bypass Bash, so the
+ * backslashes in the executable path survive verbatim instead of being parsed
+ * as escapes. Pure transform only: it never writes files, and it acts solely
+ * on graphify-injected commands (the ones Meta_Kim's own install flow emits),
+ * leaving unrelated user hooks untouched for explicit review.
+ *
+ * Returns the rewritten hook object, or null when the hook is not a graphify
+ * Windows shell-form command that needs rewriting.
+ */
+export function rewriteHookToDirectSpawn(hook, runtimePlatform = platform()) {
+  if (
+    runtimePlatform !== "win32" ||
+    !hook ||
+    typeof hook !== "object" ||
+    typeof hook.command !== "string" ||
+    Object.hasOwn(hook, "args")
+  ) {
+    return null;
+  }
+  if (!detectHookCommandIncompatibility(hook, runtimePlatform)) return null;
+  if (!/graphify/i.test(hook.command)) return null;
+  const tokens = parseCommandTokens(hook.command.trim());
+  if (tokens.length < 2) return null;
+  const { type = "command" } = hook;
+  return { type, command: tokens[0], args: tokens.slice(1) };
+}
+
 export function settingsProjectRoot(settingsPath) {
   const settingsDir = path.dirname(path.resolve(settingsPath));
   return path.basename(settingsDir).toLowerCase() === ".claude"

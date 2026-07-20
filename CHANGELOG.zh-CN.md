@@ -8,6 +8,22 @@
 
 ## Unreleased
 
+## [2.8.90] - 2026-07-21
+
+### 解决的问题
+
+graphify 上游安装器会把 Windows shell 形式的 hook 命令（`C:\Users\<用户>\...\graphify.EXE hook-guard read`）写进项目 `.claude/settings.json`。Claude Code 在 Windows 上用 Git Bash 跑 shell 形式 hook，反斜杠被当成转义字符吞掉，路径塌成类似 `C:UsersKim...graphify.EXE`，于是每次 `Read`、`Glob`、`Bash` 工具调用都会刷一条 non-blocking 的 `command not found`。Meta_Kim 的 hook 体检已经能把它诊断为 `windows_shell_backslash_path` 不兼容，但只是诊断——安装和更新流程每次还会重新生成那条坏命令，所以在 Windows 上 clone 仓库的人每次全新安装都会撞上同样的报错。
+
+### 修复内容
+
+- **graphify hook 命令在安装时就被修好，而不是只被诊断。** `graphify hook install` 跑完后，setup 流程（`setup.mjs`）和 `meta:graphify:install` / `meta:graphify:update` 流程都会把 Windows shell 形式的 graphify 命令改写成 direct-spawn 的 `command` + `args` 形式（例如 `command: "C:\\...\\graphify.EXE"`，`args: ["hook-guard", "read"]`）。direct-spawn hook 不经过 Bash，可执行文件路径原样保留。修复只在 Windows 生效，幂等，改写前写带时间戳的备份，并且只动 graphify 注入的命令——其他用户 hook 保持原样，等用户自己处理。
+
+### 验证
+
+- 新增 `rewriteHookToDirectSpawn` 单测（在 `doctor-hooks`）覆盖盘符和 UNC 路径改写、安全形式放行（正斜杠、引号包裹、已拆 `args`、裸 `graphify`）、非 graphify 命令保留、非 win32 不处理。
+- 新增 `sanitizeGraphifyWindowsHooks` 单测覆盖文件读写往返、非 win32 不处理、幂等、备份生成、文件缺失、非 graphify 保留、权限和同组 hook 保留。
+- 完整 `npm run meta:test:setup` 通过，409 个测试，0 失败。
+
 ## [2.8.89] - 2026-07-16
 
 ### 解决的问题
