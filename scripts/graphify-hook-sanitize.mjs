@@ -1,9 +1,15 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 
 import { rewriteHookToDirectSpawn } from "./doctor-hooks.mjs";
 
-function isoStamp() {
-  return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+function isoStamp(now = new Date()) {
+  return now.toISOString().replace(/[:.]/g, "-");
 }
 
 /**
@@ -17,26 +23,43 @@ function isoStamp() {
  * No-op outside win32. Backs up the original file before any write. Idempotent.
  *
  * @param {string} settingsPath Absolute path to a settings.json file.
- * @param {{ platform?: string }} [options]
+ * @param {{
+ *   platform?: string,
+ *   exists?: typeof existsSync,
+ *   readFile?: typeof readFileSync,
+ *   writeFile?: typeof writeFileSync,
+ *   renameFile?: typeof renameSync,
+ *   removeFile?: typeof unlinkSync,
+ *   now?: Date,
+ * }} [options]
  * @returns {{ changed: boolean, count: number, path: string | null, backup?: string }}
  */
 export function sanitizeGraphifyWindowsHooks(settingsPath, options = {}) {
   const runtimePlatform = options.platform ?? process.platform;
+  const fileExists = options.exists ?? existsSync;
+  const readFile = options.readFile ?? readFileSync;
+  const writeFile = options.writeFile ?? writeFileSync;
+  const renameFile = options.renameFile ?? renameSync;
+  const removeFile = options.removeFile ?? unlinkSync;
   const base = { changed: false, count: 0, path: settingsPath ?? null };
   if (runtimePlatform !== "win32") return base;
-  if (!settingsPath || !existsSync(settingsPath)) return base;
+  if (!settingsPath || !fileExists(settingsPath)) return base;
 
   let raw;
   try {
-    raw = readFileSync(settingsPath, "utf8");
-  } catch {
-    return base;
+    raw = readFile(settingsPath, "utf8");
+  } catch (error) {
+    throw new Error(`Unable to read Graphify hook settings at ${settingsPath}: ${error.message}`, {
+      cause: error,
+    });
   }
   let parsed;
   try {
     parsed = JSON.parse(raw);
-  } catch {
-    return base;
+  } catch (error) {
+    throw new Error(`Unable to parse Graphify hook settings at ${settingsPath}: ${error.message}`, {
+      cause: error,
+    });
   }
 
   let count = 0;
@@ -57,13 +80,32 @@ export function sanitizeGraphifyWindowsHooks(settingsPath, options = {}) {
 
   if (count === 0) return base;
 
-  const backup = `${settingsPath}.backup-${isoStamp()}`;
+  const stamp = isoStamp(options.now);
+  const backup = `${settingsPath}.backup-${stamp}-graphify`;
+  const temporary = `${settingsPath}.tmp-${stamp}-${process.pid}`;
   try {
-    writeFileSync(backup, raw, "utf8");
-  } catch {
-    // Best-effort backup; the repair itself still proceeds.
+    writeFile(backup, raw, { encoding: "utf8", flag: "wx" });
+  } catch (error) {
+    throw new Error(`Graphify hook repair stopped because backup creation failed at ${backup}: ${error.message}`, {
+      cause: error,
+    });
   }
   const next = { ...parsed, hooks: nextHooks };
-  writeFileSync(settingsPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+  try {
+    writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: "wx",
+    });
+    renameFile(temporary, settingsPath);
+  } catch (error) {
+    try {
+      if (fileExists(temporary)) removeFile(temporary);
+    } catch {
+      // Preserve the original failure; the exact backup remains available.
+    }
+    throw new Error(`Graphify hook repair failed for ${settingsPath}; the original backup is ${backup}: ${error.message}`, {
+      cause: error,
+    });
+  }
   return { changed: true, count, path: settingsPath, backup };
 }

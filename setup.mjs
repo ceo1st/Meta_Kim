@@ -4553,6 +4553,20 @@ async function copyToDeployDir(activeTargets, targetDir) {
   console.log(`${C.dim}  ${t.npxQuickCreating} ${targetDir}${C.reset}`);
 
   const bootstrapResult = await applyProjectBootstrapToDir(activeTargets, targetDir);
+  const normalizedTargets = normalizeTargets(activeTargets);
+  let graphifyHookRepair = { changed: false, count: 0, path: null };
+  if (normalizedTargets.includes("claude") || normalizedTargets.includes("all")) {
+    graphifyHookRepair = sanitizeGraphifyWindowsHooks(
+      join(targetDir, ".claude", "settings.json"),
+    );
+    if (graphifyHookRepair.changed) {
+      ok(t.graphifyHooksRepaired(
+        graphifyHookRepair.count,
+        targetDir,
+        graphifyHookRepair.backup,
+      ));
+    }
+  }
   quickDeployDir = quickDeployDir || targetDir;
   quickDeployDirs = uniqueProjectDeployDirs([...quickDeployDirs, targetDir]);
 
@@ -4560,7 +4574,7 @@ async function copyToDeployDir(activeTargets, targetDir) {
   console.log(`${C.dim}  ${targetDir}${C.reset}`);
   printPostCopyBootstrapHint();
   console.log("");
-  return bootstrapResult;
+  return { ...bootstrapResult, graphifyHookRepair };
 }
 
 async function runQuickDeploy() {

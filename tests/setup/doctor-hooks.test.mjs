@@ -20,14 +20,31 @@ describe("rewriteHookToDirectSpawn()", () => {
   test("rewrites a graphify Windows shell-form hook into command + args", () => {
     const hook = {
       type: "command",
+      timeout: 17,
+      statusMessage: "Indexing context",
       command: String.raw`C:\Users\Kim\Python\Scripts\graphify.EXE hook-guard read`,
     };
     const next = rewriteHookToDirectSpawn(hook, "win32");
     assert.deepEqual(next, {
       type: "command",
+      timeout: 17,
+      statusMessage: "Indexing context",
       command: String.raw`C:\Users\Kim\Python\Scripts\graphify.EXE`,
       args: ["hook-guard", "read"],
     });
+  });
+
+  test("keeps a Graphify executable path containing spaces intact", () => {
+    const hook = {
+      type: "command",
+      command: String.raw`C:\Users\Kim Name\Python\Scripts\graphify.EXE hook-guard read`,
+    };
+    const next = rewriteHookToDirectSpawn(hook, "win32");
+    assert.equal(
+      next.command,
+      String.raw`C:\Users\Kim Name\Python\Scripts\graphify.EXE`,
+    );
+    assert.deepEqual(next.args, ["hook-guard", "read"]);
   });
 
   test("rewrites a UNC graphify path into command + args", () => {
@@ -69,6 +86,14 @@ describe("rewriteHookToDirectSpawn()", () => {
     const hook = {
       type: "command",
       command: String.raw`C:\Users\Kim\bin\other-tool.EXE run`,
+    };
+    assert.equal(rewriteHookToDirectSpawn(hook, "win32"), null);
+  });
+
+  test("leaves Graphify commands outside the known hook-guard contract untouched", () => {
+    const hook = {
+      type: "command",
+      command: String.raw`C:\Users\Kim\Python\Scripts\graphify.EXE update .`,
     };
     assert.equal(rewriteHookToDirectSpawn(hook, "win32"), null);
   });
