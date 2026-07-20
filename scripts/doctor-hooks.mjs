@@ -354,6 +354,44 @@ export function extractHookTargetPath(hook) {
   return extractCommandPath(command);
 }
 
+/**
+ * Detect shell-form hook commands that cannot survive Claude Code's native
+ * Windows Git Bash boundary. An unquoted `C:\\...` or UNC executable token at
+ * the start of the command is parsed by Bash before the executable starts, so
+ * every backslash becomes an escape and the path collapses (for example
+ * `C:\\Users` becomes `C:Users`).
+ *
+ * Direct-spawn `command` + `args` hooks do not cross this shell boundary and
+ * quoted tokens are left alone. This is diagnostic-only; cleanup continues to
+ * preserve external or otherwise ambiguous commands.
+ */
+export function detectHookCommandIncompatibility(
+  hook,
+  runtimePlatform = platform(),
+) {
+  if (
+    runtimePlatform !== "win32" ||
+    !hook ||
+    typeof hook !== "object" ||
+    typeof hook.command !== "string" ||
+    Object.hasOwn(hook, "args")
+  ) {
+    return null;
+  }
+  const match = hook.command
+    .trim()
+    .match(/^((?:[A-Za-z]:\\|\\\\)[^\s"';&|]+)/u);
+  if (!match) return null;
+  return {
+    code: "windows_shell_backslash_path",
+    path: match[1],
+    reason:
+      `Native Windows Claude Code runs shell-form hooks through Git Bash, ` +
+      `where the unquoted backslashes in ${match[1]} are consumed as escapes. ` +
+      "Regenerate the hook with forward slashes or use direct-spawn command + args.",
+  };
+}
+
 export function settingsProjectRoot(settingsPath) {
   const settingsDir = path.dirname(path.resolve(settingsPath));
   return path.basename(settingsDir).toLowerCase() === ".claude"
@@ -448,16 +486,21 @@ export function scanSettingsFile(settingsPath) {
   for (const [event, blocks] of Object.entries(hooks)) {
     for (const block of blocks || []) {
       for (const hook of block.hooks || []) {
+        const commandIssue = detectHookCommandIncompatibility(hook);
         const rawTarget = extractHookTargetPath(hook);
         const target = resolveHookTargetPath(rawTarget, settingsPath);
         const exists = target ? existsSync(target) : true;
         const entry = {
           event,
           matcher: block.matcher,
-          path: target,
+          path: target ?? commandIssue?.path ?? null,
           rawPath: rawTarget,
           command: hook.command,
         };
+        if (commandIssue) {
+          incompatible.push({ ...entry, ...commandIssue });
+          continue;
+        }
         if (!rawTarget || !target) {
           unverified.push(entry);
           continue;
